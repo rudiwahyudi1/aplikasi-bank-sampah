@@ -201,11 +201,16 @@ jobs:
         with:
           version: 'v1.28.0'
 
-      - name: Verify Kubernetes Manifests (Client Dry-run)
+      - name: Create KinD (Kubernetes in Docker) Cluster
+        uses: helm/kind-action@v1.9.0
+        with:
+          cluster_name: devsecops-cluster
+
+      - name: Verify Kubernetes Manifests (Dry-run Deployment)
         run: |
-          echo "Verifying Kubernetes manifests via offline dry-run..."
-          kubectl kustomize k8s/ | kubectl apply --dry-run=client --validate=false -f -
-          echo "✅ All Kubernetes manifests passed client-side dry-run validation!"
+          echo "Verifying Kubernetes manifests against KinD cluster..."
+          kubectl apply --dry-run=server -k k8s/
+          echo "✅ All Kubernetes manifests passed server-side dry-run validation!"
 
       - name: Render Kustomize Resources Summary
         run: |
