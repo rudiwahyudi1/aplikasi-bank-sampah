@@ -30,7 +30,7 @@ jobs:
         continue-on-error: false
 
       - name: Trivy Filesystem & Dependency Vulnerability Scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -158,7 +158,7 @@ jobs:
           images: ${{ env.DOCKER_IMAGE }}
           tags: |
             type=ref,event=branch
-            type=sha,prefix=
+            type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build Multi-stage Docker Image
@@ -175,7 +175,7 @@ jobs:
             NODE_ENV=production
 
       - name: Scan Built Container Image with Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ env.DOCKER_IMAGE }}:sha-${{ github.sha }}
           format: 'table'
