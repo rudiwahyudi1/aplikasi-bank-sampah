@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bank-sampah-config
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  DB_HOST: "mysql-service"
+  DB_PORT: "3306"
+  DB_NAME: "bank_sampah"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bank-sampah-secret
+type: Opaque
+stringData:
+  DB_USER: "bank_sampah_user"
+  DB_PASSWORD: "change_me_in_prod"
+  JWT_SECRET: "change_me_super_secret_jwt_key"

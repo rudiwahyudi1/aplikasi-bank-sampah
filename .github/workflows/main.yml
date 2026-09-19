@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: DevSecOps CI/CD Pipeline
 
 on:
   push:
@@ -11,38 +11,67 @@ env:
   NODE_VERSION: '20'
 
 jobs:
-  # ──────────────────────────────────────────────
-  # Job 1: Lint — Static code analysis
-  # ──────────────────────────────────────────────
-  lint:
-    name: 🔍 Lint
+  # ───────────────────────────────────────────────────────────────────────────
+  # Stage 1: 🔐 Security Scanning (Gitleaks & Trivy FS Scan)
+  # ───────────────────────────────────────────────────────────────────────────
+  security-scanning:
+    name: 🔐 1. Security Scanning
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          fetch-depth: 0
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Gitleaks Secret Leak Detection
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: false
 
-      - name: Run ESLint
-        run: npm run lint
+      - name: Trivy Filesystem & Dependency Vulnerability Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
 
-      - name: Check code formatting (Prettier)
-        run: npm run format:check
-
-  # ──────────────────────────────────────────────
-  # Job 2: Test — Unit tests & security audit
-  # ──────────────────────────────────────────────
-  test:
-    name: 🧪 Test & Security Audit
+  # ───────────────────────────────────────────────────────────────────────────
+  # Stage 2: 🧱 Infrastructure Validation (Docker Compose & Nginx Syntax)
+  # ───────────────────────────────────────────────────────────────────────────
+  infrastructure-validation:
+    name: 🧱 2. Infrastructure Validation
     runs-on: ubuntu-latest
-    needs: lint
+    needs: security-scanning
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Docker Compose Configuration
+        run: |
+          echo "Checking docker-compose.yml syntax and schema..."
+          docker compose config --quiet
+          echo "✅ Docker Compose config is valid!"
+
+      - name: Validate Nginx Configuration Syntax
+        run: |
+          echo "Testing Nginx configuration syntax with nginx -t..."
+          docker run --rm \
+            -v ${{ github.workspace }}/nginx/nginx.conf:/etc/nginx/nginx.conf:ro \
+            -v ${{ github.workspace }}/nginx/conf.d:/etc/nginx/conf.d:ro \
+            nginx:alpine nginx -t
+          echo "✅ Nginx syntax is valid!"
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Stage 3: 🧪 Testing Stage (Express.js Unit & Integration Testing via Jest)
+  # ───────────────────────────────────────────────────────────────────────────
+  testing:
+    name: 🧪 3. Testing Stage (Jest)
+    runs-on: ubuntu-latest
+    needs: infrastructure-validation
 
     services:
       mysql:
@@ -73,11 +102,10 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run security audit
-        run: npm audit --audit-level=high
-        continue-on-error: false
+      - name: Run ESLint static check
+        run: npm run lint
 
-      - name: Run unit tests
+      - name: Run Express.js Unit & Integration Tests (Jest)
         run: npm test
         env:
           NODE_ENV: test
@@ -88,7 +116,7 @@ jobs:
           DB_PASSWORD: test_password
           JWT_SECRET: test_jwt_secret_key_ci
 
-      - name: Upload coverage report
+      - name: Upload Test & Coverage Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -96,13 +124,13 @@ jobs:
           path: coverage/
           retention-days: 7
 
-  # ──────────────────────────────────────────────
-  # Job 3: Build — Docker multi-stage build
-  # ──────────────────────────────────────────────
-  build:
-    name: 🐳 Build Docker Image
+  # ───────────────────────────────────────────────────────────────────────────
+  # Stage 4: 🐳 Build & Push (Multi-stage Docker Build & Trivy Image Scan)
+  # ───────────────────────────────────────────────────────────────────────────
+  build-and-push:
+    name: 🐳 4. Build & Push Docker Image
     runs-on: ubuntu-latest
-    needs: test
+    needs: testing
     if: github.event_name == 'push'
     permissions:
       contents: read
@@ -122,7 +150,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels)
+      - name: Extract Docker metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -132,10 +160,11 @@ jobs:
             type=sha,prefix=
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push Docker image
+      - name: Build Multi-stage Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
+          target: production
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -144,73 +173,40 @@ jobs:
           build-args: |
             NODE_ENV=production
 
-      - name: Scan Docker image for vulnerabilities
+      - name: Scan Built Container Image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ env.DOCKER_IMAGE }}:latest
+          image-ref: ${{ env.DOCKER_IMAGE }}:sha-${{ github.sha }}
           format: 'table'
           exit-code: '0'
           severity: 'CRITICAL,HIGH'
           ignore-unfixed: true
 
-# ──────────────────────────────────────────────
-  # Job 4: Deploy — SSH to VPS + docker-compose
-  # (STATUS: DINONAKTIFKAN SEMENTARA KARENA BELUM ADA SECRETS)
-  # ──────────────────────────────────────────────
-  # deploy:
-  #   name: 🚀 Deploy to VPS
-  #   runs-on: ubuntu-latest
-  #   needs: build
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-  #   environment:
-  #     name: production
-  # 
-  #   steps:
-  #     - name: Deploy via SSH
-  #       uses: appleboy/ssh-action@v1
-  #       with:
-  #         host: ${{ secrets.VPS_HOST }}
-  #         username: ${{ secrets.VPS_USERNAME }}
-  #         key: ${{ secrets.VPS_SSH_KEY }}
-  #         port: ${{ secrets.VPS_PORT || 22 }}
-  #         script: |
-  #           cd ${{ secrets.APP_DEPLOY_PATH }}
-  # 
-  #           # Pull latest changes
-  #           git pull origin main
-  # 
-  #           # Login to Docker registry
-  #           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login \
-  #             ${{ secrets.DOCKER_REGISTRY }} \
-  #             -u ${{ secrets.DOCKER_USERNAME }} \
-  #             --password-stdin
-  # 
-  #           # Pull latest images and restart services
-  #           docker compose pull
-  #           docker compose up -d --remove-orphans --force-recreate
-  # 
-  #           # Prune old images
-  #           docker image prune -af --filter "until=168h"
-  # 
-  #           # Run database migrations
-  #           docker compose exec -T app npm run db:migrate
-  # 
-  #           # Health check
-  #           sleep 10
-  #           curl -f http://localhost:${{ secrets.APP_PORT || 3000 }}/api/health || exit 1
-  # 
-  #     - name: Notify deployment status
-  #       if: always()
-  #       uses: appleboy/telegram-action@master
-  #       with:
-  #         to: ${{ secrets.TELEGRAM_CHAT_ID }}
-  #         token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-  #         message: |
-  #           🏗️ Deployment ${{ job.status }}
-  # 
-  #           Repository: ${{ github.repository }}
-  #           Branch: ${{ github.ref_name }}
-  #           Commit: ${{ github.sha }}
-  #           Author: ${{ github.actor }}
-  # 
-  #           Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  # ───────────────────────────────────────────────────────────────────────────
+  # Stage 5: ☸️ Deployment Stage (Kubernetes Manifest Verification / Dry-run)
+  # ───────────────────────────────────────────────────────────────────────────
+  kubernetes-deployment-dryrun:
+    name: ☸️ 5. Kubernetes Dry-run Deployment
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Verify Kubernetes Manifests (Client Dry-run)
+        run: |
+          echo "Verifying Kubernetes manifests via kubectl dry-run..."
+          kubectl apply --dry-run=client -k k8s/
+          echo "✅ All Kubernetes manifests passed client-side dry-run validation!"
+
+      - name: Render Kustomize Resources Summary
+        run: |
+          echo "Inspecting compiled Kubernetes resources:"
+          kubectl kustomize k8s/

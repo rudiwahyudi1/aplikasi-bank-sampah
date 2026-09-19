@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bank-sampah-app
+  labels:
+    app.kubernetes.io/name: bank-sampah-app
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: bank-sampah-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: bank-sampah-app
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/rudiwahyudi1/aplikasi-bank-sampah:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: bank-sampah-config
+            - secretRef:
+                name: bank-sampah-secret
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 5
