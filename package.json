@@ -1,19 +1,19 @@
 {
   "name": "aplikasi-bank-sampah",
   "version": "0.1.0",
-  "description": "Aplikasi Bank Sampah Terintegrasi — Platform digital pengelolaan sampah berbasis web",
-  "main": "src/server.js",
+  "description": "Aplikasi Bank Sampah Terintegrasi — Platform digital pengelolaan sampah berbasis web & mobile",
+  "main": "backend/src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "lint": "eslint src/ --ext .js",
-    "format:check": "prettier --check \"src/**/*.{js,ejs,json,css}\"",
-    "format": "prettier --write \"src/**/*.{js,ejs,json,css}\"",
+    "start": "node backend/src/server.js",
+    "dev": "nodemon backend/src/server.js",
+    "lint": "eslint backend/src/ --ext .js",
+    "format:check": "prettier --check \"backend/src/**/*.js\" \"frontend/web/views/**/*.ejs\"",
+    "format": "prettier --write \"backend/src/**/*.js\" \"frontend/web/views/**/*.ejs\"",
     "test": "jest --forceExit --detectOpenHandles",
     "test:coverage": "jest --coverage --forceExit --detectOpenHandles",
     "test:watch": "jest --watch",
-    "db:migrate": "node src/database/migrate.js",
-    "db:seed": "node src/database/seed.js",
+    "db:migrate": "node backend/src/database/migrate.js",
+    "db:seed": "node backend/src/database/seed.js",
     "build": "echo \"No build step required\""
   },
   "keywords": [
@@ -27,22 +27,22 @@
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "ejs": "^3.1.10",
     "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.12.0",
     "express-validator": "^7.2.1",
     "helmet": "^8.0.0",
-    "cors": "^2.8.5",
+    "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1"
+    "multer": "^1.4.5-lts.1",
+    "mysql2": "^3.12.0"
   },
   "devDependencies": {
     "eslint": "^8.57.1",
-    "prettier": "^3.4.2",
     "jest": "^29.7.0",
     "nodemon": "^3.1.9",
+    "prettier": "^3.4.2",
     "supertest": "^7.0.0"
   },
   "engines": {

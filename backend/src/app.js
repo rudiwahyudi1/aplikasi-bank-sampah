@@ -17,12 +17,12 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// View engine
+// View engine setup (pointing to frontend/web/views)
 app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, '..', 'views'));
+app.set('views', path.join(__dirname, '..', '..', 'frontend', 'web', 'views'));
 
-// Static files
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// Static files setup (pointing to frontend/web/public)
+app.use(express.static(path.join(__dirname, '..', '..', 'frontend', 'web', 'public')));
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {

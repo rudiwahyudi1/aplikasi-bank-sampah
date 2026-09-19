@@ -43,12 +43,11 @@ RUN addgroup -g 1001 -S appgroup \
 
 WORKDIR /app
 
-# Copy production dependencies and built application
+# Copy production dependencies and application directories
 COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
 COPY --from=builder --chown=appuser:appgroup /app/package.json ./package.json
-COPY --from=builder --chown=appuser:appgroup /app/src ./src
-COPY --from=builder --chown=appuser:appgroup /app/views ./views
-COPY --from=builder --chown=appuser:appgroup /app/public ./public
+COPY --from=builder --chown=appuser:appgroup /app/backend ./backend
+COPY --from=builder --chown=appuser:appgroup /app/frontend ./frontend
 
 # Create directories for logs and uploads
 RUN mkdir -p /app/logs /app/uploads \
@@ -67,5 +66,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 # Use tini as entrypoint for proper signal handling
 ENTRYPOINT ["/sbin/tini", "--"]
 
-# Start the application
-CMD ["node", "src/server.js"]
+# Start the application server
+CMD ["node", "backend/src/server.js"]
