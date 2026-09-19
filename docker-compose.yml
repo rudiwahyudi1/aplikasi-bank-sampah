@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # ──────────────────────────────────────────────
+  # Application Service
+  # ──────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: bank-sampah-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-bank_sampah}
+      DB_USER: ${DB_USER:-bank_sampah_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      WHATSAPP_API_URL: ${WHATSAPP_API_URL}
+      WHATSAPP_API_KEY: ${WHATSAPP_API_KEY}
+      PAYMENT_GATEWAY_KEY: ${PAYMENT_GATEWAY_KEY}
+      PAYMENT_GATEWAY_SECRET: ${PAYMENT_GATEWAY_SECRET}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+    volumes:
+      - app_uploads:/app/uploads
+      - app_logs:/app/logs
+    networks:
+      - bank-sampah-network
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ──────────────────────────────────────────────
+  # MySQL Database Service
+  # ──────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: bank-sampah-db
+    restart: unless-stopped
+    ports:
+      - "${DB_EXTERNAL_PORT:-3307}:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-bank_sampah}
+      MYSQL_USER: ${DB_USER:-bank_sampah_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./src/database/init:/docker-entrypoint-initdb.d
+    networks:
+      - bank-sampah-network
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=256M
+      --max-connections=200
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+# ──────────────────────────────────────────────
+# Volumes — Persistent data storage
+# ──────────────────────────────────────────────
+volumes:
+  db_data:
+    driver: local
+    name: bank-sampah-db-data
+  app_uploads:
+    driver: local
+    name: bank-sampah-uploads
+  app_logs:
+    driver: local
+    name: bank-sampah-logs
+
+# ──────────────────────────────────────────────
+# Networks — Internal communication
+# ──────────────────────────────────────────────
+networks:
+  bank-sampah-network:
+    driver: bridge
+    name: bank-sampah-net
