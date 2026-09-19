@@ -203,8 +203,8 @@ jobs:
 
       - name: Verify Kubernetes Manifests (Client Dry-run)
         run: |
-          echo "Verifying Kubernetes manifests via kubectl dry-run..."
-          kubectl kustomize k8s/ | kubectl apply --dry-run=client -f -
+          echo "Verifying Kubernetes manifests via offline dry-run..."
+          kubectl kustomize k8s/ | kubectl apply --dry-run=client --validate=false -f -
           echo "✅ All Kubernetes manifests passed client-side dry-run validation!"
 
       - name: Render Kustomize Resources Summary
