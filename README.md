@@ -1,10 +1,10 @@
-# ♻️ Aplikasi Bank Sampah Terintegrasi
+# Aplikasi Bank Sampah Terintegrasi
 
 Sistem Informasi Pengelolaan Bank Sampah Terintegrasi adalah platform digital berbasis web & mobile yang dirancang untuk mendigitalisasi proses pengumpulan sampah dari nasabah rumah tangga, penimbangan aktual oleh petugas lapangan, verifikasi oleh admin gudang, hingga konversi nilai sampah menjadi saldo dompet digital (wallet).
 
 ---
 
-## 🚀 Fitur Utama (Minimum Viable Product)
+## Fitur Utama (Minimum Viable Product)
 
 - **Manajemen Pengguna (RBAC):** Akses khusus untuk 4 peran utama (Nasabah, Petugas Lapangan, Admin Pengelola, dan Super Admin).
 - **Pengajuan Penjemputan (Pickup):** Nasabah dapat meminta penjemputan sampah berdasarkan kategori (Organik, Anorganik, Daur Ulang, B3).
@@ -14,7 +14,7 @@ Sistem Informasi Pengelolaan Bank Sampah Terintegrasi adalah platform digital be
 
 ---
 
-## 🛠️ Teknologi & Arsitektur Utama
+## Teknologi & Arsitektur Utama
 
 - **Backend:** Node.js (v20 LTS), Express.js (REST API)
 - **Frontend Web:** EJS Template Engine / JavaScript / Tailwind CSS
@@ -24,29 +24,29 @@ Sistem Informasi Pengelolaan Bank Sampah Terintegrasi adalah platform digital be
 
 ---
 
-## 🔄 5-Stage DevSecOps CI/CD Pipeline
+## 5-Stage DevSecOps CI/CD Pipeline
 
 Proyek ini dilengkapi dengan pipeline otomatis GitHub Actions yang menerapkan praktik **DevSecOps** 5-Tahap:
 
-1. 🔐 **Security Scanning Stage:**
+1. **Security Scanning Stage:**
    - **Gitleaks**: Deteksi dini kebocoran secret / API keys dalam repositori.
    - **Trivy (FS Scan)**: Scanning kerentanan file system & dependency packages.
-2. 🧱 **Infrastructure Validation Stage:**
+2. **Infrastructure Validation Stage:**
    - **Docker Compose**: Uji sintaks & skema file `docker-compose.yml`.
    - **Nginx Syntax**: Uji validasi sintaks reverse proxy (`nginx -t`).
-3. 🧪 **Testing Stage:**
+3. **Testing Stage:**
    - **Jest Unit & Integration Test**: Menjalankan pengujian otomatis Express.js dengan kontainer database MySQL 8.0.
    - Upload artifact laporan cakupan kode (*coverage report*).
-4. 🐳 **Build & Push Stage:**
+4. **Build & Push Stage:**
    - Multi-stage Docker image build.
    - Container Image Scanning menggunakan **Trivy**.
    - Push image ke **GitHub Container Registry (GHCR)**.
-5. ☸️ **Deployment Stage:**
+5. **Deployment Stage:**
    - Verifikasi & uji jalan (*client-side dry-run*) manifest Kubernetes menggunakan `kubectl` dan `kustomize`.
 
 ---
 
-## 📋 Persyaratan Sistem (Prerequisites)
+## Persyaratan Sistem (Prerequisites)
 
 Sebelum menjalankan proyek ini di mesin lokal Anda, pastikan Anda telah menginstal:
 - [Node.js](https://nodejs.org/) (Versi 20.x direkomendasikan)
@@ -55,7 +55,7 @@ Sebelum menjalankan proyek ini di mesin lokal Anda, pastikan Anda telah menginst
 
 ---
 
-## ⚙️ Instalasi & Menjalankan Proyek Lokal
+## Instalasi & Menjalankan Proyek Lokal
 
 1. **Clone Repositori**
    ```bash
@@ -89,7 +89,7 @@ Sebelum menjalankan proyek ini di mesin lokal Anda, pastikan Anda telah menginst
 
 ---
 
-## 🐳 Menjalankan dengan Docker Compose
+## Menjalankan dengan Docker Compose
 
 Anda dapat menjalankan seluruh stack aplikasi (Node.js + MySQL + Nginx) menggunakan Docker Compose:
 
@@ -105,7 +105,7 @@ docker compose down
 
 ---
 
-## 📁 Struktur Direktori Utama
+## Struktur Direktori Utama
 
 ```text
 aplikasi-bank-sampah/
@@ -136,6 +136,6 @@ aplikasi-bank-sampah/
 
 ---
 
-## 📄 Lisensi
+## Lisensi
 
 Proyek ini bersifat tertutup (Proprietary) untuk kebutuhan operasional Bank Sampah. Dilarang menyalin, mendistribusikan, atau menggunakan ulang kode tanpa izin tertulis dari pemilik proyek.
