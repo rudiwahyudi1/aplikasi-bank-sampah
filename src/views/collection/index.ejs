@@ -4843,27 +4843,61 @@ function autoDetectCoords(id) {
     }
 }
 
-function useGpsLocation(id) {
+function getGpsErrorMessage(err) {
+    if (!window.isSecureContext && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") {
+        return "Browser membatasi sensor GPS pada domain HTTP non-aman. Silakan akses aplikasi melalui HTTPS atau localhost.";
+    }
+    if (!err) return "Gagal mendapatkan koordinat GPS.";
+    switch (err.code) {
+        case 1:
+            return "Izin lokasi GPS ditolak. Silakan izinkan akses lokasi pada browser/perangkat Anda.";
+        case 2:
+            return "Sinyal GPS tidak tersedia saat ini. Pastikan GPS perangkat Anda aktif.";
+        case 3:
+            return "Waktu pencarian sinyal GPS habis (Timeout).";
+        default:
+            return err.message || "Gagal mendapatkan koordinat GPS.";
+    }
+}
+
+function fetchGpsCoordinates(onSuccess, onError) {
     if (!navigator.geolocation) {
         alert("Browser Anda tidak mendukung geolokasi GPS.");
         return;
     }
+
+    // Coba pertama kali dengan akurasi tinggi (GPS Hardware)
     navigator.geolocation.getCurrentPosition(
+        (pos) => onSuccess(pos),
+        (err) => {
+            console.warn("High-accuracy GPS gagal atau timeout, mencoba fallback jaringan seluler/Wi-Fi...", err);
+            // Fallback dengan akurasi standar (lebih cepat dan stabil terutama di dalam ruangan)
+            navigator.geolocation.getCurrentPosition(
+                (fallbackPos) => onSuccess(fallbackPos),
+                (finalErr) => onError(finalErr),
+                { enableHighAccuracy: false, timeout: 12000, maximumAge: 60000 }
+            );
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+}
+
+function useGpsLocation(id) {
+    const latEl = document.getElementById("editLat_" + id);
+    const lngEl = document.getElementById("editLng_" + id);
+    if (!latEl || !lngEl) return;
+
+    fetchGpsCoordinates(
         function (pos) {
             const lat = pos.coords.latitude.toFixed(6);
             const lng = pos.coords.longitude.toFixed(6);
-            const latEl = document.getElementById("editLat_" + id);
-            const lngEl = document.getElementById("editLng_" + id);
-            if (latEl && lngEl) {
-                latEl.value = lat;
-                lngEl.value = lng;
-                alert(`GPS berhasil diambil: ${lat}, ${lng}`);
-            }
+            latEl.value = lat;
+            lngEl.value = lng;
+            alert(`✓ GPS Berhasil Diambil!\nLatitude: ${lat}\nLongitude: ${lng}\nAkurasi: ±${Math.round(pos.coords.accuracy || 0)} meter`);
         },
         function (err) {
-            alert("Gagal mengambil GPS: " + err.message);
-        },
-        { timeout: 10000 }
+            alert(getGpsErrorMessage(err));
+        }
     );
 }
 
@@ -4895,26 +4929,21 @@ function autoDetectCreateCoords() {
 }
 
 function useGpsCreateLocation() {
-    if (!navigator.geolocation) {
-        alert("Browser Anda tidak mendukung geolokasi GPS.");
-        return;
-    }
-    navigator.geolocation.getCurrentPosition(
+    const latEl = document.getElementById("createPickupLat");
+    const lngEl = document.getElementById("createPickupLng");
+    if (!latEl || !lngEl) return;
+
+    fetchGpsCoordinates(
         function (pos) {
             const lat = pos.coords.latitude.toFixed(6);
             const lng = pos.coords.longitude.toFixed(6);
-            const latEl = document.getElementById("createPickupLat");
-            const lngEl = document.getElementById("createPickupLng");
-            if (latEl && lngEl) {
-                latEl.value = lat;
-                lngEl.value = lng;
-                alert(`GPS berhasil diambil: ${lat}, ${lng}`);
-            }
+            latEl.value = lat;
+            lngEl.value = lng;
+            alert(`✓ GPS Berhasil Diambil!\nLatitude: ${lat}\nLongitude: ${lng}\nAkurasi: ±${Math.round(pos.coords.accuracy || 0)} meter`);
         },
         function (err) {
-            alert("Gagal mengambil GPS: " + err.message);
-        },
-        { timeout: 10000 }
+            alert(getGpsErrorMessage(err));
+        }
     );
 }
 
@@ -5032,23 +5061,48 @@ function sendReceiptWhatsApp() {
 ================================================================ */
 let html5QrScanner = null;
 
+function ensureHtml5QrcodeLoaded(callback) {
+    if (typeof Html5Qrcode !== "undefined") {
+        return callback();
+    }
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
+    script.onload = () => callback();
+    script.onerror = () => {
+        // Fallback CDN jika unpkg terhalang
+        const fallback = document.createElement("script");
+        fallback.src = "https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js";
+        fallback.onload = () => callback();
+        fallback.onerror = () => {
+            const errEl = document.getElementById("scanErrorMessage");
+            if (errEl) {
+                errEl.style.display = "block";
+                errEl.textContent = "Gagal memuat pustaka scanner. Pastikan perangkat terhubung ke internet.";
+            }
+        };
+        document.body.appendChild(fallback);
+    };
+    document.body.appendChild(script);
+}
+
 function openQrScannerModal() {
     const modalEl = document.getElementById("modalQrScanner");
-    const modal = new bootstrap.Modal(modalEl);
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
     modal.show();
 
     document.getElementById("scanResultCard").style.display = "none";
     document.getElementById("scanErrorMessage").style.display = "none";
+    document.getElementById("qrVideoRegion").innerHTML = `
+        <div class="spinner-border text-light spinner-border-sm me-2" role="status"></div>
+        <span>Mengaktifkan kamera...</span>
+    `;
 
-    // Muat script HTML5-QRCode jika belum ada
-    if (typeof Html5Qrcode === "undefined") {
-        const script = document.createElement("script");
-        script.src = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
-        script.onload = () => startScanner();
-        document.body.appendChild(script);
-    } else {
-        startScanner();
-    }
+    // Pastikan modal sudah selesai render sebelum memulai scanner
+    const onShown = () => {
+        modalEl.removeEventListener("shown.bs.modal", onShown);
+        ensureHtml5QrcodeLoaded(() => startScanner());
+    };
+    modalEl.addEventListener("shown.bs.modal", onShown);
 }
 
 function startScanner() {
@@ -5065,20 +5119,61 @@ function startScanner() {
     }
 }
 
-function initScannerInstance() {
-    html5QrScanner = new Html5Qrcode("qrVideoRegion");
-    const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+async function initScannerInstance() {
+    const errEl = document.getElementById("scanErrorMessage");
+    try {
+        html5QrScanner = new Html5Qrcode("qrVideoRegion");
+        const config = { fps: 10, qrbox: { width: 220, height: 220 } };
 
-    html5QrScanner.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText) => {
+        // Coba kamera belakang (environment), fallback ke kamera depan jika tidak tersedia
+        try {
+            await html5QrScanner.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText) => onQrCodeSuccess(decodedText),
+                () => {}
+            );
+        } catch (camErr) {
+            console.warn("Kamera belakang tidak tersedia, mencoba kamera default...", camErr);
+            await html5QrScanner.start(
+                { facingMode: "user" },
+                config,
+                (decodedText) => onQrCodeSuccess(decodedText),
+                () => {}
+            );
+        }
+    } catch (err) {
+        console.error("Camera access error:", err);
+        errEl.style.display = "block";
+        const isSecure = window.isSecureContext || location.hostname === "localhost" || location.hostname === "127.0.0.1";
+        errEl.textContent = !isSecure 
+            ? "Akses kamera membutuhkan HTTPS. Anda tetap dapat menggunakan tombol 'Unggah Foto QR' di bawah." 
+            : "Tidak dapat mengakses kamera: " + (err.message || err) + ". Anda dapat memilih opsi unggah file/foto QR di bawah.";
+        document.getElementById("qrVideoRegion").innerHTML = `
+            <div class="text-center p-3 text-muted">
+                <i class="bi bi-camera-video-off fs-1 d-block mb-2 text-secondary"></i>
+                <span class="small text-light">Kamera tidak aktif</span>
+            </div>
+        `;
+    }
+}
+
+function scanQrFromImage(file) {
+    if (!file) return;
+    const errEl = document.getElementById("scanErrorMessage");
+    errEl.style.display = "none";
+
+    ensureHtml5QrcodeLoaded(async () => {
+        try {
+            if (!html5QrScanner) {
+                html5QrScanner = new Html5Qrcode("qrVideoRegion");
+            }
+            const decodedText = await html5QrScanner.scanFile(file, true);
             onQrCodeSuccess(decodedText);
-        },
-        (errorMessage) => {}
-    ).catch(err => {
-        document.getElementById("scanErrorMessage").style.display = "block";
-        document.getElementById("scanErrorMessage").textContent = "Tidak dapat mengakses kamera: " + err;
+        } catch (err) {
+            errEl.style.display = "block";
+            errEl.textContent = "QR Code tidak terdeteksi pada gambar. Pastikan gambar QR tajam dan tidak blur.";
+        }
     });
 }
 
@@ -5086,7 +5181,9 @@ function stopScanner() {
     if (html5QrScanner) {
         html5QrScanner.stop().then(() => {
             html5QrScanner = null;
-        }).catch(() => {});
+        }).catch(() => {
+            html5QrScanner = null;
+        });
     }
 }
 
@@ -5094,10 +5191,17 @@ async function onQrCodeSuccess(decodedText) {
     stopScanner();
 
     try {
-        // Ekstrak ID atau format BS-2026-XXXX
-        let query = decodedText.trim();
-        const match = query.match(/BS-\d{4}-\d+/i);
-        if (match) query = match[0];
+        let raw = decodedText.trim();
+        let query = raw;
+
+        // Mendukung format MEMBER:BS-2026-0001|NAME:Budi atau BS-2026-0001 atau ID
+        const memberMatch = raw.match(/MEMBER:\s*([^|\n]+)/i);
+        if (memberMatch) {
+            query = memberMatch[1].trim();
+        } else {
+            const bsMatch = raw.match(/BS-\d{4}-\d+/i);
+            if (bsMatch) query = bsMatch[0].trim();
+        }
 
         // Cari di input search
         const searchInput = document.getElementById("collectionSearch");
@@ -5107,12 +5211,16 @@ async function onQrCodeSuccess(decodedText) {
 
         // Tampilkan result di modal
         document.getElementById("scanResultCard").style.display = "block";
-        document.getElementById("scannedCodeBadge").textContent = decodedText;
+        document.getElementById("scannedCodeBadge").textContent = query;
 
         // Auto submit filter untuk menyaring pickup nasabah ini
         const filterForm = document.getElementById("collectionFilterForm");
         document.getElementById("btnApplyScanFilter").onclick = () => {
-            if (filterForm) filterForm.submit();
+            if (filterForm) {
+                const searchEl = filterForm.querySelector("input[name='search']");
+                if (searchEl) searchEl.value = query;
+                filterForm.submit();
+            }
         };
 
     } catch (e) {
@@ -5310,6 +5418,13 @@ document.getElementById("modalQrScanner")?.addEventListener("hidden.bs.modal", (
 
                 <div id="scanErrorMessage" class="alert alert-danger py-2 small" style="display: none;"></div>
 
+                <div class="mb-3 text-center">
+                    <input type="file" id="qrFileInput" accept="image/*" class="d-none" onchange="scanQrFromImage(this.files[0])">
+                    <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 shadow-sm" onclick="document.getElementById('qrFileInput').click()">
+                        <i class="bi bi-image me-1"></i> Unggah / Foto QR dari Galeri
+                    </button>
+                </div>
+
                 <!-- SCAN RESULT CARD -->
                 <div id="scanResultCard" class="card border-success p-3 rounded-3 text-start bg-light" style="display: none;">
                     <div class="d-flex align-items-center gap-2 mb-2">
@@ -5329,4 +5444,3 @@ document.getElementById("modalQrScanner")?.addEventListener("hidden.bs.modal", (
         </div>
     </div>
 </div>
-</script>

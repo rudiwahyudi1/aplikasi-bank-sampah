@@ -287,14 +287,52 @@ Peran pengguna umum (masyarakat, RT/RW, instansi, atau sekolah) yang menyetorkan
    npm install
    npm start
    ```
+
 5. **Akses Aplikasi**:
    * Buka peramban ke: **`http://localhost:5000`**
    * Masuk menggunakan salah satu akun demo di atas.
 
 ---
 
-5. **Masalah Dalam Sistem Kami**:
-   * Belum bisa Scan QR Nasabah
-   * Nembak GPS masih Eror
+## 🐳 Menjalankan dengan Docker (Opsional / Siap Deploy)
+
+Anda dapat menjalankan seluruh sistem (Node.js, MySQL 8.0, dan Nginx) dengan satu perintah:
+
+```bash
+docker compose up -d
+```
+
+- **Aplikasi Web**: `http://localhost:80` atau `http://localhost:5000`
+- Database MySQL otomatis diinisialisasi dari file `database/aplikasi_sampah.sql`.
+
+---
+
+## 🧪 Pengujian Otomatis (Automated Testing)
+
+Jalankan test suite menggunakan Jest dan Supertest:
+
+```bash
+npm test
+```
+
+---
+
+## 🛠️ Perintah CLI & Utilitas
+
+* `npm run db:ping` — Menguji koneksi dan latensi database MySQL.
+* `npm run db:status` — Menampilkan daftar seluruh tabel dan estimasi total baris data.
+* `npm run backup:db` — Membuat cadangan database otomatis ke folder `backups/` dengan rotasi 7 file terbaru.
+
+---
+
+## ✅ Catatan Perbaikan & Peningkatan Sistem
+
+* **Scanner QR Nasabah**: Berhasil diperbaiki dengan dukungan kamera depan/belakang, lifecycle modal Bootstrap yang stabil, dan opsi pemindaian via file/foto galeri.
+* **Geolokasi GPS**: Dilengkapi mekanisme *dual-tier* (Hardware GPS akurasi tinggi dengan fallback instan ke sinyal seluler/Wi-Fi dalam ruangan).
+* **PWA & Offline Shell**: Dilengkapi `manifest.json` dan Service Worker (`sw.js`) agar dapat di-install di Android & iOS.
+* **Notifikasi WhatsApp**: Layanan template pesan otomatis dan click-to-chat deep link terintegrasi.
+* **Keamanan Tambahan**: HTTP Security Headers via Helmet dan Anti-Brute Force Rate Limiter pada halaman login.
+
+---
 
 *Dikembangkan untuk efisiensi operasional bank sampah, peningkatan ekonomi sirkular masyarakat, dan kelestarian lingkungan hidup.*
