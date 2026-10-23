@@ -1080,10 +1080,13 @@ async function startServer() {
 // START
 // ================================================================
 
-startServer();
+if (process.env.NODE_ENV !== "test") {
+    startServer();
+}
 
 // ================================================================
 // EXPORT
 // ================================================================
 
+app.startServer = startServer;
 module.exports = app;

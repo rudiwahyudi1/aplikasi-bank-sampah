@@ -132,7 +132,7 @@ class RealtimeService {
 const realtime = new RealtimeService();
 
 // Heartbeat ping setiap 25 detik agar koneksi tetap stabil melalui reverse proxy / firewall
-setInterval(() => {
+const heartbeat = setInterval(() => {
     for (const client of realtime.clients) {
         try {
             client.res.write(": ping\n\n");
@@ -141,5 +141,9 @@ setInterval(() => {
         }
     }
 }, 25000);
+
+if (heartbeat && typeof heartbeat.unref === "function") {
+    heartbeat.unref();
+}
 
 module.exports = realtime;
