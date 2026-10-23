@@ -1,0 +1,27 @@
+{
+  "name": "Aplikasi Bank Sampah Terintegrasi",
+  "short_name": "Bank Sampah",
+  "description": "Sistem Informasi Manajemen Pengelolaan Sampah dan Tabungan Sampah Terintegrasi",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#198754",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/assets/img/icon/144x144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/icon/192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/icon/512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

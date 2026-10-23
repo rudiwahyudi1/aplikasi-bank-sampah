@@ -18,6 +18,7 @@ yarn-error.log*
 scratch/
 tmp/
 temp/
+backups/
 
 # OS generated files
 .DS_Store
