@@ -10,6 +10,8 @@ const session = require("express-session");
 const path = require("path");
 const methodOverride = require("method-override");
 const layouts = require("express-ejs-layouts");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 
 // ================================================================
 // DATABASE
@@ -51,10 +53,28 @@ app.set(
 );
 
 // ================================================================
-// BASIC CONFIG
+// BASIC CONFIG & SECURITY HEADERS
 // ================================================================
 
 app.disable("x-powered-by");
+
+app.use(
+    helmet({
+        contentSecurityPolicy: false,
+        crossOriginEmbedderPolicy: false
+    })
+);
+
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: () => process.env.NODE_ENV === "test",
+    message: "Terlalu banyak percobaan login. Silakan coba kembali beberapa saat lagi."
+});
+
+app.use("/login", loginLimiter);
 
 // ================================================================
 // BODY PARSER

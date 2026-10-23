@@ -3562,6 +3562,14 @@ document.addEventListener(
 <!-- Floating Realtime Toast Center -->
 <div id="realtimeToastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 99999; pointer-events: none;"></div>
 
+<script>
+    if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+            navigator.serviceWorker.register("/sw.js").catch(() => {});
+        });
+    }
+</script>
+
 </body>
 
 </html>
