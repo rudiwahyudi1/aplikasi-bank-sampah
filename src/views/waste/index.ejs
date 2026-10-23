@@ -1,0 +1,508 @@
+<%
+const list = typeof rows !== "undefined" && Array.isArray(rows) ? rows : [];
+const sum = typeof summary !== "undefined" && summary ? summary : { total: 0, active: 0, recycle: 0, hazardous: 0 };
+const flt = typeof filters !== "undefined" && filters ? filters : { keyword: "", category: "", status: "" };
+const pag = typeof pagination !== "undefined" && pagination ? pagination : { page: 1, limit: 12, total: 0, totalPages: 1 };
+const canEdit = typeof canManage !== "undefined" ? canManage : false;
+
+const catBadge = {
+    daur_ulang: { label: 'Daur Ulang', class: 'bg-success text-white' },
+    organik: { label: 'Organik', class: 'bg-warning text-dark' },
+    anorganik: { label: 'Anorganik', class: 'bg-info text-dark' },
+    b3: { label: 'Limbah B3', class: 'bg-danger text-white' },
+    lainnya: { label: 'Lainnya', class: 'bg-secondary text-white' }
+};
+%>
+
+<style>
+.waste-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 1rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="waste-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:18px;">
+                        <i class="bi bi-recycle"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;">MASTER JENIS SAMPAH</h5>
+                        <div class="small mt-1" style="color: #16a34a; font-size: 11px;">Katalog komoditas sampah, harga beli satuan, dan metode penanganan terpadu.</div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <% if (canEdit) { %>
+                    <button type="button" class="btn btn-success fw-semibold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#addWasteModal">
+                        <i class="bi bi-plus-lg me-1"></i> Tambah Jenis Sampah
+                    </button>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Total Jenis</div>
+                            <div class="stat-value text-dark"><%= sum.total || list.length %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-tags-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Komoditas sampah terdaftar</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Status Aktif</div>
+                            <div class="stat-value text-success"><%= sum.active || list.filter(r => r.status === 'active').length %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-check2-circle"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Diterima bank sampah</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Daur Ulang</div>
+                            <div class="stat-value text-primary"><%= sum.recycle || list.filter(r => r.category === 'daur_ulang').length %></div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Plastik, kertas, logam, kaca</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Limbah Khusus / B3</div>
+                            <div class="stat-value text-danger"><%= sum.hazardous || list.filter(r => r.is_hazardous).length %></div>
+                        </div>
+                        <div class="stat-icon bg-danger-subtle text-danger">
+                            <i class="bi bi-radioactive"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Wajib penanganan berizin</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="p-3 bg-light rounded-4 mb-4">
+            <form method="GET" action="/waste" class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="keyword" class="form-control bg-white border-start-0" placeholder="Cari kode atau nama jenis sampah..." value="<%= flt.keyword || '' %>">
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select name="category" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Kategori</option>
+                        <option value="daur_ulang" <%= flt.category === 'daur_ulang' ? 'selected' : '' %>>Daur Ulang</option>
+                        <option value="organik" <%= flt.category === 'organik' ? 'selected' : '' %>>Organik</option>
+                        <option value="anorganik" <%= flt.category === 'anorganik' ? 'selected' : '' %>>Anorganik</option>
+                        <option value="b3" <%= flt.category === 'b3' ? 'selected' : '' %>>Limbah B3</option>
+                        <option value="lainnya" <%= flt.category === 'lainnya' ? 'selected' : '' %>>Lainnya</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select name="status" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Status</option>
+                        <option value="active" <%= flt.status === 'active' ? 'selected' : '' %>>Aktif</option>
+                        <option value="inactive" <%= flt.status === 'inactive' ? 'selected' : '' %>>Nonaktif</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3"><i class="bi bi-funnel me-1"></i> Filter</button>
+                    <a href="/waste" class="btn btn-outline-secondary rounded-3" title="Reset"><i class="bi bi-arrow-counterclockwise"></i></a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabel Jenis Sampah -->
+        <div class="table-card mb-4">
+            <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
+                <table class="table table-hover align-middle mb-0" style="min-width: 850px;">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Kode & Nama Komoditas</th>
+                            <th>Kategori</th>
+                            <th>Harga Beli Satuan</th>
+                            <th>Metode Penanganan</th>
+                            <th>Sifat Limbah</th>
+                            <th>Status</th>
+                            <th class="pe-4 text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (list.length === 0) { %>
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                Belum ada data jenis sampah yang sesuai filter.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% list.forEach(item => { 
+                            const cat = catBadge[item.category] || { label: item.category, class: 'bg-secondary text-white' };
+                        %>
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark"><%= item.name %></div>
+                                <div class="small text-muted font-monospace"><%= item.code %></div>
+                                <% if (item.description) { %>
+                                <div class="small text-secondary text-truncate mt-1" style="max-width: 250px;"><%= item.description %></div>
+                                <% } %>
+                            </td>
+                            <td>
+                                <span class="badge <%= cat.class %> rounded-pill px-2 py-1"><%= cat.label %></span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-success fs-6">
+                                    Rp <%= Number(item.price_per_unit || 0).toLocaleString('id-ID') %>
+                                    <span class="small fw-normal text-muted">/ <%= item.unit || 'kg' %></span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small fw-semibold text-dark"><%= item.treatment_method || 'Penyimpanan & daur ulang' %></div>
+                            </td>
+                            <td>
+                                <% if (item.is_hazardous) { %>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-2 py-1">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>Berbahaya (B3)
+                                </span>
+                                <% } else { %>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1">
+                                    <i class="bi bi-shield-check me-1"></i>Non-B3
+                                </span>
+                                <% } %>
+                            </td>
+                            <td>
+                                <% if (item.status === 'active') { %>
+                                <span class="badge bg-success rounded-pill px-2 py-1">Aktif</span>
+                                <% } else { %>
+                                <span class="badge bg-secondary rounded-pill px-2 py-1">Nonaktif</span>
+                                <% } %>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <% if (canEdit) { %>
+                                <div class="d-inline-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                                            onclick="openEditWasteModal('<%= item.id %>', '<%= item.code %>', `<%= item.name %>`, '<%= item.category %>', '<%= item.unit %>', '<%= item.price_per_unit %>', `<%= item.treatment_method || '' %>`, <%= item.is_hazardous ? 1 : 0 %>, `<%= item.description || '' %>`, '<%= item.status %>')">
+                                        <i class="bi bi-pencil-square me-1"></i> Edit
+                                    </button>
+                                    <form action="/waste/<%= item.id %>/delete" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus jenis sampah ini?');">
+                                        <button type="submit" class="btn btn-sm btn-light rounded-circle text-danger" title="Hapus">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                                <% } else { %>
+                                <span class="text-muted small">-</span>
+                                <% } %>
+                            </td>
+                        </tr>
+                        <% }) %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL TAMBAH JENIS SAMPAH
+============================================================= -->
+<% if (canEdit) { %>
+<div class="modal fade" id="addWasteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-bottom py-3 px-4" style="background:#f8fafc;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px; height:32px; border-radius:8px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center;">
+                        <i class="bi bi-plus-lg"></i>
+                    </div>
+                    <h6 class="modal-title fw-bold text-dark mb-0">Tambah Jenis Sampah Baru</h6>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/waste/add" method="POST">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Kode Sampah <span class="text-danger">*</span></label>
+                            <input type="text" name="code" class="form-control text-uppercase" placeholder="Cth: PLS, ORG, KRT" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Kategori <span class="text-danger">*</span></label>
+                            <select name="category" class="form-select" required>
+                                <option value="daur_ulang">Daur Ulang</option>
+                                <option value="organik">Organik</option>
+                                <option value="anorganik">Anorganik</option>
+                                <option value="b3">Limbah B3</option>
+                                <option value="lainnya">Lainnya</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Nama Jenis Sampah <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" placeholder="Cth: Botol Plastik PET Bening" required>
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Harga Beli Satuan (Rp) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">Rp</span>
+                                <input type="number" name="price_per_unit" class="form-control" placeholder="3000" min="0" required>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Satuan Ukur <span class="text-danger">*</span></label>
+                            <input type="text" name="unit" class="form-control" value="kg" required>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Metode Penanganan Rekomendasi</label>
+                            <input type="text" name="treatment_method" class="form-control" placeholder="Cth: Daur ulang plastik, pencacahan, pengomposan">
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="active">Aktif</option>
+                                <option value="inactive">Nonaktif</option>
+                            </select>
+                        </div>
+                        <div class="col-6 d-flex align-items-center pt-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_hazardous" value="1" id="addIsHazardous">
+                                <label class="form-check-label small fw-semibold text-danger" for="addIsHazardous">
+                                    Limbah Berbahaya (B3)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Deskripsi & Keterangan</label>
+                            <textarea name="description" class="form-control" rows="2" placeholder="Botol kemasan air mineral bersih tanpa label..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success fw-semibold rounded-3 px-4">Simpan Sampah</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL EDIT JENIS SAMPAH
+============================================================= -->
+<div class="modal fade" id="editWasteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-bottom py-3 px-4" style="background:#f8fafc;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px; height:32px; border-radius:8px; background:#fef3c7; color:#d97706; display:grid; place-items:center;">
+                        <i class="bi bi-pencil-square"></i>
+                    </div>
+                    <h6 class="modal-title fw-bold text-dark mb-0">Edit Jenis Sampah</h6>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editWasteForm" method="POST">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Kode Sampah <span class="text-danger">*</span></label>
+                            <input type="text" name="code" id="editWasteCode" class="form-control text-uppercase" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Kategori <span class="text-danger">*</span></label>
+                            <select name="category" id="editWasteCategory" class="form-select" required>
+                                <option value="daur_ulang">Daur Ulang</option>
+                                <option value="organik">Organik</option>
+                                <option value="anorganik">Anorganik</option>
+                                <option value="b3">Limbah B3</option>
+                                <option value="lainnya">Lainnya</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Nama Jenis Sampah <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="editWasteName" class="form-control" required>
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Harga Beli Satuan (Rp) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">Rp</span>
+                                <input type="number" name="price_per_unit" id="editWastePrice" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Satuan Ukur <span class="text-danger">*</span></label>
+                            <input type="text" name="unit" id="editWasteUnit" class="form-control" required>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Metode Penanganan</label>
+                            <input type="text" name="treatment_method" id="editWasteMethod" class="form-control">
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Status</label>
+                            <select name="status" id="editWasteStatus" class="form-select">
+                                <option value="active">Aktif</option>
+                                <option value="inactive">Nonaktif</option>
+                            </select>
+                        </div>
+                        <div class="col-6 d-flex align-items-center pt-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="is_hazardous" value="1" id="editWasteHazardous">
+                                <label class="form-check-label small fw-semibold text-danger" for="editWasteHazardous">
+                                    Limbah Berbahaya (B3)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Deskripsi & Keterangan</label>
+                            <textarea name="description" id="editWasteDesc" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning text-dark fw-semibold rounded-3 px-4">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<script>
+function openEditWasteModal(id, code, name, category, unit, price, method, isHazardous, desc, status) {
+    const form = document.getElementById('editWasteForm');
+    form.action = `/waste/${id}/update`;
+    document.getElementById('editWasteCode').value = code;
+    document.getElementById('editWasteName').value = name;
+    document.getElementById('editWasteCategory').value = category;
+    document.getElementById('editWasteUnit').value = unit;
+    document.getElementById('editWastePrice').value = price;
+    document.getElementById('editWasteMethod').value = method;
+    document.getElementById('editWasteHazardous').checked = Boolean(Number(isHazardous));
+    document.getElementById('editWasteDesc').value = desc;
+    document.getElementById('editWasteStatus').value = status;
+
+    const modal = new bootstrap.Modal(document.getElementById('editWasteModal'));
+    modal.show();
+}
+</script>

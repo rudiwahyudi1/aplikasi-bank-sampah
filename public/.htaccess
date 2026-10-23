@@ -1,0 +1,9 @@
+RewriteEngine On
+RewriteBase /adminsja.com/
+
+# Jika file/folder tidak ditemukan, teruskan ke index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Arahkan ke index.php dengan parameter
+RewriteRule ^([a-zA-Z0-9_-]+)$ index.php?halaman=$1 [L]

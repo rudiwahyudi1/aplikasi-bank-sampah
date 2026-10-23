@@ -1,0 +1,488 @@
+<%
+/* ============================================================
+   DOKUMEN & BUKTI TERHUBUNG - APLIKASI SAMPAH TERINTEGRASI
+============================================================ */
+
+const safeRows = Array.isArray(rows) ? rows : [];
+const safeSales = Array.isArray(salesList) ? salesList : [];
+const safeCollections = Array.isArray(collectionList) ? collectionList : [];
+const safeWithdrawals = Array.isArray(withdrawalList) ? withdrawalList : [];
+
+function formatBytes(bytes) {
+    if (!bytes || bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
+}
+%>
+
+<style>
+.documents-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.doc-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.doc-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.doc-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+.doc-type-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+}
+.doc-ref-badge {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 12px;
+}
+.doc-icon-box {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="documents-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:34px; height:34px; border-radius:10px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:16px;">
+                        <i class="bi bi-file-earmark-text"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;">PUSAT DOKUMEN DIGITAL</h5>
+                        <div class="small mt-1" style="color: #16a34a; font-size: 10px;">Arsip berkas, foto bukti timbang sampah, bukti transfer bank, dan nota transaksi yang saling terhubung.</div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <% if (canManage) { %>
+                        <button type="button" class="btn btn-success fw-semibold shadow-sm" data-bs-toggle="modal" data-bs-target="#addDocumentModal">
+                            <i class="bi bi-cloud-arrow-up me-1"></i> Unggah Dokumen Baru
+                        </button>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+    <!-- Filter & Search Bar -->
+    <div class="card bg-white border rounded-4 p-3 mb-4 shadow-sm">
+        <form method="get" action="/documents" class="row g-2 align-items-center">
+            <div class="col-12 col-md-4">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light"><i class="bi bi-search text-success"></i></span>
+                    <input type="text" name="q" class="form-control" placeholder="Cari nama dokumen atau kode transaksi..." value="<%= filters.q || '' %>">
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <select name="type" class="form-select form-select-sm">
+                    <option value="">-- Semua Kategori Berkas --</option>
+                    <option value="bukti_transfer" <%= filters.type === 'bukti_transfer' ? 'selected' : '' %>>Bukti Transfer Bank</option>
+                    <option value="foto" <%= filters.type === 'foto' ? 'selected' : '' %>>Foto Dokumentasi Sampah</option>
+                    <option value="bukti_timbang" <%= filters.type === 'bukti_timbang' ? 'selected' : '' %>>Foto Hasil Timbang</option>
+                    <option value="nota" <%= filters.type === 'nota' ? 'selected' : '' %>>Nota / Tanda Terima</option>
+                    <option value="surat" <%= filters.type === 'surat' ? 'selected' : '' %>>Surat Jalan / Invoice</option>
+                    <option value="lainnya" <%= filters.type === 'lainnya' ? 'selected' : '' %>>Dokumen Lainnya</option>
+                </select>
+            </div>
+            <div class="col-6 col-md-3">
+                <select name="ref" class="form-select form-select-sm">
+                    <option value="">-- Semua Keterkaitan Transaksi --</option>
+                    <option value="sales" <%= filters.ref === 'sales' ? 'selected' : '' %>>Transaksi Penjualan</option>
+                    <option value="collection" <%= filters.ref === 'collection' ? 'selected' : '' %>>Penjemputan Sampah</option>
+                    <option value="collection_item" <%= filters.ref === 'collection_item' ? 'selected' : '' %>>Item Timbangan Sampah</option>
+                    <option value="withdrawal" <%= filters.ref === 'withdrawal' ? 'selected' : '' %>>Pencairan Saldo (Withdrawal)</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-2 d-flex gap-1">
+                <button type="submit" class="btn btn-sm btn-success w-100 fw-semibold">
+                    <i class="bi bi-funnel me-1"></i> Filter
+                </button>
+                <% if (filters.type || filters.ref || filters.q) { %>
+                    <a href="/documents" class="btn btn-sm btn-light border text-danger" title="Reset Filter">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                <% } %>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabel Dokumen Terhubung -->
+    <div class="doc-card mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 280px;">Nama Berkas</th>
+                        <th>Kategori</th>
+                        <th>Keterkaitan Transaksi (Terhubung)</th>
+                        <th>Ukuran</th>
+                        <th>Pengunggah & Waktu</th>
+                        <th class="text-end">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (safeRows.length) { %>
+                        <% safeRows.forEach(d => { %>
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <% 
+                                            const isImg = d.mime_type?.includes('image') || d.file_path?.match(/\.(jpg|jpeg|png|webp)$/i);
+                                            const isPdf = d.mime_type?.includes('pdf') || d.file_path?.match(/\.pdf$/i);
+                                        %>
+                                        <div class="doc-icon-box <%= isImg ? 'bg-success-subtle text-success' : (isPdf ? 'bg-danger-subtle text-danger' : 'bg-primary-subtle text-primary') %>">
+                                            <i class="bi <%= isImg ? 'bi-image' : (isPdf ? 'bi-filetype-pdf' : 'bi-file-earmark-text') %>"></i>
+                                        </div>
+                                        <div style="max-width: 210px;" class="text-truncate">
+                                            <div class="fw-bold text-dark text-truncate" title="<%= d.file_name %>">
+                                                <%= d.file_name || 'Dokumen Tanpa Nama' %>
+                                            </div>
+                                            <small class="text-muted"><%= d.mime_type || 'File Dokumen' %></small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <% if (d.document_type === 'bukti_transfer') { %>
+                                        <span class="doc-type-badge bg-success-subtle text-success border border-success-subtle">
+                                            <i class="bi bi-credit-card me-1"></i> Bukti Transfer
+                                        </span>
+                                    <% } else if (d.document_type === 'foto') { %>
+                                        <span class="doc-type-badge bg-primary-subtle text-primary border border-primary-subtle">
+                                            <i class="bi bi-camera me-1"></i> Foto Lokasi
+                                        </span>
+                                    <% } else if (d.document_type === 'bukti_timbang') { %>
+                                        <span class="doc-type-badge bg-info-subtle text-info border border-info-subtle">
+                                            <i class="bi bi-speedometer2 me-1"></i> Bukti Timbang
+                                        </span>
+                                    <% } else if (d.document_type === 'nota' || d.document_type === 'surat') { %>
+                                        <span class="doc-type-badge bg-warning-subtle text-warning border border-warning-subtle">
+                                            <i class="bi bi-receipt me-1"></i> Nota / Surat
+                                        </span>
+                                    <% } else { %>
+                                        <span class="doc-type-badge bg-light text-secondary border">
+                                            <i class="bi bi-file-earmark me-1"></i> <%= d.document_type || 'Lainnya' %>
+                                        </span>
+                                    <% } %>
+                                </td>
+
+                                <!-- KOLOM KETERKAITAN TRANSAKSI (TERHUBUNG) -->
+                                <td>
+                                    <div class="doc-ref-badge">
+                                        <% if (d.reference_type === 'sales' && d.sales_code) { %>
+                                            <div class="fw-bold text-success">
+                                                <i class="bi bi-tag-fill me-1"></i> Penjualan: <%= d.sales_code %>
+                                            </div>
+                                            <div class="small text-muted">
+                                                Pembeli: <strong><%= d.buyer_name || 'Mitra' %></strong> | Total: <strong>Rp <%= Number(d.sales_amount || 0).toLocaleString('id-ID') %></strong>
+                                            </div>
+                                        <% } else if ((d.reference_type === 'collection' || d.reference_type === 'collection_request') && d.collection_code) { %>
+                                            <div class="fw-bold text-primary">
+                                                <i class="bi bi-truck me-1"></i> Penjemputan: <%= d.collection_code %>
+                                            </div>
+                                            <div class="small text-muted">
+                                                Nasabah: <strong><%= d.collection_nasabah || '-' %></strong> | <span title="<%= d.collection_address %>"><%= (d.collection_address && d.collection_address.length > 25) ? d.collection_address.slice(0, 25) + '...' : d.collection_address %></span>
+                                            </div>
+                                        <% } else if (d.reference_type === 'collection_item') { %>
+                                            <div class="fw-bold text-info">
+                                                <i class="bi bi-recycle me-1"></i> Timbangan: <%= d.ci_waste_name || 'Sampah' %> (<%= Number(d.ci_weight || 0) %> kg)
+                                            </div>
+                                            <div class="small text-muted">
+                                                Pickup: <strong><%= d.ci_collection_code || '-' %></strong>
+                                            </div>
+                                        <% } else if (d.reference_type === 'withdrawal' && d.wdr_id) { %>
+                                            <div class="fw-bold text-danger">
+                                                <i class="bi bi-cash-stack me-1"></i> Pencairan Saldo #WDR-<%= String(d.wdr_id).padStart(5, '0') %>
+                                            </div>
+                                            <div class="small text-muted">
+                                                Nasabah: <strong><%= d.wdr_nasabah || '-' %></strong> | <strong><%= (d.wdr_bank || '').toUpperCase() %></strong> Rp <%= Number(d.wdr_amount || 0).toLocaleString('id-ID') %>
+                                            </div>
+                                        <% } else { %>
+                                            <div class="text-secondary small">
+                                                <i class="bi bi-paperclip me-1"></i> Dokumen Umum / Referensi #<%= d.reference_id || '-' %>
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="text-secondary small fw-semibold"><%= formatBytes(d.file_size) %></span>
+                                </td>
+
+                                <td>
+                                    <div class="text-dark fw-semibold"><%= d.uploaded_name || d.uploaded_username || 'Sistem' %></div>
+                                    <div class="text-muted" style="font-size: 11px;"><%= formatDateTime(d.created_at) %></div>
+                                </td>
+
+                                <td class="text-end">
+                                    <div class="d-flex justify-content-end gap-1">
+                                        <!-- Tombol Preview Modal -->
+                                        <button type="button" class="btn btn-sm btn-light border action-btn btn-preview-doc"
+                                            title="Lihat Pratinjau Dokumen"
+                                            data-bs-toggle="modal" data-bs-target="#previewDocModal"
+                                            data-name="<%= d.file_name %>"
+                                            data-path="<%= d.file_path %>"
+                                            data-type="<%= d.document_type %>"
+                                            data-mime="<%= d.mime_type %>"
+                                            data-date="<%= formatDateTime(d.created_at) %>"
+                                            data-uploader="<%= d.uploaded_name || d.uploaded_username || 'Sistem' %>">
+                                            <i class="bi bi-eye text-primary"></i>
+                                        </button>
+
+                                        <!-- Tombol Download Langsung -->
+                                        <a href="/documents/<%= d.id %>/download" class="btn btn-sm btn-light border action-btn" title="Unduh Berkas">
+                                            <i class="bi bi-download text-success"></i>
+                                        </a>
+
+                                        <!-- Tombol Hapus (Admin) -->
+                                        <% if (canManage) { %>
+                                            <form method="post" action="/documents/<%= d.id %>/delete" onsubmit="return confirm('Apakah Anda yakin ingin menghapus dokumen ini?')" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-light border action-btn" title="Hapus">
+                                                    <i class="bi bi-trash text-danger"></i>
+                                                </button>
+                                            </form>
+                                        <% } %>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-folder-x fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                Belum ada berkas dokumen yang terdata pada sistem.
+                            </td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ========================================================
+     MODAL UNGGAH DOKUMEN BARU TERHUBUNG (ADMIN)
+========================================================= -->
+<div class="modal fade" id="addDocumentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content border-0 shadow" method="post" action="/documents/add" enctype="multipart/form-data">
+            <div class="modal-header border-bottom">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="bi bi-cloud-arrow-up text-success me-2"></i>Unggah Dokumen & Hubungkan Transaksi
+                    </h5>
+                    <div class="small text-muted">Unggah berkas fisik dan tautkan dengan entitas transaksi sistem.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold small">Nama / Judul Dokumen <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="file_name" placeholder="Contoh: Bukti Transfer Penjualan SAL-001" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold small">Kategori Dokumen <span class="text-danger">*</span></label>
+                        <select name="document_type" class="form-select" required>
+                            <option value="bukti_transfer">Bukti Transfer Pembayaran</option>
+                            <option value="foto">Foto Dokumentasi Lokasi Sampah</option>
+                            <option value="bukti_timbang">Foto Bukti Timbang Sampah</option>
+                            <option value="nota">Nota / Tanda Terima</option>
+                            <option value="surat">Surat Jalan / Invoice</option>
+                            <option value="lainnya">Dokumen Lainnya</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold small">Tautkan ke Jenis Transaksi</label>
+                        <select id="docRefTypeSelect" name="reference_type" class="form-select">
+                            <option value="umum">Dokumen Umum (Tanpa Tautan Khusus)</option>
+                            <option value="sales">Transaksi Penjualan Sampah</option>
+                            <option value="collection">Penjemputan Sampah</option>
+                            <option value="withdrawal">Pencairan Saldo (Withdrawal)</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6" id="refIdContainer" style="display: none;">
+                        <label class="form-label fw-semibold small">Pilih Transaksi yang Ditautkan</label>
+                        <!-- Pilihan Sales -->
+                        <select id="selectRefSales" name="reference_id_sales" class="form-select doc-ref-select" style="display: none;">
+                            <option value="">-- Pilih Transaksi Penjualan --</option>
+                            <% safeSales.forEach(s => { %>
+                                <option value="<%= s.id %>"><%= s.code %> - Rp <%= Number(s.total_amount || 0).toLocaleString('id-ID') %></option>
+                            <% }) %>
+                        </select>
+                        <!-- Pilihan Collection -->
+                        <select id="selectRefCollection" name="reference_id_collection" class="form-select doc-ref-select" style="display: none;">
+                            <option value="">-- Pilih Penjemputan Koleksi --</option>
+                            <% safeCollections.forEach(c => { %>
+                                <option value="<%= c.id %>"><%= c.code %> (<%= c.address %>)</option>
+                            <% }) %>
+                        </select>
+                        <!-- Pilihan Withdrawal -->
+                        <select id="selectRefWithdrawal" name="reference_id_withdrawal" class="form-select doc-ref-select" style="display: none;">
+                            <option value="">-- Pilih Pencairan Saldo --</option>
+                            <% safeWithdrawals.forEach(w => { %>
+                                <option value="<%= w.id %>">#WDR-<%= String(w.id).padStart(5,'0') %> - <%= w.bank_name %> Rp <%= Number(w.amount || 0).toLocaleString('id-ID') %></option>
+                            <% }) %>
+                        </select>
+                        <!-- Hidden input untuk reference_id riil -->
+                        <input type="hidden" name="reference_id" id="realReferenceId" value="">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold small">Pilih Berkas File (JPG, PNG, WEBP, PDF) <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control" name="file" accept="image/*,application/pdf" required>
+                        <div class="form-text">Maksimal ukuran file 5 MB. Format didukung: PDF dan Gambar.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-success fw-semibold">
+                    <i class="bi bi-cloud-arrow-up me-1"></i> Unggah & Tautkan Dokumen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================================
+     MODAL PRATINJAU DOKUMEN (PREVIEW MODAL)
+========================================================= -->
+<div class="modal fade" id="previewDocModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark" id="modalDocTitle">Pratinjau Dokumen</h5>
+                    <div class="small text-muted" id="modalDocSubtitle">Informasi berkas dokumen</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-3">
+                <div id="previewDocImageContainer" style="display: none;">
+                    <img id="previewDocImage" src="" alt="Pratinjau Dokumen" class="img-fluid rounded border" style="max-height: 500px; margin: auto;">
+                </div>
+                <div id="previewDocPdfContainer" style="display: none; height: 500px;">
+                    <iframe id="previewDocPdf" src="" style="width: 100%; height: 100%; border: none; border-radius: 8px;"></iframe>
+                </div>
+                <div id="previewDocFallback" style="display: none;" class="py-5 text-muted">
+                    <i class="bi bi-file-earmark-arrow-down fs-1 text-secondary mb-2 d-block"></i>
+                    Berkas dokumen dapat diunduh langsung untuk melihat isinya.
+                </div>
+            </div>
+            <div class="modal-footer border-top bg-light d-flex justify-content-between">
+                <a id="previewDocDownloadBtn" href="#" class="btn btn-success btn-sm fw-semibold">
+                    <i class="bi bi-download me-1"></i> Unduh Berkas
+                </a>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Dropdown keterkaitan transaksi di modal tambah dokumen
+    const refTypeSelect = document.getElementById("docRefTypeSelect");
+    const refContainer = document.getElementById("refIdContainer");
+    const selectSales = document.getElementById("selectRefSales");
+    const selectCollection = document.getElementById("selectRefCollection");
+    const selectWithdrawal = document.getElementById("selectRefWithdrawal");
+    const realRefInput = document.getElementById("realReferenceId");
+
+    if (refTypeSelect) {
+        refTypeSelect.addEventListener("change", function () {
+            const val = this.value;
+            selectSales.style.display = "none";
+            selectCollection.style.display = "none";
+            selectWithdrawal.style.display = "none";
+            realRefInput.value = "";
+
+            if (val === "sales") {
+                refContainer.style.display = "block";
+                selectSales.style.display = "block";
+            } else if (val === "collection") {
+                refContainer.style.display = "block";
+                selectCollection.style.display = "block";
+            } else if (val === "withdrawal") {
+                refContainer.style.display = "block";
+                selectWithdrawal.style.display = "block";
+            } else {
+                refContainer.style.display = "none";
+            }
+        });
+
+        selectSales.addEventListener("change", function () { realRefInput.value = this.value; });
+        selectCollection.addEventListener("change", function () { realRefInput.value = this.value; });
+        selectWithdrawal.addEventListener("change", function () { realRefInput.value = this.value; });
+    }
+
+    // Event listener tombol preview dokumen
+    document.querySelectorAll(".btn-preview-doc").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            const name = btn.getAttribute("data-name") || "Dokumen";
+            const path = btn.getAttribute("data-path") || "";
+            const mime = btn.getAttribute("data-mime") || "";
+            const date = btn.getAttribute("data-date") || "";
+            const uploader = btn.getAttribute("data-uploader") || "";
+
+            document.getElementById("modalDocTitle").textContent = name;
+            document.getElementById("modalDocSubtitle").textContent = `Diunggah oleh: ${uploader} pada ${date}`;
+
+            const fullPath = path.startsWith("http") || path.startsWith("/") ? path : "/" + path;
+            document.getElementById("previewDocDownloadBtn").href = fullPath;
+
+            const imgBox = document.getElementById("previewDocImageContainer");
+            const img = document.getElementById("previewDocImage");
+            const pdfBox = document.getElementById("previewDocPdfContainer");
+            const pdf = document.getElementById("previewDocPdf");
+            const fallback = document.getElementById("previewDocFallback");
+
+            imgBox.style.display = "none";
+            pdfBox.style.display = "none";
+            fallback.style.display = "none";
+
+            if (mime.includes("image") || fullPath.match(/\.(jpg|jpeg|png|webp|gif)$/i)) {
+                img.src = fullPath;
+                imgBox.style.display = "block";
+            } else if (mime.includes("pdf") || fullPath.match(/\.pdf$/i)) {
+                pdf.src = fullPath;
+                pdfBox.style.display = "block";
+            } else {
+                fallback.style.display = "block";
+            }
+        });
+    });
+});
+</script>

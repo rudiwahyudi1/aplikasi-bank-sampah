@@ -1,0 +1,968 @@
+<style>
+
+/* =========================================================
+   MAIN PAGE
+========================================================= */
+
+.page-box {
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #e8ebf1;
+    border-radius: 22px;
+    box-shadow: 0 10px 35px rgba(31, 41, 55, .055);
+    overflow: hidden;
+}
+
+
+/* =========================================================
+   HEADER
+========================================================= */
+
+.box-head {
+    padding: 20px 22px;
+    background: linear-gradient(
+        180deg,
+        #ffffff 0%,
+        #fbfbfd 100%
+    );
+    border-bottom: 1px solid #e8ebf1;
+}
+
+.page-title-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 13px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: #eaf8ef;
+    color: #16a34a;
+
+    font-size: 20px;
+}
+
+
+/* =========================================================
+   BODY
+========================================================= */
+
+.box-body {
+    padding: 22px;
+}
+
+.muted {
+    color: #8b94a4;
+}
+
+
+/* =========================================================
+   ROLE CARD
+========================================================= */
+
+.role-permission-card {
+    background: #ffffff;
+
+    border: 1px solid #e8ebf1;
+    border-radius: 20px;
+
+    padding: 0;
+
+    margin-bottom: 18px;
+
+    overflow: hidden;
+
+    box-shadow: 0 5px 20px rgba(31, 41, 55, .035);
+
+    transition:
+        box-shadow .2s ease,
+        border-color .2s ease,
+        transform .2s ease;
+}
+
+.role-permission-card:hover {
+    border-color: #dde3ea;
+    box-shadow: 0 8px 28px rgba(31, 41, 55, .06);
+}
+
+
+/* =========================================================
+   ROLE HEADER
+========================================================= */
+
+.role-header {
+    padding: 18px 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 20px;
+
+    background: linear-gradient(
+        180deg,
+        #ffffff 0%,
+        #fbfcfd 100%
+    );
+
+    border-bottom: 1px solid #edf0f4;
+}
+
+.role-info {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    min-width: 0;
+}
+
+.role-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 13px;
+
+    background: #eaf8ef;
+    color: #16a34a;
+
+    font-size: 19px;
+}
+
+.role-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #172033;
+}
+
+.role-description {
+    margin-top: 3px;
+
+    font-size: 11px;
+    color: #8b94a4;
+
+    max-width: 600px;
+}
+
+
+/* =========================================================
+   ROLE ACTIONS
+========================================================= */
+
+.role-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.permission-count {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+
+    padding: 8px 11px;
+
+    background: #f5f7f9;
+
+    border: 1px solid #e8ebf0;
+    border-radius: 10px;
+
+    color: #647084;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.permission-count i {
+    color: #16a34a;
+}
+
+.permission-count small {
+    font-size: 10px;
+    font-weight: 500;
+    color: #8b94a4;
+}
+
+
+/* =========================================================
+   SAVE BUTTON
+========================================================= */
+
+.btn-save {
+    border: 0;
+
+    background: #16a34a;
+    color: #ffffff;
+
+    border-radius: 11px;
+
+    padding: 9px 15px;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    box-shadow: 0 5px 12px rgba(22, 163, 74, .16);
+
+    transition:
+        background .2s ease,
+        transform .15s ease,
+        box-shadow .2s ease;
+}
+
+.btn-save:hover {
+    background: #15803d;
+    color: #ffffff;
+
+    transform: translateY(-1px);
+
+    box-shadow: 0 7px 16px rgba(22, 163, 74, .20);
+}
+
+.btn-save:active {
+    transform: translateY(0);
+}
+
+
+/* =========================================================
+   PERMISSION SECTION HEADER
+========================================================= */
+
+.permission-section-head {
+    padding: 16px 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+
+    border-bottom: 1px solid #edf0f4;
+}
+
+.section-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+
+    color: #172033;
+
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.section-label i {
+    color: #16a34a;
+}
+
+.section-description {
+    margin-top: 3px;
+
+    color: #9aa2af;
+
+    font-size: 10px;
+}
+
+.total-permission {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+
+    padding: 7px 10px;
+
+    border-radius: 9px;
+
+    background: #f7f8fa;
+
+    color: #7c8696;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+.total-permission i {
+    color: #16a34a;
+}
+
+
+/* =========================================================
+   PERMISSION GRID
+========================================================= */
+
+.permission-grid {
+    padding: 18px;
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 12px;
+}
+
+
+/* =========================================================
+   PERMISSION ITEM
+========================================================= */
+
+.permission-item {
+    position: relative;
+
+    min-height: 70px;
+
+    margin: 0;
+
+    padding: 12px 13px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 12px;
+
+    background: #ffffff;
+
+    border: 1px solid #e8ebf1;
+
+    border-radius: 15px;
+
+    cursor: pointer;
+
+    transition:
+        background .2s ease,
+        border-color .2s ease,
+        box-shadow .2s ease,
+        transform .15s ease;
+}
+
+.permission-item:hover {
+    background: #fbfcfd;
+
+    border-color: #dfe5eb;
+
+    box-shadow: 0 5px 15px rgba(31, 41, 55, .035);
+}
+
+.permission-item.active {
+    background: #f7fcf8;
+    border-color: #bfe5ca;
+}
+
+
+/* =========================================================
+   PERMISSION LEFT
+========================================================= */
+
+.permission-left {
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+
+    gap: 11px;
+}
+
+.permission-icon-box {
+    width: 37px;
+    height: 37px;
+    min-width: 37px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 11px;
+
+    background: #f0f8f3;
+
+    color: #16a34a;
+
+    font-size: 15px;
+}
+
+.permission-item.active .permission-icon-box {
+    background: #e1f5e7;
+    color: #15803d;
+}
+
+
+/* =========================================================
+   PERMISSION TEXT
+========================================================= */
+
+.permission-text {
+    min-width: 0;
+}
+
+.permission-name {
+    color: #273142;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.permission-code {
+    margin-top: 3px;
+
+    color: #9aa2af;
+
+    font-size: 10px;
+
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+/* =========================================================
+   IOS SWITCH
+========================================================= */
+
+.ios-switch {
+    position: relative;
+
+    width: 42px;
+    height: 25px;
+
+    min-width: 42px;
+
+    flex-shrink: 0;
+}
+
+.ios-switch input {
+    position: absolute;
+
+    width: 100%;
+    height: 100%;
+
+    margin: 0;
+
+    opacity: 0;
+
+    cursor: pointer;
+
+    z-index: 3;
+}
+
+.ios-switch-track {
+    position: absolute;
+
+    inset: 0;
+
+    background: #d8dde5;
+
+    border-radius: 999px;
+
+    transition: background .2s ease;
+}
+
+.ios-switch-thumb {
+    position: absolute;
+
+    width: 19px;
+    height: 19px;
+
+    left: 3px;
+    top: 3px;
+
+    background: #ffffff;
+
+    border-radius: 50%;
+
+    box-shadow:
+        0 2px 5px rgba(0, 0, 0, .15);
+
+    transition:
+        transform .2s ease,
+        box-shadow .2s ease;
+}
+
+
+/* CHECKED */
+
+.ios-switch input:checked + .ios-switch-track {
+    background: #16a34a;
+}
+
+.ios-switch input:checked
+~ .ios-switch-thumb {
+    transform: translateX(17px);
+
+    box-shadow:
+        0 2px 6px rgba(22, 163, 74, .22);
+}
+
+
+/* =========================================================
+   EMPTY STATE
+========================================================= */
+
+.empty-state {
+    min-height: 220px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 15px;
+
+    text-align: left;
+
+    border: 1px dashed #dfe4eb;
+    border-radius: 17px;
+
+    background: #fbfcfd;
+
+    padding: 30px;
+}
+
+.empty-icon {
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background: #f1f3f6;
+    color: #9aa2af;
+
+    font-size: 20px;
+}
+
+.empty-title {
+    font-weight: 700;
+    color: #273142;
+}
+
+
+/* =========================================================
+   EMPTY PERMISSION
+========================================================= */
+
+.empty-permission {
+    margin: 18px;
+
+    padding: 25px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 13px;
+
+    border: 1px dashed #dfe4eb;
+    border-radius: 15px;
+
+    background: #fbfcfd;
+}
+
+.empty-permission-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background: #f1f3f6;
+
+    color: #9aa2af;
+
+    font-size: 18px;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 991.98px) {
+
+    .role-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .role-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .permission-grid {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+
+@media (max-width: 575.98px) {
+
+    .box-head {
+        padding: 16px;
+    }
+
+    .box-body {
+        padding: 12px;
+    }
+
+    .role-header {
+        padding: 15px;
+    }
+
+    .permission-section-head {
+        padding: 14px 15px;
+
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .permission-grid {
+        padding: 12px;
+    }
+
+    .permission-item {
+        min-height: 66px;
+    }
+
+    .permission-count small {
+        display: none;
+    }
+
+    .btn-save {
+        padding: 8px 12px;
+    }
+
+}
+
+</style>
+
+<div class="page-box">
+
+    <!-- =========================================================
+         HEADER
+    ========================================================== -->
+    <div class="box-head">
+        <div class="d-flex align-items-center gap-3">
+
+            <div class="page-title-icon">
+                <i class="bi bi-shield-lock"></i>
+            </div>
+
+            <div>
+                <h5 class="mb-0">
+                    ROLE & PERMISSION
+                </h5>
+            </div>
+
+        </div>
+    </div>
+
+
+    <!-- =========================================================
+         BODY
+    ========================================================== -->
+    <div class="box-body">
+
+        <%
+            const roleList = Array.isArray(roles) ? roles : [];
+            const permissionList = Array.isArray(perms) ? perms : [];
+            const rolePermissionList = Array.isArray(rp) ? rp : [];
+        %>
+
+
+        <% if (!roleList.length) { %>
+
+            <!-- =================================================
+                 EMPTY ROLE
+            ================================================== -->
+            <div class="empty-state">
+
+                <div class="empty-icon">
+                    <i class="bi bi-person-x"></i>
+                </div>
+
+                <div>
+                    <div class="empty-title">
+                        Role belum tersedia
+                    </div>
+
+                    <div class="muted small mt-1">
+                        Belum ada data role yang dapat diatur.
+                    </div>
+                </div>
+
+            </div>
+
+        <% } else { %>
+
+
+            <!-- =================================================
+                 ROLE LIST
+            ================================================== -->
+            <% roleList.forEach(role => {
+
+                const selected = rolePermissionList
+                    .filter(x =>
+                        Number(x.role_id) === Number(role.id)
+                    )
+                    .map(x =>
+                        Number(x.permission_id)
+                    );
+
+            %>
+
+                <form
+                    method="post"
+                    action="/admin/rbac/save"
+                    class="role-permission-card"
+                >
+
+                    <input
+                        type="hidden"
+                        name="role_id"
+                        value="<%= role.id %>"
+                    >
+
+
+                    <!-- =========================================
+                         ROLE HEADER
+                    ========================================== -->
+                    <div class="role-header">
+
+                        <div class="role-info">
+
+                            <div class="role-icon">
+                                <i class="bi bi-person-badge"></i>
+                            </div>
+
+                            <div>
+
+                                <div class="role-name">
+                                    <%= role.display_name || role.name || '-' %>
+                                </div>
+
+                                <div class="role-description">
+                                    <%= role.description || 'Tidak ada deskripsi role.' %>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="role-actions">
+
+                            <div class="permission-count">
+
+                                <i class="bi bi-key-fill"></i>
+
+                                <span>
+                                    <%= selected.length %>
+                                </span>
+
+                                <small>
+                                    Permission aktif
+                                </small>
+
+                            </div>
+
+                            <button
+                                type="submit"
+                                class="btn btn-save"
+                            >
+                                <i class="bi bi-check2"></i>
+                                Simpan
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =========================================
+                         PERMISSION HEADER
+                    ========================================== -->
+                    <div class="permission-section-head">
+
+                        <div>
+
+                            <div class="section-label">
+                                <i class="bi bi-shield-check"></i>
+                                Hak Akses Modul
+                            </div>
+
+                            <div class="section-description">
+                                Aktifkan permission yang boleh digunakan
+                                oleh role ini.
+                            </div>
+
+                        </div>
+
+                        <div class="total-permission">
+
+                            <i class="bi bi-grid-3x3-gap"></i>
+
+                            <%= permissionList.length %>
+                            Permission
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =========================================
+                         PERMISSION LIST
+                    ========================================== -->
+                    <% if (permissionList.length) { %>
+
+                        <div class="permission-grid">
+
+                            <% permissionList.forEach(p => {
+
+                                const checked =
+                                    selected.includes(Number(p.id));
+
+                            %>
+
+                                <label
+                                    class="permission-item <%= checked ? 'active' : '' %>"
+                                >
+
+                                    <div class="permission-left">
+
+                                        <div class="permission-icon-box">
+                                            <i class="bi bi-key"></i>
+                                        </div>
+
+                                        <div class="permission-text">
+
+                                            <div class="permission-name">
+                                                <%= p.name || '-' %>
+                                            </div>
+
+                                            <div class="permission-code">
+                                                <%= p.code || '-' %>
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+
+                                    <!-- =================================
+                                         IOS SWITCH
+                                    ================================== -->
+                                    <div class="ios-switch">
+
+                                        <input
+                                            type="checkbox"
+                                            name="permission_ids"
+                                            value="<%= p.id %>"
+                                            <%= checked ? 'checked' : '' %>
+                                        >
+
+                                        <span class="ios-switch-track"></span>
+
+                                        <span class="ios-switch-thumb"></span>
+
+                                    </div>
+
+                                </label>
+
+                            <% }) %>
+
+                        </div>
+
+                    <% } else { %>
+
+                        <div class="empty-permission">
+
+                            <div class="empty-permission-icon">
+                                <i class="bi bi-shield-x"></i>
+                            </div>
+
+                            <div>
+
+                                <strong>
+                                    Permission belum tersedia
+                                </strong>
+
+                                <div class="muted small mt-1">
+                                    Belum ada data permission yang dapat
+                                    diatur untuk role ini.
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    <% } %>
+
+                </form>
+
+            <% }) %>
+
+        <% } %>
+
+    </div>
+
+</div>
+
+<script>
+
+/* =========================================================
+   PERMISSION INTERACTION
+========================================================= */
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    const permissionItems =
+        document.querySelectorAll(".permission-item");
+
+    permissionItems.forEach(function (item) {
+
+        const checkbox =
+            item.querySelector('input[type="checkbox"]');
+
+        if (!checkbox) return;
+
+
+        function updateState() {
+
+            if (checkbox.checked) {
+                item.classList.add("active");
+            } else {
+                item.classList.remove("active");
+            }
+
+        }
+
+
+        updateState();
+
+
+        checkbox.addEventListener("change", function () {
+            updateState();
+        });
+
+    });
+
+});
+
+</script>

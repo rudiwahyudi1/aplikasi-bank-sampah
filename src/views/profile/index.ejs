@@ -1,0 +1,726 @@
+<%
+/* ============================================================
+   PROFILE PAGE (IDENTIK DENGAN ADMIN USERS)
+============================================================ */
+const userObj = typeof u !== "undefined" && u ? u : {};
+const userStats = typeof stats !== "undefined" && stats ? stats : {};
+const completion = typeof completionPct !== "undefined" ? completionPct : 50;
+
+const bankList = [
+    'BCA', 'Mandiri', 'BRI', 'BNI', 'BSI', 
+    'CIMB Niaga', 'Permata', 'Danamon', 'Bank Jatim', 'Bank DKI', 
+    'DANA', 'GoPay', 'OVO', 'ShopeePay', 'LinkAja', 'Lainnya'
+];
+%>
+
+<style>
+/* ============================================================
+   USERS / PROFILE PAGE STYLE (IDENTIK 100% ADMIN/USERS)
+============================================================ */
+.users-page {
+    width: 100%;
+}
+
+.users-card {
+    background: #fff;
+    border: 1px solid #e8e8ed;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(31, 41, 55, .06);
+}
+
+.users-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 20px 22px;
+    border-bottom: 1px solid #e8e8ed;
+    background: linear-gradient(180deg, #fff 0%, #fbfbfd 100%);
+}
+
+.users-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.users-title-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 13px;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    font-size: 19px;
+    box-shadow: 0 6px 14px rgba(22, 163, 74, .24);
+}
+
+.users-title {
+    margin: 0;
+    color: #172033;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -.2px;
+}
+
+.users-subtitle {
+    margin-top: 2px;
+    color: #8b94a4;
+    font-size: 11px;
+}
+
+/* STATS */
+.users-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    padding: 18px 22px;
+    border-bottom: 1px solid #edf0f4;
+    background: #fafbfd;
+}
+
+.users-stat {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid #e8ebee;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.users-stat-icon {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    font-size: 16px;
+}
+
+.users-stat-icon.wallet {
+    background: #eaf8ef;
+    color: #16a34a;
+}
+
+.users-stat-icon.active {
+    background: #eef5ff;
+    color: #2563eb;
+}
+
+.users-stat-icon.progress-stat {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.users-stat-icon.bank-stat {
+    background: #f3e8ff;
+    color: #9333ea;
+}
+
+.users-stat-value {
+    color: #172033;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.users-stat-label {
+    margin-top: 2px;
+    color: #8b94a4;
+    font-size: 10.5px;
+}
+
+/* BANK CARD PREVIEW */
+.virtual-debit-card {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 60%, #16a34a 100%);
+    border-radius: 18px;
+    color: #fff;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.25);
+}
+
+.virtual-debit-card::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 140px;
+    height: 140px;
+    background: radial-gradient(circle, rgba(22, 163, 74, 0.4), transparent 70%);
+    border-radius: 50%;
+}
+
+.card-chip {
+    width: 36px;
+    height: 28px;
+    background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 50%, #94a3b8 100%);
+    border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.4);
+    display: inline-block;
+}
+
+.card-number-display {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 17px;
+    letter-spacing: 2px;
+    font-weight: 700;
+    margin: 14px 0 10px 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+/* FORM ELEMENTS */
+.profile-section-title {
+    font-size: 13px;
+    font-weight: 800;
+    color: #172033;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f1f3f6;
+}
+
+.profile-section-title i {
+    color: #16a34a;
+    font-size: 15px;
+}
+
+.users-save-btn {
+    padding: 9px 20px;
+    border: 0;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 750;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, .25);
+    transition: all .2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+
+.users-save-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(22, 163, 74, .32);
+    color: #fff;
+}
+
+.users-cancel-btn {
+    padding: 9px 18px;
+    border: 1px solid #e3e7ec;
+    border-radius: 11px;
+    background: #fff;
+    color: #566071;
+    font-size: 12px;
+    font-weight: 700;
+    transition: all .2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+}
+
+.users-cancel-btn:hover {
+    background: #f8fafc;
+    color: #172033;
+}
+
+@media (max-width: 991.98px) {
+    .users-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .users-stats {
+        grid-template-columns: 1fr;
+        padding: 14px 16px;
+    }
+    .users-header {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 16px;
+    }
+}
+</style>
+
+<div class="users-page">
+    <div class="users-card">
+
+        <!-- ====================================================
+             HEADER (IDENTIK ADMIN/USERS)
+        ===================================================== -->
+        <div class="users-header">
+            <div class="users-header-left">
+                <div class="users-title-icon">
+                    <i class="bi bi-person-gear"></i>
+                </div>
+                <div>
+                    <h1 class="users-title">Pengaturan Profil & Rekening Nasabah</h1>
+                    <div class="users-subtitle">
+                        Kelola data identitas KTP, usia, alamat, dan nomor rekening penerimaan pembayaran hasil penjualan sampah.
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill fw-bold">
+                    <i class="bi bi-shield-check me-1"></i>
+                    Role: <%= userObj.roles || userObj.role || 'Pengguna' %>
+                </span>
+            </div>
+        </div>
+
+        <!-- ====================================================
+             STATS BAR (IDENTIK DENGAN ADMIN USERS)
+        ===================================================== -->
+        <div class="users-stats">
+            <!-- SALDO WALLET -->
+            <div class="users-stat">
+                <div class="users-stat-icon wallet">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+                <div>
+                    <div class="users-stat-value text-success">
+                        Rp <%= Number(userObj.wallet_balance || 0).toLocaleString('id-ID') %>
+                    </div>
+                    <div class="users-stat-label">Saldo Dompet Saya</div>
+                </div>
+            </div>
+
+            <!-- KELENGKAPAN PROFIL -->
+            <div class="users-stat">
+                <div class="users-stat-icon progress-stat">
+                    <i class="bi bi-speedometer2"></i>
+                </div>
+                <div>
+                    <div class="users-stat-value text-warning">
+                        <%= completion %>% Lengkap
+                    </div>
+                    <div class="users-stat-label">Kelengkapan Identitas</div>
+                </div>
+            </div>
+
+            <!-- REKENING BANK -->
+            <div class="users-stat">
+                <div class="users-stat-icon bank-stat">
+                    <i class="bi bi-credit-card-2-front"></i>
+                </div>
+                <div>
+                    <div class="users-stat-value text-purple text-truncate" style="max-width:140px;">
+                        <%= userObj.bank_name ? (userObj.bank_name.toUpperCase() + ' - Terdaftar') : 'Belum Ada' %>
+                    </div>
+                    <div class="users-stat-label">Rekening Pembayaran</div>
+                </div>
+            </div>
+
+            <!-- TOTAL PICKUP SELESAI -->
+            <div class="users-stat">
+                <div class="users-stat-icon active">
+                    <i class="bi bi-truck"></i>
+                </div>
+                <div>
+                    <div class="users-stat-value text-primary">
+                        <%= Number(userStats.finished_pickups || 0) %> Selesai
+                    </div>
+                    <div class="users-stat-label">Total Setor Sampah</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====================================================
+             BODY (DUA KOLOM: KARTU IDENTITAS + FORM EDIT)
+        ===================================================== -->
+        <div class="p-3 p-md-4">
+            <div class="row g-4">
+
+                <!-- ================================================
+                     KOLOM KIRI: PREVIEW KARTU DEBIT & IDENTITAS
+                ================================================= -->
+                <div class="col-lg-4">
+
+                    <!-- VIRTUAL DEBIT / BANK CARD -->
+                    <div class="virtual-debit-card mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="card-chip"></span>
+                            <span class="fw-bold fs-6 text-uppercase text-light tracking-wider">
+                                <i class="bi bi-bank me-1 text-success"></i>
+                                <%= userObj.bank_name ? userObj.bank_name.toUpperCase() : 'BANK / E-WALLET' %>
+                            </span>
+                        </div>
+
+                        <div class="small text-white-50 text-uppercase" style="font-size:9.5px; letter-spacing:1px;">
+                            Nomor Rekening Penerima
+                        </div>
+                        <div class="card-number-display">
+                            <%= userObj.bank_account_number || '•••• •••• •••• ••••' %>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-end mt-2">
+                            <div>
+                                <div class="text-white-50" style="font-size:9px; text-transform:uppercase;">Atas Nama Pemilik</div>
+                                <div class="fw-bold small text-light text-truncate" style="max-width:180px;">
+                                    <%= userObj.bank_account_holder || userObj.full_name || 'PEMILIK REKENING' %>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-success bg-opacity-75 border border-light border-opacity-25" style="font-size:9px;">
+                                    <i class="bi bi-check-circle me-1"></i>Sales Ready
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KARTU INFO REKENING KASIR -->
+                    <div class="p-3 rounded-4 border bg-light mb-3">
+                        <div class="d-flex align-items-start gap-2">
+                            <i class="bi bi-info-circle-fill text-primary fs-5 mt-1"></i>
+                            <div>
+                                <div class="fw-bold text-dark small">Integrasi Otomatis Kasir (/sales)</div>
+                                <div class="small text-muted mt-1" style="font-size:11.5px; line-height:1.5;">
+                                    Saat Anda melakukan penjualan sampah, admin di kasir <strong>/sales</strong> akan melihat rekening di atas secara langsung dan mentransfer uang pembayaran ke rekening ini.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RINGKASAN DATA IDENTITAS KTP -->
+                    <div class="p-3 rounded-4 border bg-white shadow-sm">
+                        <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                            <span class="fw-bold small text-secondary">
+                                <i class="bi bi-person-vcard text-success me-1"></i> Identitas Terdaftar
+                            </span>
+                            <span class="badge bg-light text-secondary border">
+                                Status: <%= userObj.status || 'Active' %>
+                            </span>
+                        </div>
+
+                        <div class="d-flex flex-column gap-2" style="font-size:12px;">
+                            <div>
+                                <span class="text-muted d-block" style="font-size:10px;">Nomor KTP / NIK</span>
+                                <span class="fw-bold font-monospace text-dark">
+                                    <%= userObj.ktp_number ? userObj.ktp_number : '(Belum diisi)' %>
+                                </span>
+                            </div>
+
+                            <div>
+                                <span class="text-muted d-block" style="font-size:10px;">Usia</span>
+                                <span class="fw-bold text-dark">
+                                    <%= userObj.age ? (userObj.age + ' Tahun') : '(Belum diisi)' %>
+                                </span>
+                            </div>
+
+                            <div>
+                                <span class="text-muted d-block" style="font-size:10px;">Alamat Domisili</span>
+                                <span class="text-dark">
+                                    <%= userObj.address ? userObj.address : '(Belum diisi)' %>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ================================================
+                     KOLOM KANAN: FORMULIR UPDATE PROFIL
+                ================================================= -->
+                <div class="col-lg-8">
+                    <form method="post" action="/profile/update" class="p-3 p-md-4 rounded-4 border bg-white shadow-sm">
+
+                        <!-- SECTION 1: IDENTITAS DIRI -->
+                        <div class="profile-section-title">
+                            <i class="bi bi-person-bounding-box"></i>
+                            Informasi Identitas Diri & Kontak
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <!-- NAMA LENGKAP -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small">
+                                    Nama Lengkap <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-success">
+                                        <i class="bi bi-person"></i>
+                                    </span>
+                                    <input 
+                                        type="text" 
+                                        class="form-control border-start-0 ps-0" 
+                                        name="full_name" 
+                                        required 
+                                        placeholder="Nama lengkap sesuai KTP"
+                                        value="<%= userObj.full_name || '' %>"
+                                    >
+                                </div>
+                            </div>
+
+                            <!-- USERNAME (READONLY) -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small">
+                                    Username <span class="text-muted fw-normal">(tidak dapat diubah)</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-secondary">
+                                        <i class="bi bi-at"></i>
+                                    </span>
+                                    <input 
+                                        type="text" 
+                                        class="form-control border-start-0 ps-0 bg-light" 
+                                        readonly 
+                                        value="<%= userObj.username || '' %>"
+                                    >
+                                </div>
+                            </div>
+
+                            <!-- NOMOR KTP (NIK 16 DIGIT) -->
+                            <div class="col-md-8">
+                                <label class="form-label fw-semibold text-secondary small">
+                                    Nomor Identitas KTP (NIK 16 Digit) <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-success">
+                                        <i class="bi bi-person-vcard"></i>
+                                    </span>
+                                    <input 
+                                        type="text" 
+                                        class="form-control border-start-0 ps-0 font-monospace" 
+                                        name="ktp_number" 
+                                        maxlength="25"
+                                        placeholder="Contoh: 3201234567890001"
+                                        value="<%= userObj.ktp_number || '' %>"
+                                    >
+                                </div>
+                                <div class="form-text text-muted" style="font-size:11px;">
+                                    Diperlukan untuk validasi verifikasi identitas nasabah bank sampah.
+                                </div>
+                            </div>
+
+                            <!-- USIA -->
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold text-secondary small">
+                                    Usia (Tahun)
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-success">
+                                        <i class="bi bi-calendar3"></i>
+                                    </span>
+                                    <input 
+                                        type="number" 
+                                        class="form-control border-start-0 ps-0" 
+                                        name="age" 
+                                        min="5" 
+                                        max="120"
+                                        placeholder="Contoh: 28"
+                                        value="<%= userObj.age || '' %>"
+                                    >
+                                    <span class="input-group-text bg-light border-start-0 text-muted small">Th</span>
+                                </div>
+                            </div>
+
+                            <!-- TELEPON / WHATSAPP -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small">
+                                    Nomor Telepon / WhatsApp
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-success">
+                                        <i class="bi bi-telephone"></i>
+                                    </span>
+                                    <input 
+                                        type="text" 
+                                        class="form-control border-start-0 ps-0" 
+                                        name="phone" 
+                                        placeholder="Contoh: 081234567890"
+                                        value="<%= userObj.phone || '' %>"
+                                    >
+                                </div>
+                            </div>
+
+                            <!-- EMAIL (READONLY) -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold text-secondary small">
+                                    Alamat Email Terdaftar
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-secondary">
+                                        <i class="bi bi-envelope"></i>
+                                    </span>
+                                    <input 
+                                        type="email" 
+                                        class="form-control border-start-0 ps-0 bg-light" 
+                                        readonly 
+                                        value="<%= userObj.email || '' %>"
+                                    >
+                                </div>
+                            </div>
+
+                            <!-- ALAMAT DOMISILI -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold text-secondary small">
+                                    Alamat Domisili Lengkap
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-success align-items-start pt-2">
+                                        <i class="bi bi-geo-alt"></i>
+                                    </span>
+                                    <textarea 
+                                        class="form-control border-start-0 ps-0" 
+                                        name="address" 
+                                        rows="2" 
+                                        placeholder="Jalan, RT/RW, Kelurahan, Kecamatan, Kota..."
+                                    ><%= userObj.address || '' %></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 2: REKENING BANK PEMBAYARAN SALES -->
+                        <div class="profile-section-title">
+                            <i class="bi bi-credit-card-2-front"></i>
+                            Rekening Bank / E-Wallet Pembayaran (Digunakan di Kasir /sales)
+                        </div>
+
+                        <div class="p-3 mb-4 rounded-3 border bg-light bg-opacity-75">
+                            <div class="row g-3">
+                                <!-- NAMA BANK -->
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-secondary small">
+                                        Pilih Bank / E-Wallet <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0 text-success">
+                                            <i class="bi bi-bank"></i>
+                                        </span>
+                                        <select class="form-select border-start-0 ps-0 bg-white" name="bank_name">
+                                            <option value="">-- Pilih Bank / E-Wallet --</option>
+                                            <% bankList.forEach(b => { %>
+                                                <option value="<%= b %>" <%= (userObj.bank_name || '').toUpperCase() === b.toUpperCase() ? 'selected' : '' %>>
+                                                    <%= b %>
+                                                </option>
+                                            <% }); %>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <!-- NOMOR REKENING -->
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-secondary small">
+                                        Nomor Rekening / Akun <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0 text-success">
+                                            <i class="bi bi-hash"></i>
+                                        </span>
+                                        <input 
+                                            type="text" 
+                                            class="form-control border-start-0 ps-0 bg-white font-monospace" 
+                                            name="bank_account_number" 
+                                            placeholder="Nomor rekening bank..."
+                                            value="<%= userObj.bank_account_number || '' %>"
+                                        >
+                                    </div>
+                                </div>
+
+                                <!-- ATAS NAMA REKENING -->
+                                <div class="col-md-4">
+                                    <label class="form-label fw-semibold text-secondary small">
+                                        Atas Nama Pemilik <span class="text-danger">*</span>
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-white border-end-0 text-success">
+                                            <i class="bi bi-person-check"></i>
+                                        </span>
+                                        <input 
+                                            type="text" 
+                                            class="form-control border-start-0 ps-0 bg-white" 
+                                            name="bank_account_holder" 
+                                            placeholder="Nama pemilik rekening..."
+                                            value="<%= userObj.bank_account_holder || '' %>"
+                                        >
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SECTION 3: KEAMANAN PASSWORD -->
+                        <div class="profile-section-title">
+                            <i class="bi bi-shield-lock"></i>
+                            Keamanan Akun & Password (Opsional)
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold text-secondary small">
+                                    Password Baru
+                                    <span class="text-muted fw-normal fst-italic">(kosongkan jika tidak ingin mengubah password)</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-success">
+                                        <i class="bi bi-key-fill"></i>
+                                    </span>
+                                    <input 
+                                        type="password" 
+                                        class="form-control border-start-0 border-end-0 ps-0" 
+                                        name="password" 
+                                        id="profilePasswordInput"
+                                        placeholder="Minimal 6 karakter"
+                                    >
+                                    <button 
+                                        type="button" 
+                                        class="btn btn-light border border-start-0 text-secondary" 
+                                        onclick="toggleProfilePassword()"
+                                        title="Lihat / Sembunyikan Password"
+                                    >
+                                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TOMBOL AKSI -->
+                        <div class="d-flex align-items-center justify-content-between pt-3 border-top">
+                            <a href="/dashboard" class="users-cancel-btn">
+                                <i class="bi bi-arrow-left me-1"></i>
+                                Kembali ke Dashboard
+                            </a>
+
+                            <button type="submit" class="users-save-btn">
+                                <i class="bi bi-check-lg"></i>
+                                Simpan Perubahan Profil
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+function toggleProfilePassword() {
+    const input = document.getElementById('profilePasswordInput');
+    const icon = document.getElementById('togglePasswordIcon');
+    if (!input || !icon) return;
+
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('bi-eye');
+        icon.classList.add('bi-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('bi-eye-slash');
+        icon.classList.add('bi-eye');
+    }
+}
+</script>

@@ -1,0 +1,1187 @@
+<%
+/* ============================================================
+   SAFE DATA
+============================================================ */
+const notificationRows =
+    (typeof rows !== "undefined" && Array.isArray(rows))
+        ? rows
+        : [];
+
+const totalNotifications = notificationRows.length;
+
+const unreadNotifications = notificationRows.filter(r =>
+    !r.is_read
+).length;
+
+const readNotifications = notificationRows.filter(r =>
+    !!r.is_read
+).length;
+
+const recentNotifications = notificationRows.filter(r => {
+    if (!r.created_at) return false;
+
+    const created = new Date(r.created_at);
+    const now = new Date();
+
+    const diff = now - created;
+    const oneDay = 24 * 60 * 60 * 1000;
+
+    return diff >= 0 && diff <= oneDay;
+}).length;
+%>
+
+<!-- ============================================================
+     NOTIFICATION PAGE
+============================================================ -->
+<div class="notification-page">
+
+    <div class="notification-card">
+
+        <!-- ====================================================
+             HEADER
+        ===================================================== -->
+        <div class="notification-header">
+
+            <div class="notification-title-wrap">
+
+                <div class="notification-title-icon">
+                    <i class="bi bi-bell-fill"></i>
+                </div>
+
+                <div>
+                    <h5 class="mb-0">
+                        NOTIFIKASI
+                    </h5>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ====================================================
+             STATISTICS
+        ===================================================== -->
+        <div class="notification-stats">
+
+            <!-- TOTAL -->
+            <div class="notification-stat">
+                <div class="notification-stat-icon total">
+                    <i class="bi bi-bell"></i>
+                </div>
+
+                <div>
+                    <div class="notification-stat-value">
+                        <%= totalNotifications %>
+                    </div>
+
+                    <div class="notification-stat-label">
+                        Total Notifikasi
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- BELUM DIBACA -->
+            <div class="notification-stat">
+                <div class="notification-stat-icon unread">
+                    <i class="bi bi-envelope"></i>
+                </div>
+
+                <div>
+                    <div class="notification-stat-value">
+                        <%= unreadNotifications %>
+                    </div>
+
+                    <div class="notification-stat-label">
+                        Belum Dibaca
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- DIBACA -->
+            <div class="notification-stat">
+                <div class="notification-stat-icon read">
+                    <i class="bi bi-envelope-open"></i>
+                </div>
+
+                <div>
+                    <div class="notification-stat-value">
+                        <%= readNotifications %>
+                    </div>
+
+                    <div class="notification-stat-label">
+                        Sudah Dibaca
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- TERBARU -->
+            <div class="notification-stat">
+                <div class="notification-stat-icon recent">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+
+                <div>
+                    <div class="notification-stat-value">
+                        <%= recentNotifications %>
+                    </div>
+
+                    <div class="notification-stat-label">
+                        24 Jam Terakhir
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- ====================================================
+             TOOLBAR
+        ===================================================== -->
+        <div class="notification-toolbar">
+
+            <div class="notification-search">
+
+                <i class="bi bi-search"></i>
+
+                <input
+                    type="text"
+                    id="notificationSearch"
+                    class="form-control"
+                    placeholder="Cari notifikasi..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+            <button
+                type="button"
+                class="notification-filter-btn"
+                id="notificationReset"
+            >
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Reset
+            </button>
+
+        </div>
+
+
+        <!-- ====================================================
+             BODY
+        ===================================================== -->
+        <div class="notification-body">
+
+            <% if (!notificationRows.length) { %>
+
+                <!-- EMPTY -->
+                <div class="notification-empty">
+
+                    <div class="notification-empty-icon">
+                        <i class="bi bi-bell-slash"></i>
+                    </div>
+
+                    <div class="notification-empty-title">
+                        Belum Ada Notifikasi
+                    </div>
+
+                    <div class="notification-empty-text">
+                        Belum ada notifikasi yang tersedia untuk pengguna.
+                    </div>
+
+                </div>
+
+            <% } else { %>
+
+                <!-- ====================================================
+                     NOTIFICATION LIST
+                ===================================================== -->
+                <div
+                    class="notification-list"
+                    id="notificationList"
+                >
+
+                    <% notificationRows.forEach((r, index) => { %>
+
+                        <%
+                            const notificationTitle =
+                                r.title || "Notifikasi";
+
+                            const notificationMessage =
+                                r.message || "-";
+
+                            const notificationIcon =
+                                r.icon || "bi-bell";
+
+                            const notificationRead =
+                                !!r.is_read;
+
+                            const notificationDate =
+                                r.created_at
+                                    ? new Date(r.created_at)
+                                    : null;
+
+                            const notificationSearchText = [
+                                notificationTitle,
+                                notificationMessage,
+                                notificationRead ? "dibaca" : "baru"
+                            ]
+                                .join(" ")
+                                .toLowerCase();
+                        %>
+
+                        <div
+                            class="notification-item <%= notificationRead ? 'is-read' : 'is-unread' %>"
+                            data-search="<%= notificationSearchText %>"
+                        >
+
+                            <!-- ICON -->
+                            <div class="notification-item-icon">
+                                <i class="bi <%= notificationIcon %>"></i>
+                            </div>
+
+
+                            <!-- CONTENT -->
+                            <div class="notification-item-content">
+
+                                <div class="notification-item-top">
+
+                                    <div class="notification-item-title">
+                                        <%= notificationTitle %>
+                                    </div>
+
+                                    <span
+                                        class="notification-badge <%= notificationRead ? 'notification-badge-read' : 'notification-badge-new' %>"
+                                    >
+                                        <i class="bi <%= notificationRead ? 'bi-check2' : 'bi-circle-fill' %> me-1"></i>
+
+                                        <%= notificationRead ? 'Dibaca' : 'Baru' %>
+                                    </span>
+
+                                </div>
+
+
+                                <div class="notification-item-message">
+                                    <%= notificationMessage %>
+                                </div>
+
+
+                                <% if (notificationDate && !isNaN(notificationDate.getTime())) { %>
+
+                                    <div class="notification-item-date">
+
+                                        <i class="bi bi-clock me-1"></i>
+
+                                        <span>
+                                            <%= notificationDate.toLocaleString('id-ID', {
+                                                day: '2-digit',
+                                                month: 'short',
+                                                year: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) %>
+                                        </span>
+
+                                    </div>
+
+                                <% } %>
+
+                            </div>
+
+                        </div>
+
+                    <% }) %>
+
+                </div>
+
+
+                <!-- ====================================================
+                     SEARCH EMPTY
+                ===================================================== -->
+                <div
+                    class="notification-search-empty"
+                    id="notificationSearchEmpty"
+                    style="display:none;"
+                >
+
+                    <div class="notification-empty-icon small">
+                        <i class="bi bi-search"></i>
+                    </div>
+
+                    <div class="notification-empty-title">
+                        Notifikasi Tidak Ditemukan
+                    </div>
+
+                    <div class="notification-empty-text">
+                        Tidak ada notifikasi yang sesuai dengan pencarian.
+                    </div>
+
+                </div>
+
+            <% } %>
+
+        </div>
+
+
+        <!-- ====================================================
+             FOOTER
+        ===================================================== -->
+        <% if (notificationRows.length) { %>
+
+            <div class="notification-footer">
+
+                <div class="notification-footer-info">
+                    Menampilkan
+                    <strong id="notificationVisibleCount">
+                        <%= notificationRows.length %>
+                    </strong>
+                    notifikasi
+                </div>
+
+            </div>
+
+        <% } %>
+
+    </div>
+
+</div>
+
+
+<style>
+
+/* ============================================================
+   NOTIFICATION PAGE
+============================================================ */
+
+.notification-page {
+    width: 100%;
+    padding: 0;
+}
+
+
+/* ============================================================
+   MAIN CARD
+============================================================ */
+
+.notification-card {
+    background: #ffffff;
+    border: 1px solid #e8e8ed;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow:
+        0 10px 30px rgba(31, 41, 55, 0.06);
+}
+
+
+/* ============================================================
+   HEADER
+============================================================ */
+
+.notification-header {
+    padding: 20px 22px;
+    border-bottom: 1px solid #e8e8ed;
+    background:
+        linear-gradient(
+            180deg,
+            #ffffff 0%,
+            #fbfbfd 100%
+        );
+}
+
+.notification-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.notification-title-icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 12px;
+
+    background: #eaf8ef;
+    color: #16a34a;
+
+    font-size: 17px;
+}
+
+.notification-title {
+    margin: 0;
+
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    color: #172033;
+}
+
+.notification-subtitle {
+    margin-top: 2px;
+
+    font-size: 12px;
+    color: #8b94a4;
+}
+
+
+/* ============================================================
+   STATISTICS
+============================================================ */
+
+.notification-stats {
+    display: grid;
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 12px;
+
+    padding: 18px 22px 8px;
+}
+
+.notification-stat {
+    min-height: 78px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 14px;
+
+    border: 1px solid #e8e8ed;
+    border-radius: 16px;
+
+    background: #ffffff;
+
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.notification-stat:hover {
+    transform: translateY(-1px);
+
+    box-shadow:
+        0 8px 22px rgba(31, 41, 55, 0.05);
+}
+
+.notification-stat-icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 12px;
+
+    font-size: 16px;
+}
+
+.notification-stat-icon.total {
+    background: #eaf8ef;
+    color: #16a34a;
+}
+
+.notification-stat-icon.unread {
+    background: #fff7df;
+    color: #c88700;
+}
+
+.notification-stat-icon.read {
+    background: #edf4ff;
+    color: #3478db;
+}
+
+.notification-stat-icon.recent {
+    background: #f4efff;
+    color: #7652c9;
+}
+
+.notification-stat-value {
+    font-size: 23px;
+    line-height: 1;
+
+    font-weight: 800;
+
+    color: #172033;
+}
+
+.notification-stat-label {
+    margin-top: 5px;
+
+    font-size: 10px;
+    line-height: 1.2;
+
+    color: #8b94a4;
+}
+
+
+/* ============================================================
+   TOOLBAR
+============================================================ */
+
+.notification-toolbar {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 14px 22px 16px;
+
+    border-bottom: 1px solid #e8e8ed;
+}
+
+.notification-search {
+    position: relative;
+
+    flex: 1;
+}
+
+.notification-search > i {
+    position: absolute;
+
+    left: 13px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    color: #8b94a4;
+
+    font-size: 14px;
+
+    z-index: 2;
+}
+
+.notification-search .form-control {
+    height: 40px;
+
+    padding-left: 38px;
+
+    border: 1px solid #e1e6ed;
+    border-radius: 12px;
+
+    background: #f7f8fa;
+
+    color: #172033;
+
+    font-size: 12px;
+
+    box-shadow: none;
+}
+
+.notification-search .form-control::placeholder {
+    color: #9ba3af;
+}
+
+.notification-search .form-control:focus {
+    border-color: #b8dfc4;
+
+    background: #ffffff;
+
+    box-shadow:
+        0 0 0 3px rgba(22, 163, 74, 0.08);
+}
+
+.notification-filter-btn {
+    height: 40px;
+
+    padding: 0 14px;
+
+    border: 1px solid #e1e6ed;
+    border-radius: 12px;
+
+    background: #ffffff;
+
+    color: #566071;
+
+    font-size: 12px;
+    font-weight: 600;
+
+    transition: all 0.2s ease;
+}
+
+.notification-filter-btn:hover {
+    background: #f7f8fa;
+    border-color: #d7dce4;
+    color: #172033;
+}
+
+
+/* ============================================================
+   BODY
+============================================================ */
+
+.notification-body {
+    padding: 0 22px;
+}
+
+
+/* ============================================================
+   LIST
+============================================================ */
+
+.notification-list {
+    width: 100%;
+}
+
+.notification-item {
+    display: flex;
+
+    gap: 14px;
+
+    padding: 17px 2px;
+
+    border-bottom: 1px solid #edf0f4;
+
+    transition:
+        background 0.2s ease,
+        padding 0.2s ease;
+}
+
+.notification-item:last-child {
+    border-bottom: 0;
+}
+
+.notification-item:hover {
+    background: #fbfcfd;
+}
+
+
+/* ============================================================
+   ITEM ICON
+============================================================ */
+
+.notification-item-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 13px;
+
+    background: #eaf8ef;
+    color: #16a34a;
+
+    font-size: 17px;
+
+    border: 1px solid #d9f0df;
+}
+
+
+/* ============================================================
+   ITEM CONTENT
+============================================================ */
+
+.notification-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-item-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+
+    gap: 12px;
+}
+
+.notification-item-title {
+    min-width: 0;
+
+    color: #172033;
+
+    font-size: 13px;
+    font-weight: 750;
+
+    line-height: 1.4;
+}
+
+.notification-item-message {
+    margin-top: 4px;
+
+    color: #667085;
+
+    font-size: 12px;
+    line-height: 1.55;
+
+    word-break: break-word;
+}
+
+.notification-item-date {
+    display: flex;
+    align-items: center;
+
+    margin-top: 8px;
+
+    color: #9aa3b1;
+
+    font-size: 10px;
+}
+
+
+/* ============================================================
+   READ / UNREAD
+============================================================ */
+
+.notification-item.is-unread .notification-item-title {
+    font-weight: 800;
+}
+
+.notification-item.is-unread .notification-item-icon {
+    box-shadow:
+        0 0 0 3px rgba(22, 163, 74, 0.06);
+}
+
+.notification-item.is-read .notification-item-icon {
+    background: #f5f6f8;
+    border-color: #e8e8ed;
+    color: #8b94a4;
+}
+
+
+/* ============================================================
+   BADGES
+============================================================ */
+
+.notification-badge {
+    flex-shrink: 0;
+
+    display: inline-flex;
+    align-items: center;
+
+    padding: 6px 9px;
+
+    border-radius: 9px;
+
+    font-size: 10px;
+    font-weight: 650;
+
+    white-space: nowrap;
+}
+
+.notification-badge-new {
+    background: #eaf8ef;
+    color: #16813d;
+}
+
+.notification-badge-read {
+    background: #f1f3f5;
+    color: #7a8494;
+}
+
+
+/* ============================================================
+   EMPTY STATE
+============================================================ */
+
+.notification-empty,
+.notification-search-empty {
+    text-align: center;
+
+    padding: 60px 20px;
+}
+
+.notification-empty-icon {
+    width: 58px;
+    height: 58px;
+
+    margin: 0 auto 14px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 17px;
+
+    background: #f1f8f3;
+    color: #16a34a;
+
+    font-size: 22px;
+}
+
+.notification-empty-icon.small {
+    width: 50px;
+    height: 50px;
+
+    border-radius: 15px;
+
+    font-size: 18px;
+}
+
+.notification-empty-title {
+    color: #172033;
+
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.notification-empty-text {
+    max-width: 420px;
+
+    margin: 5px auto 0;
+
+    color: #8b94a4;
+
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+
+/* ============================================================
+   FOOTER
+============================================================ */
+
+.notification-footer {
+    padding: 14px 22px;
+
+    border-top: 1px solid #e8e8ed;
+
+    background: #fbfbfd;
+}
+
+.notification-footer-info {
+    color: #8b94a4;
+
+    font-size: 11px;
+}
+
+.notification-footer-info strong {
+    color: #172033;
+    font-weight: 750;
+}
+
+
+/* ============================================================
+   FORM / GLOBAL COMPATIBILITY
+============================================================ */
+
+.notification-page .form-control,
+.notification-page .form-select {
+    border-color: #e1e6ed;
+    border-radius: 12px;
+}
+
+.notification-page .form-control:focus,
+.notification-page .form-select:focus {
+    border-color: #b8dfc4;
+
+    box-shadow:
+        0 0 0 3px rgba(22, 163, 74, 0.08);
+}
+
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (max-width: 991.98px) {
+
+    .notification-stats {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+
+@media (max-width: 767.98px) {
+
+    .notification-card {
+        border-radius: 18px;
+    }
+
+    .notification-header {
+        padding: 17px 16px;
+    }
+
+    .notification-stats {
+        padding: 14px 16px 6px;
+
+        gap: 8px;
+    }
+
+    .notification-stat {
+        min-height: 70px;
+
+        padding: 11px;
+
+        gap: 9px;
+
+        border-radius: 14px;
+    }
+
+    .notification-stat-icon {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+
+        border-radius: 10px;
+
+        font-size: 14px;
+    }
+
+    .notification-stat-value {
+        font-size: 19px;
+    }
+
+    .notification-stat-label {
+        font-size: 9px;
+    }
+
+    .notification-toolbar {
+        padding: 12px 16px 14px;
+    }
+
+    .notification-filter-btn {
+        padding: 0 11px;
+    }
+
+    .notification-body {
+        padding: 0 16px;
+    }
+
+    .notification-item {
+        gap: 10px;
+
+        padding: 14px 0;
+    }
+
+    .notification-item-icon {
+        width: 38px;
+        height: 38px;
+        min-width: 38px;
+
+        border-radius: 11px;
+
+        font-size: 15px;
+    }
+
+    .notification-item-top {
+        align-items: flex-start;
+        flex-direction: column;
+
+        gap: 6px;
+    }
+
+    .notification-badge {
+        padding: 5px 8px;
+
+        font-size: 9px;
+    }
+
+    .notification-footer {
+        padding: 12px 16px;
+    }
+
+}
+
+
+@media (max-width: 480px) {
+
+    .notification-title {
+        font-size: 14px;
+    }
+
+    .notification-subtitle {
+        font-size: 10px;
+    }
+
+    .notification-stats {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .notification-stat {
+        min-height: 66px;
+    }
+
+    .notification-stat-icon {
+        display: none;
+    }
+
+    .notification-stat-value {
+        font-size: 18px;
+    }
+
+    .notification-stat-label {
+        font-size: 9px;
+    }
+
+    .notification-search .form-control {
+        height: 38px;
+    }
+
+    .notification-filter-btn {
+        height: 38px;
+
+        font-size: 10px;
+    }
+
+}
+
+
+/* ============================================================
+   HIDDEN SEARCH RESULT
+============================================================ */
+
+.notification-item.notification-hidden {
+    display: none !important;
+}
+
+</style>
+
+
+<script>
+(function () {
+
+    "use strict";
+
+    const searchInput =
+        document.getElementById("notificationSearch");
+
+    const resetButton =
+        document.getElementById("notificationReset");
+
+    const notificationList =
+        document.getElementById("notificationList");
+
+    const searchEmpty =
+        document.getElementById("notificationSearchEmpty");
+
+    const visibleCount =
+        document.getElementById("notificationVisibleCount");
+
+
+    if (!notificationList) {
+        return;
+    }
+
+
+    const items =
+        Array.from(
+            notificationList.querySelectorAll(
+                ".notification-item"
+            )
+        );
+
+
+    function filterNotifications() {
+
+        const keyword =
+            searchInput
+                ? searchInput.value
+                    .trim()
+                    .toLowerCase()
+                : "";
+
+
+        let visible = 0;
+
+
+        items.forEach(function (item) {
+
+            const searchText =
+                (
+                    item.dataset.search || ""
+                ).toLowerCase();
+
+
+            const match =
+                !keyword ||
+                searchText.includes(keyword);
+
+
+            if (match) {
+
+                item.classList.remove(
+                    "notification-hidden"
+                );
+
+                visible++;
+
+            } else {
+
+                item.classList.add(
+                    "notification-hidden"
+                );
+
+            }
+
+        });
+
+
+        if (visibleCount) {
+
+            visibleCount.textContent =
+                visible;
+
+        }
+
+
+        if (searchEmpty) {
+
+            searchEmpty.style.display =
+                visible === 0
+                    ? ""
+                    : "none";
+
+        }
+
+    }
+
+
+    if (searchInput) {
+
+        searchInput.addEventListener(
+            "input",
+            filterNotifications
+        );
+
+        searchInput.addEventListener(
+            "keydown",
+            function (event) {
+
+                if (event.key === "Escape") {
+
+                    searchInput.value = "";
+
+                    filterNotifications();
+
+                    searchInput.blur();
+
+                }
+
+            }
+        );
+
+    }
+
+
+    if (resetButton) {
+
+        resetButton.addEventListener(
+            "click",
+            function () {
+
+                if (searchInput) {
+                    searchInput.value = "";
+                }
+
+                filterNotifications();
+
+            }
+        );
+
+    }
+
+
+})();
+</script>

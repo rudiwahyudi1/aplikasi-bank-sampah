@@ -1,0 +1,508 @@
+<%
+const list = typeof wasteTypes !== "undefined" && Array.isArray(wasteTypes) ? wasteTypes : [];
+const cats = typeof categories !== "undefined" && Array.isArray(categories) ? categories : [];
+const sum = typeof summary !== "undefined" && summary ? summary : { total_types: 0, avg_price: 0, max_price: 0, total_categories: 0 };
+const flt = typeof filters !== "undefined" && filters ? filters : { category: "", keyword: "" };
+
+const categoryBadge = {
+    plastik: { label: 'Plastik', class: 'bg-info text-dark' },
+    kertas: { label: 'Kertas / Kardus', class: 'bg-primary text-white' },
+    logam: { label: 'Logam / Besi', class: 'bg-secondary text-white' },
+    kaca: { label: 'Kaca / Beling', class: 'bg-warning text-dark' },
+    organik: { label: 'Organik / Sisa', class: 'bg-success text-white' },
+    elektronik: { label: 'Limbah Elektronik', class: 'bg-dark text-white' },
+    lainnya: { label: 'Lainnya', class: 'bg-light text-dark border' }
+};
+%>
+
+<style>
+.calc-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 1rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+.simulasi-box {
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+    border: 1px solid #bbf7d0;
+    border-radius: 16px;
+    padding: 20px;
+}
+.result-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    height: 100%;
+    transition: transform 0.15s ease;
+}
+.result-card:hover {
+    transform: translateY(-2px);
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="calc-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:18px;">
+                        <i class="bi bi-calculator-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;">KALKULATOR & DAMPAK LINGKUNGAN</h5>
+                        <div class="small mt-1" style="color: #16a34a; font-size: 11px;">Simulasi nilai rupiah tabungan, estimasi reward poin, dan reduksi jejak karbon (CO2) sampah.</div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-success fw-semibold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#modalPanduanEco">
+                        <i class="bi bi-info-circle me-1"></i> Metodologi Karbon
+                    </button>
+                    <a href="/collection" class="btn btn-success fw-semibold shadow-sm px-3">
+                        <i class="bi bi-truck me-1"></i> Jemput Sampah
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Jenis Sampah</div>
+                            <div class="stat-value text-dark"><%= sum.total_types %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-recycle"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Komoditas aktif bernilai</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Rata-rata Harga</div>
+                            <div class="stat-value text-primary">Rp <%= Number(Math.round(sum.avg_price)).toLocaleString('id-ID') %></div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-cash-coin"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Per kilogram rata-rata</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Harga Tertinggi</div>
+                            <div class="stat-value text-warning">Rp <%= Number(sum.max_price).toLocaleString('id-ID') %></div>
+                        </div>
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Tembaga / anorganik khusus</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Kategori Material</div>
+                            <div class="stat-value text-success"><%= sum.total_categories %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-tags-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Plastik, kertas, logam, dll</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIMULASI INTERAKTIF CEPAT -->
+        <div class="simulasi-box mb-4 shadow-sm">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <div class="badge bg-success text-white px-2 py-1 rounded-pill">
+                    <i class="bi bi-lightning-charge-fill me-1"></i> Simulasi Langsung
+                </div>
+                <h6 class="mb-0 fw-bold text-dark">Hitung Nilai Tabungan & Manfaat Bumi</h6>
+            </div>
+            
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-5">
+                    <label class="form-label small fw-semibold text-muted mb-1">Pilih Jenis Sampah</label>
+                    <select id="simWasteSelect" class="form-select bg-white rounded-3 py-2 border-success-subtle">
+                        <% list.forEach((w, idx) => { %>
+                        <option value="<%= w.id %>" 
+                                data-price="<%= w.price_per_unit %>" 
+                                data-unit="<%= w.unit || 'kg' %>"
+                                data-co2="<%= w.co2_factor %>"
+                                data-tree="<%= w.tree_factor %>"
+                                data-name="<%= w.name %>"
+                                <%= idx === 0 ? 'selected' : '' %>>
+                            <%= w.name %> (<%= w.category.toUpperCase() %>) - Rp <%= Number(w.price_per_unit).toLocaleString('id-ID') %> / <%= w.unit %>
+                        </option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small fw-semibold text-muted mb-1">Perkiraan Berat / Jumlah (<span id="simUnitLabel">kg</span>)</label>
+                    <div class="input-group">
+                        <input type="number" id="simWeightInput" step="0.5" min="0.1" value="5.0" class="form-control bg-white rounded-start-3 py-2 border-success-subtle fw-bold text-dark">
+                        <span class="input-group-text bg-white border-success-subtle text-muted" id="simUnitBadge">kg</span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-4 d-flex gap-2">
+                    <button type="button" class="btn btn-success w-100 py-2 rounded-3 fw-semibold shadow-sm" onclick="hitungSimulasi()">
+                        <i class="bi bi-calculator me-1"></i> Hitung Sekarang
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary py-2 rounded-3" onclick="resetSimulasi()" title="Reset Nilai">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Kartu Hasil Simulasi Real-time -->
+            <div class="row g-3 mt-1 pt-2">
+                <div class="col-6 col-md-3">
+                    <div class="result-card shadow-sm border-start border-success border-3">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="small text-muted fw-semibold" style="font-size: 11px;">ESTIMASI SALDO</span>
+                            <i class="bi bi-wallet2 text-success"></i>
+                        </div>
+                        <div class="fs-5 fw-bold text-success" id="resMoney">Rp 0</div>
+                        <div class="small text-muted" style="font-size: 10px;">Langsung masuk ke rekening</div>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <div class="result-card shadow-sm border-start border-warning border-3">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="small text-muted fw-semibold" style="font-size: 11px;">ESTIMASI POIN</span>
+                            <i class="bi bi-stars text-warning"></i>
+                        </div>
+                        <div class="fs-5 fw-bold text-warning" id="resPoints">0 Poin</div>
+                        <div class="small text-muted" style="font-size: 10px;">Bisa ditukar sembako/hadiah</div>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <div class="result-card shadow-sm border-start border-info border-3">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="small text-muted fw-semibold" style="font-size: 11px;">REDUKSI EMISI CO₂</span>
+                            <i class="bi bi-cloud-check-fill text-info"></i>
+                        </div>
+                        <div class="fs-5 fw-bold text-info" id="resCo2">0.0 kg CO₂e</div>
+                        <div class="small text-muted" style="font-size: 10px;">Cegah polusi pemanasan global</div>
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3">
+                    <div class="result-card shadow-sm border-start border-success border-3">
+                        <div class="d-flex align-items-center justify-content-between mb-1">
+                            <span class="small text-muted fw-semibold" style="font-size: 11px;">SETARA POHON</span>
+                            <i class="bi bi-tree-fill text-success"></i>
+                        </div>
+                        <div class="fs-5 fw-bold text-success" id="resTree">0.00 Pohon</div>
+                        <div class="small text-muted" style="font-size: 10px;">Serapan oksigen lingkungan</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="p-3 bg-light rounded-4 mb-4">
+            <form method="GET" action="/calculator" class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="keyword" class="form-control bg-white border-start-0" placeholder="Cari nama sampah, kode, atau material..." value="<%= flt.keyword || '' %>">
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <select name="category" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Kategori Sampah</option>
+                        <% cats.forEach(c => { %>
+                        <option value="<%= c %>" <%= flt.category === c ? 'selected' : '' %>>
+                            <%= c.toUpperCase() %>
+                        </option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3"><i class="bi bi-funnel me-1"></i> Filter</button>
+                    <a href="/calculator" class="btn btn-outline-secondary rounded-3" title="Reset Filter"><i class="bi bi-arrow-counterclockwise"></i></a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabel Referensi Master Nilai Konversi -->
+        <div class="table-card">
+            <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
+                <table class="table table-hover align-middle mb-0" style="min-width: 780px;">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Kode & Nama Sampah</th>
+                            <th>Kategori</th>
+                            <th>Harga Tabungan (Nasabah)</th>
+                            <th>Estimasi Poin Reward</th>
+                            <th>Faktor Reduksi CO₂</th>
+                            <th>Dampak Penyelamatan</th>
+                            <th class="pe-4 text-end">Aksi Simulasi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (list.length === 0) { %>
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                Tidak ada jenis sampah yang cocok dengan filter.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% list.forEach(item => { 
+                            const badge = categoryBadge[item.category.toLowerCase()] || { label: item.category, class: 'bg-light text-dark' };
+                        %>
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark"><%= item.name %></div>
+                                <div class="small text-muted" style="font-size: 11px;"><%= item.code %></div>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill <%= badge.class %> px-2 py-1"><%= badge.label %></span>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-success">Rp <%= Number(item.price_per_unit).toLocaleString('id-ID') %></span>
+                                <span class="small text-muted">/ <%= item.unit %></span>
+                            </td>
+                            <td>
+                                <span class="badge bg-warning bg-opacity-10 text-warning fw-bold">
+                                    <i class="bi bi-stars me-1"></i><%= item.est_points %> Poin / <%= item.unit %>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-primary"><i class="bi bi-cloud-arrow-down me-1"></i><%= item.co2_factor %> kg CO₂e</span>
+                                <span class="small text-muted">/ <%= item.unit %></span>
+                            </td>
+                            <td class="small">
+                                <div class="text-success"><i class="bi bi-tree-fill me-1"></i><%= (item.tree_factor * 100).toFixed(2) %>% pohon</div>
+                                <div class="text-muted" style="font-size: 11px;"><%= item.eco_label %></div>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="pilihSampahSimulasi('<%= item.id %>', '<%= item.price_per_unit %>', '<%= item.unit %>', '<%= item.co2_factor %>', '<%= item.tree_factor %>', '<%= item.name %>')">
+                                    <i class="bi bi-calculator me-1"></i> Hitung
+                                </button>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PANDUAN METODOLOGI KARBON -->
+<div class="modal fade" id="modalPanduanEco" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-tree-fill text-success me-2"></i>Metodologi Jejak Karbon</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="small text-muted mb-3">
+                    Perhitungan dampak lingkungan pada sistem bank sampah kami mengacu pada koefisien faktor emisi daur ulang standar <strong>IPCC & Kementerian Lingkungan Hidup dan Kehutanan (KLHK)</strong>:
+                </p>
+
+                <div class="list-group list-group-flush small">
+                    <div class="list-group-item px-0 py-2 border-0">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-cup-straw text-info fs-5"></i>
+                            <div>
+                                <strong class="text-dark">Plastik (PET, HDPE, PP):</strong>
+                                <div class="text-muted">1 kg plastik daur ulang mencegah pelepasan ±1.5 kg CO₂e emisi minyak bumi.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-0 py-2 border-0">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-newspaper text-primary fs-5"></i>
+                            <div>
+                                <strong class="text-dark">Kertas & Kardus:</strong>
+                                <div class="text-muted">1 ton daur ulang kertas menyelamatkan 17 batang pohon dewasa dan 1.2 kg CO₂e/kg.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-0 py-2 border-0">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-hammer text-secondary fs-5"></i>
+                            <div>
+                                <strong class="text-dark">Logam & Kaleng Aluminium:</strong>
+                                <div class="text-muted">Menghemat 95% energi smelter tambang baru, setara ±4.0 kg CO₂e per kilogram.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-0 py-2 border-0">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-flower1 text-success fs-5"></i>
+                            <div>
+                                <strong class="text-dark">Sampah Organik (Kompos / Maggot):</strong>
+                                <div class="text-muted">Mencegah pembusukan anaerobik di TPA yang menghasilkan gas metana berbahaya (CH₄).</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-success rounded-3 px-4" data-bs-dismiss="modal">Saya Mengerti</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function hitungSimulasi() {
+    const select = document.getElementById('simWasteSelect');
+    const selectedOption = select.options[select.selectedIndex];
+    if (!selectedOption) return;
+
+    const price = parseFloat(selectedOption.getAttribute('data-price') || 0);
+    const co2Factor = parseFloat(selectedOption.getAttribute('data-co2') || 1.0);
+    const treeFactor = parseFloat(selectedOption.getAttribute('data-tree') || 0.002);
+    const weight = parseFloat(document.getElementById('simWeightInput').value || 0);
+
+    const totalMoney = Math.round(price * weight);
+    const totalPoints = Math.floor(totalMoney / 100);
+    const totalCo2 = (co2Factor * weight).toFixed(2);
+    const totalTree = (treeFactor * weight).toFixed(3);
+
+    document.getElementById('resMoney').innerText = 'Rp ' + totalMoney.toLocaleString('id-ID');
+    document.getElementById('resPoints').innerText = totalPoints.toLocaleString('id-ID') + ' Poin';
+    document.getElementById('resCo2').innerText = totalCo2 + ' kg CO₂e';
+    document.getElementById('resTree').innerText = totalTree + ' Pohon';
+}
+
+function pilihSampahSimulasi(id, price, unit, co2, tree, name) {
+    const select = document.getElementById('simWasteSelect');
+    for (let i = 0; i < select.options.length; i++) {
+        if (select.options[i].value == id) {
+            select.selectedIndex = i;
+            break;
+        }
+    }
+    document.getElementById('simUnitLabel').innerText = unit || 'kg';
+    document.getElementById('simUnitBadge').innerText = unit || 'kg';
+    hitungSimulasi();
+    // Smooth scroll up to simulation box
+    window.scrollTo({ top: 120, behavior: 'smooth' });
+}
+
+function resetSimulasi() {
+    document.getElementById('simWeightInput').value = '5.0';
+    hitungSimulasi();
+}
+
+document.getElementById('simWasteSelect').addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    const unit = opt.getAttribute('data-unit') || 'kg';
+    document.getElementById('simUnitLabel').innerText = unit;
+    document.getElementById('simUnitBadge').innerText = unit;
+    hitungSimulasi();
+});
+
+document.getElementById('simWeightInput').addEventListener('input', hitungSimulasi);
+
+// Initial calculation on load
+window.addEventListener('DOMContentLoaded', hitungSimulasi);
+</script>

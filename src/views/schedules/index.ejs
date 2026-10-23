@@ -1,0 +1,632 @@
+<%
+const list = typeof schedules !== "undefined" && Array.isArray(schedules) ? schedules : [];
+const logsList = typeof logs !== "undefined" && Array.isArray(logs) ? logs : [];
+const sum = typeof summary !== "undefined" && summary ? summary : { total_routes: 0, active_routes: 0, total_target_kg: 0, total_executions: 0 };
+const flt = typeof filters !== "undefined" && filters ? filters : { keyword: "", day: "", status: "" };
+const canEdit = typeof canManage !== "undefined" ? canManage : false;
+
+const statusBadge = {
+    active: { label: 'Rute Aktif', class: 'bg-success text-white', icon: 'bi-check-circle-fill' },
+    inactive: { label: 'Nonaktif', class: 'bg-secondary text-white', icon: 'bi-pause-circle-fill' },
+    maintenance: { label: 'Penyesuaian', class: 'bg-warning text-dark', icon: 'bi-exclamation-triangle-fill' }
+};
+%>
+
+<style>
+.schedules-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 1rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="schedules-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg, #e0e7ff, #c7d2fe); color:#4338ca; display:grid; place-items:center; font-size:20px; box-shadow: 0 2px 8px rgba(67, 56, 202, 0.2);">
+                        <i class="bi bi-calendar2-week-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939; letter-spacing: -0.3px;">JADWAL & RUTE PENJEMPUTAN WILAYAH</h5>
+                        <div class="small mt-1 text-muted" style="font-size: 11px;">Pengaturan rute rutin penjemputan per RW, alokasi armada, dan pencatatan tonase riil harian.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <% if (canEdit) { %>
+                    <button type="button" class="btn btn-outline-primary rounded-pill px-3 shadow-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalCatatLog">
+                        <i class="bi bi-clipboard-check-fill"></i>
+                        <span>Catat Realisasi Rute</span>
+                    </button>
+                    <button type="button" class="btn btn-primary rounded-pill px-3 shadow-sm d-flex align-items-center gap-1 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalTambahRute">
+                        <i class="bi bi-plus-circle-fill"></i>
+                        <span>Tambah Rute Baru</span>
+                    </button>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile, persis layout inventory) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Total Rute Wilayah</div>
+                            <div class="stat-value text-dark"><%= sum.total_routes %> <span class="fs-6 fw-normal text-muted">zona</span></div>
+                        </div>
+                        <div class="stat-icon bg-indigo-subtle text-primary" style="background: #e0e7ff;">
+                            <i class="bi bi-signpost-2-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Cakupan area Bank Sampah</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Rute Aktif</div>
+                            <div class="stat-value text-success"><%= sum.active_routes %> <span class="fs-6 fw-normal text-muted">zona</span></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-check-circle-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Beroperasi rutin mingguan</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Target Kapasitas</div>
+                            <div class="stat-value text-primary"><%= Number(sum.total_target_kg).toLocaleString('id-ID') %> <span class="fs-6 fw-normal text-muted">kg</span></div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-truck"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Daya angkut per rit</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Kunjungan Terlaksana</div>
+                            <div class="stat-value text-info"><%= sum.total_executions %> <span class="fs-6 fw-normal text-muted">rit</span></div>
+                        </div>
+                        <div class="stat-icon bg-info-subtle text-info">
+                            <i class="bi bi-calendar-check-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Total realisasi penjemputan</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="p-3 bg-light rounded-4 mb-4 border">
+            <form method="GET" action="/schedules" class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" name="keyword" class="form-control border-start-0 bg-white" placeholder="Cari nama wilayah, RT/RW, armada, atau driver..." value="<%= flt.keyword || '' %>">
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select name="day" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Hari Jemput</option>
+                        <option value="Senin" <%= flt.day === 'Senin' ? 'selected' : '' %>>Senin</option>
+                        <option value="Selasa" <%= flt.day === 'Selasa' ? 'selected' : '' %>>Selasa</option>
+                        <option value="Rabu" <%= flt.day === 'Rabu' ? 'selected' : '' %>>Rabu</option>
+                        <option value="Kamis" <%= flt.day === 'Kamis' ? 'selected' : '' %>>Kamis</option>
+                        <option value="Jumat" <%= flt.day === 'Jumat' ? 'selected' : '' %>>Jumat</option>
+                        <option value="Sabtu" <%= flt.day === 'Sabtu' ? 'selected' : '' %>>Sabtu</option>
+                        <option value="Minggu" <%= flt.day === 'Minggu' ? 'selected' : '' %>>Minggu</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select name="status" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Status</option>
+                        <option value="active" <%= flt.status === 'active' ? 'selected' : '' %>>Aktif</option>
+                        <option value="inactive" <%= flt.status === 'inactive' ? 'selected' : '' %>>Nonaktif</option>
+                        <option value="maintenance" <%= flt.status === 'maintenance' ? 'selected' : '' %>>Penyesuaian</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3">Cari Rute</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- TABEL 1: MASTER JADWAL & RUTE PENJEMPUTAN -->
+        <div class="mb-5">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-geo-alt-fill text-primary me-1"></i> Rute & Jadwal Operasional Wilayah
+                </h6>
+                <span class="text-muted small">Total <%= list.length %> rute terdata</span>
+            </div>
+
+            <div class="table-card table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width: 40px;">No</th>
+                            <th>Wilayah & Cakupan Area</th>
+                            <th>Hari Jemput</th>
+                            <th>Jam Operasional</th>
+                            <th>Armada & Driver PIC</th>
+                            <th>Target Kapasitas</th>
+                            <th>Status</th>
+                            <th class="pe-4 text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (list.length === 0) { %>
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-map fs-2 d-block mb-2 text-muted"></i>
+                                Tidak ada jadwal rute yang sesuai dengan filter pencarian.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% list.forEach((s, idx) => { 
+                            const st = statusBadge[s.status] || { label: s.status, class: 'bg-secondary text-white', icon: 'bi-circle' };
+                        %>
+                        <tr>
+                            <td class="ps-4 fw-bold text-muted"><%= idx + 1 %></td>
+                            <td>
+                                <div class="fw-bold text-dark fs-6"><%= s.zone_name %></div>
+                                <div class="text-muted small" style="font-size: 11px;">
+                                    <i class="bi bi-pin-map me-1 text-danger"></i><%= s.coverage_area %>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border px-2 py-1 fw-bold">
+                                    <i class="bi bi-calendar-event me-1 text-primary"></i> <%= s.day_of_week %>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-dark">
+                                    <i class="bi bi-clock me-1 text-muted"></i> <%= s.start_time %> - <%= s.end_time %> WIB
+                                </span>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark"><%= s.vehicle_type %></div>
+                                <div class="text-muted small" style="font-size: 11px;"><i class="bi bi-person-badge me-1"></i><%= s.driver_name %></div>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-primary"><%= Number(s.target_capacity_kg).toLocaleString('id-ID') %> kg</span>
+                                <div class="text-muted" style="font-size: 10px;">Realisasi: <%= Number(s.total_collected_kg || 0).toLocaleString('id-ID') %> kg (<%= s.total_runs %>x)</div>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill <%= st.class %> px-2 py-1">
+                                    <i class="bi <%= st.icon %> me-1"></i> <%= st.label %>
+                                </span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <% if (canEdit) { %>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-secondary rounded-start-pill px-2" onclick='openEditScheduleModal(<%= JSON.stringify(s) %>)' title="Edit Rute">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger rounded-end-pill px-2" onclick="deleteSchedule(<%= s.id %>)" title="Hapus Rute">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                                <% } else { %>
+                                <span class="text-muted small"><%= s.notes || '-' %></span>
+                                <% } %>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TABEL 2: LOG PELAKSANAAN RUTE & REALISASI TONASE (PERSIS LOG INVENTORY) -->
+        <div class="mt-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-clock-history text-success me-1"></i> Riwayat Pelaksanaan Rute & Muatan Riil
+                </h6>
+                <span class="text-muted small">Catatan ritase operasional terbaru</span>
+            </div>
+
+            <div class="table-card table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Tanggal Eksekusi</th>
+                            <th>Rute Wilayah</th>
+                            <th>Armada</th>
+                            <th>Rumah Terlayani</th>
+                            <th>Muatan Riil Terangkut</th>
+                            <th>Capaian Target</th>
+                            <th>Petugas / Driver</th>
+                            <th class="pe-4">Catatan Kondisi Lapangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (logsList.length === 0) { %>
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-clipboard-x fs-2 d-block mb-2 text-muted"></i>
+                                Belum ada log pelaksanaan penjemputan yang dicatat.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% logsList.forEach(l => { 
+                            const target = Number(l.target_capacity_kg || 1);
+                            const actual = Number(l.actual_weight_kg || 0);
+                            const pct = Math.round((actual / target) * 100);
+                        %>
+                        <tr>
+                            <td class="ps-4 fw-bold text-dark">
+                                <%= new Date(l.execution_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) %>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-dark"><%= l.zone_name %></span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border px-2 py-1"><%= l.vehicle_type %></span>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-dark"><%= l.households_served %> KK</span>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-success fs-6"><%= actual.toLocaleString('id-ID') %> kg</span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2" style="min-width: 100px;">
+                                    <div class="progress flex-grow-1" style="height: 6px;">
+                                        <div class="progress-bar <%= pct >= 100 ? 'bg-success' : 'bg-primary' %>" role="progressbar" style="width: <%= Math.min(100, pct) %>%"></div>
+                                    </div>
+                                    <span class="small fw-bold text-muted" style="font-size: 11px;"><%= pct %>%</span>
+                                </div>
+                            </td>
+                            <td class="small">
+                                <span class="text-dark fw-semibold"><%= l.officer_name || 'Petugas Lapangan' %></span>
+                            </td>
+                            <td class="pe-4 text-muted small" style="max-width: 250px;">
+                                <%= l.officer_notes || '-' %>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<% if (canEdit) { %>
+<!-- =======================================================
+     MODAL TAMBAH RUTE WILAYAH (ADMIN)
+======================================================== -->
+<div class="modal fade" id="modalTambahRute" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-geo-alt-fill text-primary me-2"></i>Tambah Rute Wilayah Baru</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/schedules/create">
+                <div class="modal-body py-3">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Nama Zona / Wilayah <span class="text-danger">*</span></label>
+                            <input type="text" name="zone_name" class="form-control rounded-3" placeholder="Contoh: Zona 1 - RW 05 Kelurahan Maju" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Cakupan Area / Jalan <span class="text-danger">*</span></label>
+                            <input type="text" name="coverage_area" class="form-control rounded-3" placeholder="Contoh: RT 01 - 06 Jl. Melati & Kenanga" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Hari Penjemputan <span class="text-danger">*</span></label>
+                            <input type="text" name="day_of_week" class="form-control rounded-3" placeholder="Contoh: Senin & Kamis" required>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label class="form-label small fw-semibold">Jam Mulai</label>
+                            <input type="time" name="start_time" class="form-control rounded-3" value="08:00" required>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label class="form-label small fw-semibold">Jam Selesai</label>
+                            <input type="time" name="end_time" class="form-control rounded-3" value="12:00" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Armada Kendaraan <span class="text-danger">*</span></label>
+                            <input type="text" name="vehicle_type" class="form-control rounded-3" placeholder="Contoh: Motor Tossa 01" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Driver / Petugas PIC <span class="text-danger">*</span></label>
+                            <input type="text" name="driver_name" class="form-control rounded-3" placeholder="Contoh: Pak Budi Santoso" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Target Kapasitas (Kg)</label>
+                            <input type="number" name="target_capacity_kg" class="form-control rounded-3" value="350" min="50" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Status Operasional</label>
+                            <select name="status" class="form-select rounded-3">
+                                <option value="active">Rute Aktif & Berjalan</option>
+                                <option value="inactive">Nonaktif Sementara</option>
+                                <option value="maintenance">Dalam Penyesuaian / Perbaikan Armada</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Catatan Tambahan (Opsional)</label>
+                            <input type="text" name="notes" class="form-control rounded-3" placeholder="Contoh: Akses gang sempit, gunakan motor roda tiga">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold">Simpan Jadwal Rute</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =======================================================
+     MODAL EDIT RUTE WILAYAH (ADMIN)
+======================================================== -->
+<div class="modal fade" id="modalEditRute" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square text-primary me-2"></i>Update Jadwal & Rute Wilayah</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEditRute" method="POST" action="">
+                <div class="modal-body py-3">
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Nama Zona / Wilayah <span class="text-danger">*</span></label>
+                            <input type="text" id="editZoneName" name="zone_name" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Cakupan Area / Jalan <span class="text-danger">*</span></label>
+                            <input type="text" id="editCoverage" name="coverage_area" class="form-control rounded-3" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Hari Penjemputan <span class="text-danger">*</span></label>
+                            <input type="text" id="editDay" name="day_of_week" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label class="form-label small fw-semibold">Jam Mulai</label>
+                            <input type="time" id="editStart" name="start_time" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-3 col-6">
+                            <label class="form-label small fw-semibold">Jam Selesai</label>
+                            <input type="time" id="editEnd" name="end_time" class="form-control rounded-3" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Armada Kendaraan</label>
+                            <input type="text" id="editVehicle" name="vehicle_type" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Driver / Petugas PIC</label>
+                            <input type="text" id="editDriver" name="driver_name" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Target Kapasitas (Kg)</label>
+                            <input type="number" id="editCapacity" name="target_capacity_kg" class="form-control rounded-3" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Status Operasional</label>
+                            <select id="editStatus" name="status" class="form-select rounded-3">
+                                <option value="active">Rute Aktif & Berjalan</option>
+                                <option value="inactive">Nonaktif Sementara</option>
+                                <option value="maintenance">Dalam Penyesuaian / Perbaikan Armada</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Catatan Tambahan</label>
+                            <input type="text" id="editNotes" name="notes" class="form-control rounded-3">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4 fw-bold">Update Rute</button>
+                </div>
+            </form>
+            <form id="formDeleteRute" method="POST" action="" style="display:none;"></form>
+        </div>
+    </div>
+</div>
+
+<!-- =======================================================
+     MODAL CATAT REALISASI RUTE (PETUGAS / ADMIN)
+======================================================== -->
+<div class="modal fade" id="modalCatatLog" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-clipboard-check-fill text-success me-2"></i>Catat Realisasi Penjemputan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/schedules/log">
+                <div class="modal-body py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Pilih Rute Wilayah <span class="text-danger">*</span></label>
+                        <select name="schedule_id" class="form-select rounded-3" required>
+                            <option value="">-- Pilih Rute --</option>
+                            <% list.forEach(s => { %>
+                            <option value="<%= s.id %>"><%= s.zone_name %> (<%= s.day_of_week %>)</option>
+                            <% }); %>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Tanggal Penjemputan <span class="text-danger">*</span></label>
+                            <input type="date" name="execution_date" class="form-control rounded-3" value="<%= new Date().toISOString().slice(0, 10) %>" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Rumah Terlayani (KK)</label>
+                            <input type="number" name="households_served" class="form-control rounded-3" placeholder="Contoh: 45" min="0">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Total Berat Sampah Terangkut (Kg) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" step="0.1" name="actual_weight_kg" class="form-control rounded-start-3" placeholder="Contoh: 345.5" required>
+                            <span class="input-group-text bg-light rounded-end-3">Kg</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Catatan Lapangan / Kendala (Opsional)</label>
+                        <textarea name="officer_notes" class="form-control rounded-3" rows="2" placeholder="Contoh: Jalan sedikit macet karena hajatan warga, antusiasme pilah plastik tinggi..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success rounded-3 px-4 fw-bold">Simpan Realisasi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<script>
+function openEditScheduleModal(s) {
+    document.getElementById('formEditRute').action = '/schedules/edit/' + s.id;
+    document.getElementById('editZoneName').value = s.zone_name || '';
+    document.getElementById('editCoverage').value = s.coverage_area || '';
+    document.getElementById('editDay').value = s.day_of_week || '';
+    document.getElementById('editStart').value = s.start_time || '08:00';
+    document.getElementById('editEnd').value = s.end_time || '12:00';
+    document.getElementById('editVehicle').value = s.vehicle_type || '';
+    document.getElementById('editDriver').value = s.driver_name || '';
+    document.getElementById('editCapacity').value = s.target_capacity_kg || 300;
+    document.getElementById('editStatus').value = s.status || 'active';
+    document.getElementById('editNotes').value = s.notes || '';
+
+    new bootstrap.Modal(document.getElementById('modalEditRute')).show();
+}
+
+function deleteSchedule(id) {
+    if (confirm('Yakin ingin menonaktifkan rute wilayah ini dari jadwal operasional?')) {
+        const delForm = document.getElementById('formDeleteRute');
+        delForm.action = '/schedules/delete/' + id;
+        delForm.submit();
+    }
+}
+</script>

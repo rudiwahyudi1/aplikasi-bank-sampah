@@ -1,0 +1,270 @@
+<%
+    const isEdit = !!u;
+    const formIdSuffix = isEdit ? ('_' + u.id) : '_new';
+%>
+
+<div class="row g-3">
+    <!-- NAMA LENGKAP -->
+    <div class="col-12">
+        <label class="form-label fw-semibold text-secondary small">
+            Nama Lengkap <span class="text-danger">*</span>
+        </label>
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-success">
+                <i class="bi bi-person-badge"></i>
+            </span>
+            <input 
+                type="text" 
+                class="form-control border-start-0 ps-0" 
+                name="full_name" 
+                required 
+                placeholder="Contoh: Ahmad Hidayat"
+                value="<%= u?.full_name || '' %>"
+            >
+        </div>
+    </div>
+
+    <!-- USERNAME & EMAIL -->
+    <div class="col-md-6">
+        <label class="form-label fw-semibold text-secondary small">
+            Username <span class="text-danger">*</span>
+        </label>
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-success">
+                <i class="bi bi-at"></i>
+            </span>
+            <input 
+                type="text" 
+                class="form-control border-start-0 ps-0" 
+                name="username" 
+                required 
+                placeholder="username_unik"
+                <%= isEdit ? 'readonly style="background-color:#f8fafc;"' : '' %>
+                value="<%= u?.username || '' %>"
+            >
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label fw-semibold text-secondary small">
+            Email Pengguna <span class="text-danger">*</span>
+        </label>
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-success">
+                <i class="bi bi-envelope"></i>
+            </span>
+            <input 
+                type="email" 
+                class="form-control border-start-0 ps-0" 
+                name="email" 
+                required 
+                placeholder="nama@email.com"
+                value="<%= u?.email || '' %>"
+            >
+        </div>
+    </div>
+
+    <!-- TELEPON & ROLE -->
+    <div class="col-md-6">
+        <label class="form-label fw-semibold text-secondary small">
+            Nomor Telepon / WhatsApp
+        </label>
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-success">
+                <i class="bi bi-telephone"></i>
+            </span>
+            <input 
+                type="text" 
+                class="form-control border-start-0 ps-0" 
+                name="phone" 
+                placeholder="081234567890"
+                value="<%= u?.phone || '' %>"
+            >
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label fw-semibold text-secondary small">
+            Peran Akun (Role) <span class="text-danger">*</span>
+        </label>
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-success">
+                <i class="bi bi-shield-check"></i>
+            </span>
+            <select class="form-select border-start-0 ps-0" name="role_id" required>
+                <% roles.forEach(r => { %>
+                    <option value="<%= r.id %>" <%= u?.roles?.includes(r.display_name) ? 'selected' : '' %>>
+                        <%= r.display_name %>
+                    </option>
+                <% }) %>
+            </select>
+        </div>
+    </div>
+
+    <!-- IDENTITAS KTP & USIA -->
+    <div class="col-md-7">
+        <label class="form-label fw-semibold text-secondary small">
+            Nomor KTP / NIK (16 Digit)
+        </label>
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-success">
+                <i class="bi bi-person-vcard"></i>
+            </span>
+            <input 
+                type="text" 
+                class="form-control border-start-0 ps-0 font-monospace" 
+                name="ktp_number" 
+                maxlength="25"
+                placeholder="Contoh: 3201234567890001"
+                value="<%= u?.ktp_number || '' %>"
+            >
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <label class="form-label fw-semibold text-secondary small">
+            Usia (Tahun)
+        </label>
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-success">
+                <i class="bi bi-calendar3"></i>
+            </span>
+            <input 
+                type="number" 
+                class="form-control border-start-0 ps-0" 
+                name="age" 
+                min="5" 
+                max="120"
+                placeholder="Contoh: 28"
+                value="<%= u?.age || '' %>"
+            >
+            <span class="input-group-text bg-light border-start-0 text-muted small">Tahun</span>
+        </div>
+    </div>
+
+    <!-- ALAMAT -->
+    <div class="col-12">
+        <label class="form-label fw-semibold text-secondary small">
+            Alamat Domisili
+        </label>
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-success align-items-start pt-2">
+                <i class="bi bi-geo-alt"></i>
+            </span>
+            <textarea 
+                class="form-control border-start-0 ps-0" 
+                name="address" 
+                rows="2" 
+                placeholder="Alamat lengkap pengguna..."
+            ><%= u?.address || '' %></textarea>
+        </div>
+    </div>
+
+    <!-- DATA REKENING BANK / E-WALLET (UNTUK PEMBAYARAN SALES) -->
+    <div class="col-12">
+        <div class="p-3 rounded-3 border bg-light bg-opacity-75">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-credit-card-2-front text-success fs-5"></i>
+                <div>
+                    <div class="fw-bold text-dark small">Rekening Bank / E-Wallet Pembayaran</div>
+                    <div class="text-muted" style="font-size:11px;">Digunakan petugas/admin saat mencairkan hasil penjualan sampah di Kasir/Sales</div>
+                </div>
+            </div>
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-secondary small mb-1">Nama Bank / E-Wallet</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-success">
+                            <i class="bi bi-bank"></i>
+                        </span>
+                        <select class="form-select border-start-0 ps-0 bg-white" name="bank_name">
+                            <option value="">-- Pilih Bank / E-Wallet --</option>
+                            <% const bankList = ['BCA', 'Mandiri', 'BRI', 'BNI', 'BSI', 'CIMB Niaga', 'Permata', 'Danamon', 'Bank Jatim', 'Bank DKI', 'DANA', 'GoPay', 'OVO', 'ShopeePay', 'LinkAja', 'Lainnya']; %>
+                            <% bankList.forEach(b => { %>
+                                <option value="<%= b %>" <%= (u?.bank_name || '').toUpperCase() === b.toUpperCase() ? 'selected' : '' %>><%= b %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-secondary small mb-1">Nomor Rekening / Akun</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-success">
+                            <i class="bi bi-hash"></i>
+                        </span>
+                        <input 
+                            type="text" 
+                            class="form-control border-start-0 ps-0 bg-white font-monospace" 
+                            name="bank_account_number" 
+                            placeholder="Contoh: 8830192831"
+                            value="<%= u?.bank_account_number || '' %>"
+                        >
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold text-secondary small mb-1">Atas Nama Rekening</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-success">
+                            <i class="bi bi-person-check"></i>
+                        </span>
+                        <input 
+                            type="text" 
+                            class="form-control border-start-0 ps-0 bg-white" 
+                            name="bank_account_holder" 
+                            placeholder="Nama pemilik rekening"
+                            value="<%= u?.bank_account_holder || '' %>"
+                        >
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PASSWORD (DENGAN TOGGLE LIHAT PASSWORD) & STATUS -->
+    <div class="col-md-6">
+        <label class="form-label fw-semibold text-secondary small">
+            Password 
+            <% if (isEdit) { %>
+                <span class="text-muted fw-normal fst-italic">(kosongkan jika tidak diubah)</span>
+            <% } else { %>
+                <span class="text-danger">*</span>
+            <% } %>
+        </label>
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-success">
+                <i class="bi bi-key-fill"></i>
+            </span>
+            <input 
+                type="password" 
+                class="form-control border-start-0 border-end-0 ps-0 user-password-input" 
+                name="password" 
+                id="userPasswordInput<%= formIdSuffix %>"
+                placeholder="<%= isEdit ? '•••••••• (tetap)' : 'Minimal 6 karakter' %>"
+                <%= isEdit ? '' : 'required' %>
+            >
+            <button 
+                type="button" 
+                class="btn btn-light border border-start-0 text-secondary toggle-user-password-btn" 
+                onclick="toggleUserPasswordVisibility('userPasswordInput<%= formIdSuffix %>', this)"
+                title="Lihat / Sembunyikan Password"
+            >
+                <i class="bi bi-eye"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <label class="form-label fw-semibold text-secondary small">
+            Status Akun <span class="text-danger">*</span>
+        </label>
+        <div class="input-group">
+            <span class="input-group-text bg-light border-end-0 text-success">
+                <i class="bi bi-toggle-on"></i>
+            </span>
+            <select class="form-select border-start-0 ps-0" name="status">
+                <option value="active" <%= u?.status !== 'inactive' ? 'selected' : '' %>>Aktif</option>
+                <option value="inactive" <%= u?.status === 'inactive' ? 'selected' : '' %>>Nonaktif</option>
+            </select>
+        </div>
+    </div>
+</div>

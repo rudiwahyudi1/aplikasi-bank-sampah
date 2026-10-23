@@ -1,0 +1,394 @@
+<%
+const s = typeof settings !== "undefined" && settings ? settings : {};
+const list = typeof rows !== "undefined" && Array.isArray(rows) ? rows : [];
+const sum = typeof summary !== "undefined" && summary ? summary : { bank_name: 'Bank Sampah', min_withdrawal: 10000, whatsapp: '-', operational: '-' };
+%>
+
+<style>
+.settings-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 0.95rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+.form-section-card {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 24px;
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="settings-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:18px;">
+                        <i class="bi bi-gear-wide-connected"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;">PENGATURAN PROFIL & PARAMETER BANK SAMPAH</h5>
+                        <div class="small mt-1" style="color: #16a34a; font-size: 11px;">Konfigurasi nama lembaga, alamat kantor, kontak WhatsApp CS resmi, dan batas minimal penarikan saldo.</div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-success fw-semibold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#previewProfileModal">
+                        <i class="bi bi-eye me-1"></i> Pratinjau Info Warga
+                    </button>
+                    <button type="button" class="btn btn-success fw-semibold shadow-sm px-4" onclick="document.getElementById('settingsForm').submit()">
+                        <i class="bi bi-check2-circle me-1"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Lembaga Bank Sampah</div>
+                            <div class="stat-value text-dark text-truncate" style="max-width: 130px;"><%= sum.bank_name %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-building-check"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Nama resmi institusi</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Min. Tarik Tunai</div>
+                            <div class="stat-value text-primary">Rp <%= Number(sum.min_withdrawal).toLocaleString('id-ID') %></div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Batas minimum pencairan</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">WhatsApp Resmi</div>
+                            <div class="stat-value text-success text-truncate" style="max-width: 130px;"><%= sum.whatsapp %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-whatsapp"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Nomor Call Center CS</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Jam Operasional</div>
+                            <div class="stat-value text-warning text-truncate" style="max-width: 130px;"><%= sum.operational %></div>
+                        </div>
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Jadwal buka layanan</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FORMULIR UTAMA PENGATURAN PROFIL -->
+        <form method="POST" action="/settings/update" id="settingsForm">
+            <div class="form-section-card mb-4 shadow-sm">
+                <div class="d-flex align-items-center gap-2 mb-4 pb-2 border-bottom">
+                    <div class="badge bg-success text-white px-2 py-1 rounded-pill">
+                        <i class="bi bi-sliders me-1"></i> Formulir Parameter
+                    </div>
+                    <h6 class="mb-0 fw-bold text-dark">Data Identitas Resmi & Kebijakan Operasional</h6>
+                </div>
+
+                <div class="row g-3">
+                    <!-- NAMA BANK SAMPAH -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small fw-semibold text-dark">
+                            <i class="bi bi-building me-1 text-success"></i> Nama Lembaga / Bank Sampah <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="bank_name" class="form-control rounded-3 py-2 bg-white" value="<%= s.bank_name || '' %>" placeholder="Contoh: Bank Sampah Induk Hijau Lestari" required>
+                        <div class="small text-muted mt-1" style="font-size: 11px;">Nama ini akan tercetak di kuitansi timbangan, kartu anggota, dan kop laporan resmi.</div>
+                    </div>
+
+                    <!-- WHATSAPP RESMI -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small fw-semibold text-dark">
+                            <i class="bi bi-whatsapp me-1 text-success"></i> Nomor WhatsApp Layanan CS <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="contact_whatsapp" class="form-control rounded-3 py-2 bg-white" value="<%= s.contact_whatsapp || '' %>" placeholder="Contoh: 081234567890" required>
+                        <div class="small text-muted mt-1" style="font-size: 11px;">Nomor tujuan warga saat mengklik tombol bantuan WhatsApp di HP.</div>
+                    </div>
+
+                    <!-- TELEPON KANTOR -->
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small fw-semibold text-dark">
+                            <i class="bi bi-telephone me-1 text-primary"></i> Nomor Telepon Kantor
+                        </label>
+                        <input type="text" name="contact_phone" class="form-control rounded-3 py-2 bg-white" value="<%= s.contact_phone || '' %>" placeholder="Contoh: 021-1234567">
+                    </div>
+
+                    <!-- EMAIL RESMI -->
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small fw-semibold text-dark">
+                            <i class="bi bi-envelope me-1 text-primary"></i> Email Resmi Bank Sampah
+                        </label>
+                        <input type="email" name="contact_email" class="form-control rounded-3 py-2 bg-white" value="<%= s.contact_email || '' %>" placeholder="admin@banksampah.id">
+                    </div>
+
+                    <!-- BATAS MINIMAL PENARIKAN SALDO -->
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small fw-semibold text-dark">
+                            <i class="bi bi-cash-stack me-1 text-warning"></i> Batas Minimal Tarik Tunai (Rp) <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white">Rp</span>
+                            <input type="number" step="1000" min="1000" name="min_withdrawal" class="form-control rounded-end-3 py-2 bg-white fw-bold text-dark" value="<%= s.min_withdrawal || '10000' %>" required>
+                        </div>
+                        <div class="small text-muted mt-1" style="font-size: 11px;">Nominal saldo terendah yang dapat dicairkan nasabah ke rekening/e-wallet.</div>
+                    </div>
+
+                    <!-- JAM OPERASIONAL -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small fw-semibold text-dark">
+                            <i class="bi bi-clock me-1 text-info"></i> Jam & Hari Operasional Kantor
+                        </label>
+                        <input type="text" name="operational_hours" class="form-control rounded-3 py-2 bg-white" value="<%= s.operational_hours || '' %>" placeholder="Contoh: Senin - Sabtu: 08.00 - 16.00 WIB">
+                    </div>
+
+                    <!-- PENGUMUMAN SISTEM -->
+                    <div class="col-12 col-md-6">
+                        <label class="form-label small fw-semibold text-dark">
+                            <i class="bi bi-megaphone me-1 text-danger"></i> Pengumuman / Motto Lingkungan
+                        </label>
+                        <input type="text" name="system_announcement" class="form-control rounded-3 py-2 bg-white" value="<%= s.system_announcement || '' %>" placeholder="Mari pilah sampah dari rumah demi bumi hijau!">
+                    </div>
+
+                    <!-- ALAMAT KANTOR & GUDANG -->
+                    <div class="col-12">
+                        <label class="form-label small fw-semibold text-dark">
+                            <i class="bi bi-geo-alt me-1 text-danger"></i> Alamat Kantor & Gudang Induk Pengolahan <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="office_address" rows="2" class="form-control rounded-3 bg-white" placeholder="Contoh: Jl. Kebersihan Lingkungan No. 08, RW 04, Kelurahan Sejahtera" required><%= s.office_address || '' %></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top d-flex justify-content-end gap-2">
+                    <button type="reset" class="btn btn-outline-secondary rounded-3 px-3">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Nilai
+                    </button>
+                    <button type="submit" class="btn btn-success rounded-3 px-4 fw-semibold shadow-sm">
+                        <i class="bi bi-check2-circle me-1"></i> Simpan Semua Pengaturan
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- TABEL RINCIAN PARAMETER SISTEM -->
+        <div class="table-card">
+            <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
+                <table class="table table-hover align-middle mb-0" style="min-width: 780px;">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Kunci Parameter</th>
+                            <th>Kategori Grup</th>
+                            <th>Deskripsi Penggunaan</th>
+                            <th>Nilai Parameter Aktif</th>
+                            <th class="pe-4 text-end">Terakhir Disimpan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (list.length === 0) { %>
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="bi bi-gear fs-1 d-block mb-2"></i>
+                                Belum ada daftar parameter tersimpan.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% list.forEach(item => { %>
+                        <tr>
+                            <td class="ps-4">
+                                <span class="font-monospace fw-bold text-dark"><%= item.setting_key %></span>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill bg-light text-dark border px-2 py-1"><%= item.setting_group.toUpperCase() %></span>
+                            </td>
+                            <td>
+                                <div class="text-dark"><%= item.description || '-' %></div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-success text-truncate" style="max-width: 280px;" title="<%= item.setting_value %>">
+                                    <%= item.setting_value %>
+                                </div>
+                            </td>
+                            <td class="pe-4 text-end small text-muted">
+                                <%= formatDate(item.updated_at) %>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL PRATINJAU PROFIL RESMI BAGI WARGA -->
+<div class="modal fade" id="previewProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-building-check text-success me-2"></i>Kartu Profil Resmi Bank Sampah</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <div class="p-3 bg-light rounded-4 border border-success-subtle mb-3">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <div style="width:48px; height:48px; border-radius:14px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:24px;">
+                            <i class="bi bi-recycle"></i>
+                        </div>
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark"><%= s.bank_name || 'Bank Sampah Induk' %></h6>
+                            <div class="small text-success"><i class="bi bi-patch-check-fill me-1"></i>Terverifikasi Resmi</div>
+                        </div>
+                    </div>
+
+                    <div class="list-group list-group-flush small bg-transparent">
+                        <div class="list-group-item px-0 py-2 bg-transparent border-0 d-flex gap-2">
+                            <i class="bi bi-geo-alt text-danger fs-6"></i>
+                            <div>
+                                <strong class="text-dark d-block">Alamat Kantor & Gudang:</strong>
+                                <span class="text-muted"><%= s.office_address || '-' %></span>
+                            </div>
+                        </div>
+                        <div class="list-group-item px-0 py-2 bg-transparent border-0 d-flex gap-2">
+                            <i class="bi bi-whatsapp text-success fs-6"></i>
+                            <div>
+                                <strong class="text-dark d-block">WhatsApp Call Center:</strong>
+                                <span class="text-muted"><%= s.contact_whatsapp || '-' %></span>
+                            </div>
+                        </div>
+                        <div class="list-group-item px-0 py-2 bg-transparent border-0 d-flex gap-2">
+                            <i class="bi bi-clock text-warning fs-6"></i>
+                            <div>
+                                <strong class="text-dark d-block">Jam Pelayanan:</strong>
+                                <span class="text-muted"><%= s.operational_hours || '-' %></span>
+                            </div>
+                        </div>
+                        <div class="list-group-item px-0 py-2 bg-transparent border-0 d-flex gap-2">
+                            <i class="bi bi-cash-stack text-primary fs-6"></i>
+                            <div>
+                                <strong class="text-dark d-block">Syarat Minimal Tarik Tabungan:</strong>
+                                <span class="text-success fw-bold">Rp <%= Number(s.min_withdrawal || 10000).toLocaleString('id-ID') %></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-success bg-success-subtle text-success border-0 small rounded-3 mb-0">
+                    <i class="bi bi-info-circle me-1"></i> Data di atas adalah tampilan identitas yang dilihat oleh nasabah saat mengajukan jemput sampah atau bertransaksi di aplikasi.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-success rounded-3 px-4" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>

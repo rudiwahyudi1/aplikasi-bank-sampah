@@ -1,0 +1,441 @@
+<%
+/* ============================================================
+   LAPORAN & MONITORING ANALITIK - APLIKASI SAMPAH TERINTEGRASI
+============================================================ */
+
+const safeStats = (typeof stats !== 'undefined' && stats) ? stats : {};
+const safeByWaste = (typeof byWaste !== 'undefined' && Array.isArray(byWaste)) ? byWaste : [];
+const safeByCompany = (typeof byCompany !== 'undefined' && Array.isArray(byCompany)) ? byCompany : [];
+const safeByBuyer = (typeof byBuyer !== 'undefined' && Array.isArray(byBuyer)) ? byBuyer : [];
+const safeStartDate = typeof startDate !== 'undefined' ? startDate : '';
+const safeEndDate = typeof endDate !== 'undefined' ? endDate : '';
+
+const totalWeightAll = Number(safeStats.weight || 0);
+const completionRate = (safeStats.collections && Number(safeStats.collections) > 0) 
+    ? Math.round((Number(safeStats.completed || 0) / Number(safeStats.collections)) * 100) 
+    : 0;
+%>
+
+<style>
+.reports-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.report-stat-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    height: 100%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    transition: transform .2s, box-shadow .2s;
+}
+.report-stat-card:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.report-stat-card .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.report-stat-card .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.report-stat-card .stat-value {
+    font-size: 24px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+.report-table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    margin-bottom: 24px;
+}
+.report-table-card .card-header {
+    background: #fff;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
+    font-weight: 700;
+    font-size: 14px;
+    color: #111827;
+}
+.report-table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.report-table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="reports-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:34px; height:34px; border-radius:10px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:16px;">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;">LAPORAN & MONITORING</h5>
+                        <div class="small mt-1" style="color: #16a34a; font-size: 10px;">Statistik sirkularitas sampah, evaluasi tonase penjemputan, dan omset penjualan daur ulang.</div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-success fw-semibold" data-bs-toggle="modal" data-bs-target="#exportReportsModal">
+                        <i class="bi bi-file-earmark-arrow-down me-1"></i> Export Laporan
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Periode Cepat -->
+        <div class="card bg-light border rounded-3 p-3 mb-4">
+            <form method="get" action="/reports" class="row g-2 align-items-center">
+                <div class="col-12 col-md-3">
+                    <div class="small fw-semibold text-dark mb-1"><i class="bi bi-calendar-range me-1 text-success"></i>Filter Rentang Tanggal:</div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <input type="date" name="start_date" class="form-control form-control-sm" value="<%= filters.start_date || '' %>">
+                </div>
+                <div class="col-6 col-md-3">
+                    <input type="date" name="end_date" class="form-control form-control-sm" value="<%= filters.end_date || '' %>">
+                </div>
+                <div class="col-12 col-md-3 d-flex gap-1">
+                    <button type="submit" class="btn btn-sm btn-success w-100 fw-semibold">
+                        <i class="bi bi-filter me-1"></i> Terapkan Filter
+                    </button>
+                    <% if (filters.start_date || filters.end_date) { %>
+                        <a href="/reports" class="btn btn-sm btn-light border text-danger" title="Reset Filter">
+                            <i class="bi bi-x-lg"></i>
+                        </a>
+                    <% } %>
+                </div>
+            </form>
+        </div>
+
+        <!-- 4 Kartu KPI Metrik -->
+        <div class="row g-3 mb-4">
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="report-stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-title">Total Tonase Sampah</div>
+                        <div class="stat-value text-success"><%= Number(safeStats.weight || 0).toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) %> <span class="fs-6 fw-bold">kg</span></div>
+                    </div>
+                    <div class="stat-icon bg-success-subtle text-success">
+                        <i class="bi bi-recycle"></i>
+                    </div>
+                </div>
+                <div class="small text-muted mt-2">
+                    <i class="bi bi-box-seam text-success me-1"></i> Total sampah berhasil dikumpulkan
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="report-stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-title">Omset Penjualan Sampah</div>
+                        <div class="stat-value text-primary">Rp <%= Number(safeStats.sales_value || 0).toLocaleString('id-ID') %></div>
+                    </div>
+                    <div class="stat-icon bg-primary-subtle text-primary">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                </div>
+                <div class="small text-muted mt-2">
+                    <i class="bi bi-check-all text-primary me-1"></i> Dari <%= safeStats.sales_count || 0 %> batch penjualan daur ulang
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="report-stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-title">Penjemputan Selesai</div>
+                        <div class="stat-value text-dark"><%= safeStats.completed || 0 %> <span class="fs-6 fw-normal text-muted">/ <%= safeStats.collections || 0 %></span></div>
+                    </div>
+                    <div class="stat-icon bg-info-subtle text-info">
+                        <i class="bi bi-truck"></i>
+                    </div>
+                </div>
+                <div class="small text-muted mt-2">
+                    Tingkat penyelesaian: <strong class="text-success"><%= completionRate %>%</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="report-stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-title">Nilai Tabungan Nasabah</div>
+                        <div class="stat-value text-warning">Rp <%= Number(safeStats.value || 0).toLocaleString('id-ID') %></div>
+                    </div>
+                    <div class="stat-icon bg-warning-subtle text-warning">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                </div>
+                <div class="small text-muted mt-2">
+                    Estimasi nilai ekonomi sampah nasabah
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabel 1: Rekapitulasi Berdasarkan Jenis & Kategori Sampah -->
+    <div class="report-table-card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-pie-chart text-success me-2"></i>Rekapitulasi Volume & Nilai per Jenis Sampah
+            </div>
+            <span class="badge bg-light text-dark border small fw-normal">
+                <%= safeByWaste.length %> Jenis Sampah
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 40px;" class="text-center">No</th>
+                        <th>Jenis Sampah</th>
+                        <th class="text-center">Kategori</th>
+                        <th class="text-end">Total Berat</th>
+                        <th style="width: 180px;">Proporsi Tonase</th>
+                        <th class="text-end">Total Nilai Ekonomi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (safeByWaste.length) { %>
+                        <% safeByWaste.forEach((w, idx) => { %>
+                            <% 
+                                const wWeight = Number(w.weight || 0);
+                                const pct = totalWeightAll > 0 ? Math.round((wWeight / totalWeightAll) * 100) : 0;
+                            %>
+                            <tr>
+                                <td class="text-center text-muted"><%= idx + 1 %></td>
+                                <td>
+                                    <div class="fw-bold text-dark"><%= w.name || '-' %></div>
+                                    <small class="text-muted">Satuan: <%= w.unit || 'kg' %></small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark border text-uppercase" style="font-size: 10px;"><%= w.category || '-' %></span>
+                                </td>
+                                <td class="text-end fw-bold text-dark fs-6">
+                                    <%= wWeight.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> kg
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height: 6px;">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: <%= pct %>%;"></div>
+                                        </div>
+                                        <span class="small fw-semibold text-muted" style="width: 35px;"><%= pct %>%</span>
+                                    </div>
+                                </td>
+                                <td class="text-end fw-bold text-success fs-6">
+                                    Rp <%= Number(w.value || 0).toLocaleString('id-ID') %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                Tidak ada data jenis sampah pada periode ini.
+                            </td>
+                        </tr>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Row 2 Kolom: Rekap Mitra Perusahaan & Rekap Penjualan Pabrik Daur Ulang -->
+    <div class="row g-4">
+        <!-- Rekap Pembeli / Pabrik Daur Ulang -->
+        <div class="col-12 col-lg-6">
+            <div class="report-table-card">
+                <div class="card-header">
+                    <i class="bi bi-building text-primary me-2"></i>Rekapitulasi Penjualan ke Mitra Pembeli
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Nama Pembeli / Pabrik</th>
+                                <th class="text-center">Transaksi</th>
+                                <th class="text-end">Total Tonase</th>
+                                <th class="text-end">Total Pembayaran</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (safeByBuyer.length) { %>
+                                <% safeByBuyer.forEach(b => { %>
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold text-dark"><%= b.buyer_name || 'Pembeli Umum' %></div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark border"><%= b.sales_count || 0 %> kali</span>
+                                        </td>
+                                        <td class="text-end fw-semibold">
+                                            <%= Number(b.total_weight || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> kg
+                                        </td>
+                                        <td class="text-end fw-bold text-primary">
+                                            Rp <%= Number(b.total_amount || 0).toLocaleString('id-ID') %>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">Belum ada transaksi penjualan pada periode ini.</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rekap Kemitraan Perusahaan / Wilayah -->
+        <div class="col-12 col-lg-6">
+            <div class="report-table-card">
+                <div class="card-header">
+                    <i class="bi bi-geo-alt text-danger me-2"></i>Rekapitulasi Sumber Sampah per Wilayah / Mitra
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Nama Perusahaan / Sumber</th>
+                                <th class="text-center">Pickup</th>
+                                <th class="text-end">Total Berat</th>
+                                <th class="text-end">Nilai Sampah</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (safeByCompany.length) { %>
+                                <% safeByCompany.forEach(c => { %>
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold text-dark"><%= c.company || '-' %></div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark border"><%= c.collections || 0 %> kali</span>
+                                        </td>
+                                        <td class="text-end fw-semibold">
+                                            <%= Number(c.weight || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %> kg
+                                        </td>
+                                        <td class="text-end fw-bold text-success">
+                                            Rp <%= Number(c.value || 0).toLocaleString('id-ID') %>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="4" class="text-center py-4 text-muted">Belum ada data kemitraan pada periode ini.</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- ========================================================
+     MODAL EXPORT LAPORAN ANALITIK
+========================================================= -->
+<div class="modal fade" id="exportReportsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="bi bi-file-earmark-arrow-down text-success me-2"></i>Export Laporan Analitik
+                    </h5>
+                    <div class="small text-muted">Pilih rentang tanggal untuk pratinjau PDF cetak resmi atau file Excel .xlsx.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="reportsExportForm" method="get" action="/reports/export/preview-pdf" target="_blank">
+                <div class="modal-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Dari Tanggal</label>
+                            <input type="date" class="form-control" name="start_date">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Sampai Tanggal</label>
+                            <input type="date" class="form-control" name="end_date">
+                        </div>
+                    </div>
+                    <div class="form-text text-muted">
+                        Kosongkan rentang tanggal jika ingin mengekspor seluruh akumulasi data yang tercatat di sistem.
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light d-flex flex-column-reverse flex-sm-row justify-content-between gap-2 p-3">
+                    <button type="button" class="btn btn-secondary w-100 w-sm-auto rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-sm-auto justify-content-end">
+                        <button type="button" id="btnReportPdf" class="btn btn-outline-primary fw-semibold w-100 w-sm-auto rounded-3 text-nowrap">
+                            <i class="bi bi-file-earmark-pdf me-1"></i> Pratinjau PDF
+                        </button>
+                        <button type="button" id="btnReportExcel" class="btn btn-success fw-semibold w-100 w-sm-auto rounded-3 text-nowrap">
+                            <i class="bi bi-file-earmark-excel me-1"></i> Unduh Excel
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const exportForm = document.getElementById("reportsExportForm");
+    const btnPdf = document.getElementById("btnReportPdf");
+    const btnExcel = document.getElementById("btnReportExcel");
+
+    if (btnPdf && exportForm) {
+        btnPdf.addEventListener("click", function () {
+            exportForm.action = "/reports/export/preview-pdf";
+            exportForm.target = "_blank";
+            exportForm.submit();
+        });
+    }
+
+    if (btnExcel && exportForm) {
+        btnExcel.addEventListener("click", function () {
+            exportForm.action = "/reports/export/excel";
+            exportForm.target = "_self";
+            exportForm.submit();
+        });
+    }
+});
+</script>

@@ -1,0 +1,893 @@
+<%
+const list = typeof members !== "undefined" && Array.isArray(members) ? members : [];
+const sum = typeof summary !== "undefined" && summary ? summary : { total_members: 0, active_members: 0, total_balance: 0, total_deposited_kg: 0 };
+const flt = typeof filters !== "undefined" && filters ? filters : { keyword: "", status: "", role: "" };
+const card = typeof myCard !== "undefined" ? myCard : null;
+const canEdit = typeof canManage !== "undefined" ? canManage : false;
+const usersDropdown = typeof userList !== "undefined" && Array.isArray(userList) ? userList : [];
+const autoCardId = typeof autoOpenCardId !== "undefined" ? autoOpenCardId : null;
+const isClientNasabah = typeof isNasabah !== "undefined" ? Boolean(isNasabah) : (typeof currentUser !== "undefined" && currentUser?.role === "nasabah");
+%>
+
+<style>
+.members-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 1rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+
+/* KARTU ANGGOTA DIGITAL PREMIUM */
+.digital-card {
+    background: linear-gradient(135deg, #064e3b 0%, #047857 55%, #0f766e 100%);
+    color: #ffffff;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 10px 25px -5px rgba(4, 120, 87, 0.4), 0 8px 10px -6px rgba(4, 120, 87, 0.2);
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1.586 / 1;
+    min-height: 220px;
+    max-width: 420px;
+    margin: 0 auto;
+}
+.digital-card::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+    pointer-events: none;
+}
+.digital-card-chip {
+    width: 40px;
+    height: 30px;
+    background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+    border-radius: 6px;
+    position: relative;
+    box-shadow: inset 0 1px 2px rgba(255,255,255,0.4);
+}
+.digital-card-chip::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(0,0,0,0.2);
+}
+@media print {
+    body {
+        background: #ffffff !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
+    .modal-backdrop, .sidebar, .topbar, .navbar, header, footer, .btn, .btn-close {
+        display: none !important;
+    }
+    .modal {
+        position: static !important;
+        display: block !important;
+        overflow: visible !important;
+    }
+    .modal-dialog {
+        margin: 0 auto !important;
+        max-width: 100% !important;
+    }
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+    }
+    .modal-header, .modal-footer {
+        display: none !important;
+    }
+    .digital-card {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        margin: 20px auto !important;
+        box-shadow: none !important;
+        border: 1px solid #047857 !important;
+    }
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="members-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:18px;">
+                        <i class="bi bi-person-vcard-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;"><%= isClientNasabah ? "KARTU ANGGOTA DIGITAL SAYA" : "KARTU ANGGOTA DIGITAL & DIREKTORI NASABAH" %></h5>
+                        <div class="small mt-1" style="color: #16a34a; font-size: 11px;">
+                            <%= isClientNasabah ? "Identitas resmi keanggotaan Anda dengan QR Code & Barcode untuk transaksi timbangan di pos sampah." : "Identitas resmi nasabah bank sampah dengan verifikasi QR Code untuk transaksi timbangan cepat." %>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <% if (canEdit) { %>
+                    <button type="button" class="btn btn-success fw-semibold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                        <i class="bi bi-person-plus-fill me-1"></i> Daftarkan Nasabah Baru
+                    </button>
+                    <% } %>
+                    <% if (card) { %>
+                    <button type="button" class="btn btn-success fw-semibold shadow-sm px-3" onclick="openMemberCard(<%= JSON.stringify(card) %>)">
+                        <i class="bi bi-qr-code-scan me-1"></i> Buka Kartu Digital Saya
+                    </button>
+                    <% } %>
+                    <% if (canEdit) { %>
+                    <button type="button" class="btn btn-outline-secondary fw-semibold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#scanSearchModal">
+                        <i class="bi bi-search me-1"></i> Cari / Scan ID
+                    </button>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title"><%= isClientNasabah ? "Status Keanggotaan" : "Total Anggota" %></div>
+                            <div class="stat-value text-dark"><%= isClientNasabah ? "Terverifikasi" : sum.total_members %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi <%= isClientNasabah ? 'bi-shield-fill-check' : 'bi-people-fill' %>"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2"><%= isClientNasabah ? "Akun nasabah aktif & sah" : "Seluruh akun terdaftar" %></div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title"><%= isClientNasabah ? "Nomor ID Anggota" : "Anggota Aktif" %></div>
+                            <div class="stat-value text-primary font-monospace" style="<%= isClientNasabah ? 'font-size:16px;' : '' %>"><%= isClientNasabah ? (card ? card.member_code : 'BS-2026') : sum.active_members %></div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi <%= isClientNasabah ? 'bi-upc-scan' : 'bi-person-check-fill' %>"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2"><%= isClientNasabah ? "Kode barcode penyetoran" : "Status keanggotaan aktif" %></div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title"><%= isClientNasabah ? "Saldo Tabungan Saya" : "Saldo Tabungan" %></div>
+                            <div class="stat-value text-warning">Rp <%= Number(sum.total_balance).toLocaleString('id-ID') %></div>
+                        </div>
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2"><%= isClientNasabah ? "Siap dicairkan ke rekening" : "Total dana warga tersimpan" %></div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title"><%= isClientNasabah ? "Sampah Terkumpul Saya" : "Sampah Tuntas" %></div>
+                            <div class="stat-value text-success"><%= Number(sum.total_deposited_kg).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %> <span class="fs-6 fw-normal text-muted">kg</span></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-trash3-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2"><%= isClientNasabah ? "Total sampah disetorkan" : "Akumulasi kg terpilah warga" %></div>
+                </div>
+            </div>
+        </div>
+
+        <% if (!isClientNasabah) { %>
+        <!-- Filter Bar (Khusus Pengelola) -->
+        <div class="p-3 bg-light rounded-4 mb-4">
+            <form method="GET" action="/members" class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="keyword" class="form-control bg-white border-start-0" placeholder="Cari nama, ID rekening, nomor HP, atau RW..." value="<%= flt.keyword || '' %>">
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select name="status" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Status Akun</option>
+                        <option value="active" <%= flt.status === 'active' ? 'selected' : '' %>>Aktif</option>
+                        <option value="inactive" <%= flt.status === 'inactive' ? 'selected' : '' %>>Nonaktif</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-2">
+                    <select name="role" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Peran</option>
+                        <option value="nasabah" <%= flt.role === 'nasabah' ? 'selected' : '' %>>Nasabah</option>
+                        <option value="petugas_pengumpulan" <%= flt.role === 'petugas_pengumpulan' ? 'selected' : '' %>>Petugas</option>
+                        <option value="admin_pengelola" <%= flt.role === 'admin_pengelola' ? 'selected' : '' %>>Pengelola</option>
+                        <option value="superadmin" <%= flt.role === 'superadmin' ? 'selected' : '' %>>Superadmin</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3"><i class="bi bi-funnel me-1"></i> Filter</button>
+                    <a href="/members" class="btn btn-outline-secondary rounded-3" title="Reset"><i class="bi bi-arrow-counterclockwise"></i></a>
+                </div>
+            </form>
+        </div>
+        <% } %>
+
+        <!-- Tabel Direktori Anggota -->
+        <div class="table-card">
+            <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
+                <h6 class="mb-0 fw-bold text-dark"><i class="bi bi-person-vcard text-success me-2"></i><%= isClientNasabah ? "Identitas Keanggotaan Saya" : "Daftar Direktori Nasabah" %></h6>
+                <span class="badge bg-light text-muted"><%= list.length %> Data</span>
+            </div>
+            <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
+                <table class="table table-hover align-middle mb-0" style="min-width: 820px;">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">No. ID Anggota</th>
+                            <th>Nama & Kontak</th>
+                            <th>Domisili / Lingkungan</th>
+                            <th>Total Setoran Sampah</th>
+                            <th>Saldo Tabungan</th>
+                            <th>Status & Peran</th>
+                            <th class="pe-4 text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (list.length === 0) { %>
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                Tidak ada data anggota nasabah yang cocok.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% list.forEach(item => { %>
+                        <tr>
+                            <td class="ps-4">
+                                <span class="fw-bold font-monospace text-success"><%= item.member_code %></span>
+                                <div class="small text-muted" style="font-size: 11px;">Gabung <%= formatDate(item.created_at) %></div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle bg-success-subtle text-success d-inline-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 12px;">
+                                        <%= item.full_name ? item.full_name.charAt(0).toUpperCase() : 'U' %>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark"><%= item.full_name %></div>
+                                        <div class="small text-muted"><i class="bi bi-telephone me-1"></i><%= item.phone || '-' %></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-dark"><%= item.address || 'Alamat belum diisi' %></div>
+                            </td>
+                            <td>
+                                <span class="badge bg-success bg-opacity-10 text-success fw-bold px-2 py-1">
+                                    <i class="bi bi-recycle me-1"></i><%= Number(item.total_kg).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %> kg
+                                </span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-primary">Rp <%= Number(item.wallet_balance).toLocaleString('id-ID') %></div>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill <%= item.status === 'active' ? 'bg-success' : 'bg-secondary' %> mb-1">
+                                    <%= item.status === 'active' ? 'Aktif' : 'Nonaktif' %>
+                                </span>
+                                <div class="small text-muted"><%= item.role_display || 'Nasabah' %></div>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="openMemberCard(<%= JSON.stringify(item) %>)">
+                                    <i class="bi bi-person-vcard me-1"></i> Buka Kartu
+                                </button>
+                                <a href="/collection?user_id=<%= item.id %>" class="btn btn-sm btn-light text-primary rounded-pill p-1 px-2 ms-1" title="Riwayat Setoran">
+                                    <i class="bi bi-clock-history"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL KARTU ANGGOTA DIGITAL PREMIUM -->
+<div class="modal fade" id="memberCardModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-vcard text-success me-2"></i>Kartu Anggota Digital</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-4">
+                <div id="printArea">
+                    <div class="digital-card shadow-lg">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="bg-white text-success rounded-3 p-1 px-2 fw-bold" style="font-size: 11px;">
+                                    <i class="bi bi-recycle me-1"></i> BANK SAMPAH
+                                </div>
+                                <span class="badge bg-white bg-opacity-25 text-white" style="font-size: 10px;">RESMI NASABAH</span>
+                            </div>
+                            <div class="text-white opacity-75 fs-5">
+                                <i class="bi bi-wifi"></i>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center my-3">
+                            <div class="digital-card-chip"></div>
+                            <div class="text-end">
+                                <div class="small text-white-50" style="font-size: 9px; text-transform: uppercase;">Saldo Tabungan</div>
+                                <div class="fw-bold fs-6 text-white" id="cardBalance">Rp 0</div>
+                            </div>
+                        </div>
+
+                        <div class="my-2">
+                            <div class="font-monospace fs-5 fw-bold text-white tracking-wider" id="cardMemberCode" style="letter-spacing: 2px;">
+                                BS-2026-0000
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-end mt-3 pt-1 border-top border-white border-opacity-25">
+                            <div>
+                                <div class="small text-white-50" style="font-size: 9px; text-transform: uppercase;">Nama Anggota</div>
+                                <div class="fw-bold text-white text-truncate" id="cardFullName" style="max-width: 220px; font-size: 13px;">
+                                    NAMA LENGKAP
+                                </div>
+                            </div>
+                            <div class="text-center bg-white p-1 rounded-3 shadow-sm" style="width: 54px; height: 54px;">
+                                <!-- QR Code via SVG/Canvas generator -->
+                                <img id="cardQrImage" src="" alt="QR Code" style="width: 46px; height: 46px;" class="d-block mx-auto">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mt-3 text-muted small">
+                    <i class="bi bi-shield-check text-success me-1"></i> Tunjukkan QR Code ini kepada petugas bank sampah untuk verifikasi timbangan instan.
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-success rounded-3 fw-semibold" onclick="printMemberCard()">
+                    <i class="bi bi-printer me-1"></i> Cetak Kartu
+                </button>
+                <button type="button" class="btn btn-success rounded-3 px-4" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL CARI / SCAN ID NASABAH -->
+<div class="modal fade" id="scanSearchModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-qr-code text-success me-2"></i>Cari ID Anggota / Scan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="small text-muted mb-3">Masukkan nomor rekening atau scan kode ID nasabah (contoh: <code>BS-2026-0002</code> atau ID angka <code>2</code>) untuk membuka kartu profil:</p>
+                <div class="input-group mb-3">
+                    <span class="input-group-text bg-light"><i class="bi bi-upc-scan"></i></span>
+                    <input type="text" id="scanInput" class="form-control font-monospace" placeholder="Contoh: BS-2026-0002 atau 2" autofocus>
+                    <button class="btn btn-success px-3" type="button" onclick="lookupMemberCode()">
+                        <i class="bi bi-arrow-right"></i> Cari
+                    </button>
+                </div>
+                <div id="scanResultBox" style="display:none;" class="p-3 bg-light rounded-3 border">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="fw-bold text-dark" id="scanName">-</div>
+                            <div class="small text-success font-monospace" id="scanCode">-</div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-success rounded-pill px-3" id="scanBtnOpen">
+                            Lihat Kartu
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL TERBITKAN / BUAT KARTU NASABAH -->
+<div class="modal fade" id="addMemberModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-vcard-fill text-success me-2"></i>Terbitkan Kartu Anggota Nasabah</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/members/create" id="formMemberCard">
+                <input type="hidden" name="entry_mode" id="entryModeInput" value="existing">
+
+                <div class="modal-body py-3">
+                    <p class="small text-muted mb-3">
+                        Pilih nama nasabah dari daftar pengguna sistem (database) untuk langsung menerbitkan & mengaktifkan kartu anggota digital ber-QR Code.
+                    </p>
+
+                    <!-- SECTION 1: DROPDOWN DARI TABEL USERS (DEFAULT) -->
+                    <div id="sectionDropdownUser">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-dark">
+                                <i class="bi bi-people-fill text-success me-1"></i> Pilih Nama Nasabah / Pengguna <span class="text-danger">*</span>
+                            </label>
+                            <select id="selectMemberUser" name="selected_user_id" class="form-select rounded-3 py-2 border-success-subtle bg-white fw-semibold text-dark">
+                                <option value="">-- Klik untuk Pilih Nama Nasabah --</option>
+                                <% usersDropdown.forEach(u => { %>
+                                <option value="<%= u.id %>" 
+                                        data-name="<%= u.full_name %>" 
+                                        data-username="<%= u.username %>"
+                                        data-phone="<%= u.phone || '-' %>" 
+                                        data-address="<%= u.address || '-' %>" 
+                                        data-email="<%= u.email %>" 
+                                        data-code="<%= u.member_code %>" 
+                                        data-balance="<%= u.wallet_balance %>"
+                                        data-kg="<%= u.total_kg %>">
+                                    <%= u.full_name %> (<%= u.username %> - <%= u.phone || 'Tanpa No. HP' %>)
+                                </option>
+                                <% }); %>
+                            </select>
+                            <div class="small text-muted mt-1" style="font-size: 11px;">
+                                <i class="bi bi-database-check text-success"></i> Data nama ditarik otomatis secara realtime dari database akun pengguna.
+                            </div>
+                        </div>
+
+                        <!-- KARTU PRATINJAU NASABAH TERPILIH -->
+                        <div id="userPreviewCard" class="p-3 bg-light rounded-3 border border-success-subtle mb-3" style="display: none;">
+                            <div class="d-flex align-items-center justify-content-between mb-2 pb-2 border-bottom">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle bg-success text-white d-inline-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 12px;" id="prevInitial">
+                                        U
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark" id="prevFullName">-</div>
+                                        <div class="small text-muted" id="prevUsername">-</div>
+                                    </div>
+                                </div>
+                                <span class="badge bg-success bg-opacity-10 text-success font-monospace" id="prevMemberCode">BS-2026-0000</span>
+                            </div>
+                            <div class="row g-2 small">
+                                <div class="col-6">
+                                    <span class="text-muted d-block" style="font-size: 10px;">NOMOR WHATSAPP/HP</span>
+                                    <strong class="text-dark" id="prevPhone">-</strong>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-muted d-block" style="font-size: 10px;">SALDO SAAT INI</span>
+                                    <strong class="text-success" id="prevBalance">Rp 0</strong>
+                                </div>
+                                <div class="col-12">
+                                    <span class="text-muted d-block" style="font-size: 10px;">ALAMAT DOMISILI</span>
+                                    <span class="text-dark" id="prevAddress">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION 2: INPUT WARGA BARU (OPSIONAL / TOGGLE) -->
+                    <div id="sectionManualUser" style="display: none;">
+                        <div class="p-3 bg-light rounded-3 border mb-3">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <h6 class="mb-0 fw-bold small text-dark"><i class="bi bi-person-plus text-success me-1"></i> Form Pendaftaran Warga Baru</h6>
+                                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 small text-danger" onclick="toggleEntryMode('existing')">
+                                    <i class="bi bi-arrow-left"></i> Kembali ke Dropdown
+                                </button>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Nama Lengkap Warga <span class="text-danger">*</span></label>
+                                <input type="text" id="inputNewFullName" name="full_name" class="form-control form-control-sm rounded-3" placeholder="Contoh: Siti Aminah">
+                            </div>
+
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Nomor WhatsApp/HP</label>
+                                    <input type="text" name="phone" class="form-control form-control-sm rounded-3" placeholder="08123456789">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold">Username Login</label>
+                                    <input type="text" name="username" class="form-control form-control-sm rounded-3" placeholder="Otomatis jika kosong">
+                                </div>
+                            </div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold">Alamat Domisili / RW</label>
+                                <input type="text" name="address" class="form-control form-control-sm rounded-3" placeholder="Contoh: Jl. Anggrek RT 02/RW 03">
+                            </div>
+
+                            <div class="mb-0">
+                                <label class="form-label small fw-semibold">Password Awal Akun</label>
+                                <input type="text" name="password" class="form-control form-control-sm rounded-3" value="nasabah123" placeholder="Default: nasabah123">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TOGGLE LINK -->
+                    <div class="text-center pt-1" id="toggleLinkBox">
+                        <button type="button" class="btn btn-link text-decoration-none p-0 small text-success fw-semibold" onclick="toggleEntryMode('new')">
+                            <i class="bi bi-plus-circle me-1"></i> Belum ada di daftar? Daftarkan Warga Baru
+                        </button>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success rounded-3 px-4 shadow-sm" id="btnSubmitMember">
+                        <i class="bi bi-check2-circle me-1"></i> Terbitkan & Buka Kartu
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const AUTO_OPEN_CARD_ID = "<%= autoCardId || '' %>";
+const MEMBERS_LIST = <%- JSON.stringify(list) %>;
+
+function openMemberCard(member) {
+    document.getElementById('cardMemberCode').innerText = member.member_code || ('BS-2026-' + String(member.id).padStart(4, '0'));
+    document.getElementById('cardFullName').innerText = (member.full_name || member.username || 'ANGGOTA NASABAH').toUpperCase();
+    document.getElementById('cardBalance').innerText = 'Rp ' + Number(member.wallet_balance || 0).toLocaleString('id-ID');
+    
+    // Generate QR Code URL with Google Charts or QR API
+    const qrData = encodeURIComponent('MEMBER:' + (member.member_code || member.id) + '|NAME:' + (member.full_name || member.username));
+    document.getElementById('cardQrImage').src = 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=' + qrData;
+
+    new bootstrap.Modal(document.getElementById('memberCardModal')).show();
+}
+
+function printMemberCard() {
+    const cardEl = document.querySelector("#printArea .digital-card");
+    if (!cardEl) return;
+
+    let printIframe = document.getElementById("cardPrintIframe");
+    if (!printIframe) {
+        printIframe = document.createElement("iframe");
+        printIframe.id = "cardPrintIframe";
+        printIframe.style.position = "fixed";
+        printIframe.style.right = "0";
+        printIframe.style.bottom = "0";
+        printIframe.style.width = "0";
+        printIframe.style.height = "0";
+        printIframe.style.border = "0";
+        document.body.appendChild(printIframe);
+    }
+
+    const cardHtml = cardEl.outerHTML;
+    const doc = printIframe.contentWindow.document;
+    doc.open();
+    doc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>Cetak Kartu Anggota Bank Sampah</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+            <style>
+                @page {
+                    size: A4 portrait;
+                    margin: 20mm;
+                }
+                * {
+                    box-sizing: border-box;
+                    -webkit-print-color-adjust: exact !important;
+                    print-color-adjust: exact !important;
+                    color-adjust: exact !important;
+                }
+                body {
+                    margin: 0;
+                    padding: 30px 20px;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    background: #ffffff;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: flex-start;
+                }
+                .print-header {
+                    text-align: center;
+                    margin-bottom: 25px;
+                }
+                .print-header h2 {
+                    margin: 0 0 6px 0;
+                    color: #064e3b;
+                    font-size: 20px;
+                    font-weight: 800;
+                }
+                .print-header p {
+                    margin: 0;
+                    color: #6b7280;
+                    font-size: 13px;
+                }
+                .digital-card {
+                    background: linear-gradient(135deg, #064e3b 0%, #047857 55%, #0f766e 100%) !important;
+                    color: #ffffff !important;
+                    border-radius: 20px;
+                    padding: 24px;
+                    box-shadow: none !important;
+                    position: relative;
+                    overflow: hidden;
+                    width: 420px;
+                    min-height: 230px;
+                    margin: 0 auto;
+                    border: 2px solid #047857;
+                }
+                .digital-card * {
+                    color: inherit;
+                }
+                .digital-card-chip {
+                    width: 40px;
+                    height: 30px;
+                    background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%) !important;
+                    border-radius: 6px;
+                    position: relative;
+                    box-shadow: inset 0 1px 2px rgba(255,255,255,0.4);
+                }
+                .digital-card-chip::after {
+                    content: "";
+                    position: absolute;
+                    top: 50%;
+                    left: 0;
+                    right: 0;
+                    height: 1px;
+                    background: rgba(0,0,0,0.2);
+                }
+                .print-instructions {
+                    margin-top: 30px;
+                    text-align: center;
+                    max-width: 420px;
+                    border-top: 1px dashed #d1d5db;
+                    padding-top: 15px;
+                    color: #4b5563;
+                    font-size: 11px;
+                    line-height: 1.5;
+                }
+                .d-flex { display: flex !important; }
+                .justify-content-between { justify-content: space-between !important; }
+                .align-items-center { align-items: center !important; }
+                .align-items-start { align-items: flex-start !important; }
+                .align-items-end { align-items: flex-end !important; }
+                .gap-2 { gap: 0.5rem !important; }
+                .mb-3 { margin-bottom: 1rem !important; }
+                .my-2 { margin-top: 0.5rem !important; margin-bottom: 0.5rem !important; }
+                .my-3 { margin-top: 1rem !important; margin-bottom: 1rem !important; }
+                .mt-3 { margin-top: 1rem !important; }
+                .pt-1 { padding-top: 0.25rem !important; }
+                .border-top { border-top: 1px solid rgba(255,255,255,0.25) !important; }
+                .bg-white { background-color: #ffffff !important; }
+                .text-white { color: #ffffff !important; }
+                .text-white-50 { color: rgba(255,255,255,0.7) !important; }
+                .text-success { color: #16a34a !important; }
+                .rounded-3 { border-radius: 0.5rem !important; }
+                .p-1 { padding: 0.25rem !important; }
+                .px-2 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+                .fw-bold { font-weight: 700 !important; }
+                .font-monospace { font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace !important; }
+                .fs-5 { font-size: 1.25rem !important; }
+                .fs-6 { font-size: 1rem !important; }
+                .small { font-size: 0.875em !important; }
+                .text-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                .shadow-sm { box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important; }
+                .badge { display: inline-block; padding: .35em .65em; font-size: .75em; font-weight: 700; line-height: 1; text-align: center; white-space: nowrap; vertical-align: baseline; border-radius: .25rem; }
+                .bg-opacity-25 { background-color: rgba(255,255,255,0.25) !important; }
+                .opacity-75 { opacity: .75 !important; }
+            </style>
+        </head>
+        <body>
+            <div class="print-header">
+                <h2>KARTU ANGGOTA RESMI BANK SAMPAH</h2>
+                <p>Sistem Pengelolaan Sampah Terintegrasi PilahKita</p>
+            </div>
+            ${cardHtml}
+            <div class="print-instructions">
+                <strong>Petunjuk:</strong> Gunting sesuai garis kartu dan simpan sebagai tanda pengenal nasabah.<br>
+                Tunjukkan QR Code saat penimbangan sampah di Pos Drop Point atau armada jemput.
+            </div>
+        </body>
+        </html>
+    `);
+    doc.close();
+
+    setTimeout(() => {
+        printIframe.contentWindow.focus();
+        printIframe.contentWindow.print();
+    }, 400);
+}
+
+function toggleEntryMode(mode) {
+    const entryInput = document.getElementById('entryModeInput');
+    const secDropdown = document.getElementById('sectionDropdownUser');
+    const secManual = document.getElementById('sectionManualUser');
+    const toggleBox = document.getElementById('toggleLinkBox');
+    const selectEl = document.getElementById('selectMemberUser');
+    const nameInput = document.getElementById('inputNewFullName');
+    const submitBtn = document.getElementById('btnSubmitMember');
+
+    if (mode === 'new') {
+        entryInput.value = 'new';
+        secDropdown.style.display = 'none';
+        secManual.style.display = 'block';
+        toggleBox.style.display = 'none';
+        selectEl.removeAttribute('required');
+        nameInput.setAttribute('required', 'required');
+        submitBtn.innerHTML = '<i class="bi bi-person-check-fill me-1"></i> Buat Akun & Terbitkan Kartu';
+    } else {
+        entryInput.value = 'existing';
+        secDropdown.style.display = 'block';
+        secManual.style.display = 'none';
+        toggleBox.style.display = 'block';
+        selectEl.setAttribute('required', 'required');
+        nameInput.removeAttribute('required');
+        submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Terbitkan & Buka Kartu';
+    }
+}
+
+// Dropdown Change Listener
+document.getElementById('selectMemberUser').addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    const previewBox = document.getElementById('userPreviewCard');
+
+    if (!opt || !opt.value) {
+        previewBox.style.display = 'none';
+        return;
+    }
+
+    const name = opt.getAttribute('data-name') || '-';
+    const username = opt.getAttribute('data-username') || '-';
+    const phone = opt.getAttribute('data-phone') || '-';
+    const address = opt.getAttribute('data-address') || '-';
+    const code = opt.getAttribute('data-code') || '-';
+    const balance = Number(opt.getAttribute('data-balance') || 0);
+
+    document.getElementById('prevInitial').innerText = name.charAt(0).toUpperCase();
+    document.getElementById('prevFullName').innerText = name;
+    document.getElementById('prevUsername').innerText = '@' + username;
+    document.getElementById('prevMemberCode').innerText = code;
+    document.getElementById('prevPhone').innerText = phone;
+    document.getElementById('prevAddress').innerText = address;
+    document.getElementById('prevBalance').innerText = 'Rp ' + balance.toLocaleString('id-ID');
+
+    previewBox.style.display = 'block';
+});
+
+function lookupMemberCode() {
+    const val = document.getElementById('scanInput').value.trim();
+    if (!val) return;
+
+    const numMatch = val.match(/\d+$/);
+    const userId = numMatch ? parseInt(numMatch[0], 10) : parseInt(val, 10);
+
+    if (!userId) {
+        alert('Nomor kode anggota tidak valid.');
+        return;
+    }
+
+    fetch('/members/api/card/' + userId)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.user) {
+                const u = data.user;
+                document.getElementById('scanName').innerText = u.full_name;
+                document.getElementById('scanCode').innerText = u.member_code;
+                document.getElementById('scanBtnOpen').onclick = function() {
+                    bootstrap.Modal.getInstance(document.getElementById('scanSearchModal')).hide();
+                    openMemberCard(u);
+                };
+                document.getElementById('scanResultBox').style.display = 'block';
+            } else {
+                alert('Nasabah dengan nomor ID tersebut tidak ditemukan.');
+            }
+        })
+        .catch(err => {
+            alert('Gagal mencari nasabah: ' + err.message);
+        });
+}
+
+// Auto open card modal if redirected with card_id query param
+window.addEventListener('DOMContentLoaded', function() {
+    if (AUTO_OPEN_CARD_ID) {
+        const target = MEMBERS_LIST.find(m => String(m.id) === String(AUTO_OPEN_CARD_ID));
+        if (target) {
+            setTimeout(() => openMemberCard(target), 300);
+        }
+    }
+});
+</script>

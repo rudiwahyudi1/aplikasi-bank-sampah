@@ -1,0 +1,696 @@
+<%
+const list = typeof items !== "undefined" && Array.isArray(items) ? items : [];
+const redList = typeof redemptions !== "undefined" && Array.isArray(redemptions) ? redemptions : [];
+const balance = typeof currentBalance !== "undefined" ? Number(currentBalance) : 0;
+const sum = typeof summary !== "undefined" && summary ? summary : { total_items: 0, pending_claims: 0, completed_claims: 0 };
+const flt = typeof filters !== "undefined" && filters ? filters : { category: "" };
+const isClient = typeof isNasabah !== "undefined" ? isNasabah : false;
+const canAdmin = typeof canManage !== "undefined" ? canManage : false;
+
+const catNames = {
+    sembako: { label: 'Sembako Pangan', class: 'bg-warning text-dark', icon: 'bi-basket2-fill' },
+    voucher: { label: 'Token Listrik & Pulsa', class: 'bg-info text-dark', icon: 'bi-lightning-charge-fill' },
+    merchandise: { label: 'Merchandise Daur Ulang', class: 'bg-primary text-white', icon: 'bi-cup-hot-fill' },
+    bibit_pupuk: { label: 'Pupuk & Bibit', class: 'bg-success text-white', icon: 'bi-flower1' }
+};
+
+const redStatusBadge = {
+    pending: { label: 'Menunggu Konfirmasi', class: 'bg-warning text-dark' },
+    ready: { label: 'Siap Diambil di Kantor', class: 'bg-info text-dark' },
+    completed: { label: 'Sudah Diserahkan', class: 'bg-success text-white' },
+    rejected: { label: 'Dibatalkan / Refund', class: 'bg-danger text-white' }
+};
+%>
+
+<style>
+.rewards-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 1rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+.reward-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    transition: transform .2s, box-shadow .2s;
+    background: #fff;
+    position: relative;
+}
+.reward-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.07);
+}
+.reward-card.is-disabled {
+    opacity: 0.82;
+    background: #fafafa;
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="rewards-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg, #fef3c7, #fde68a); color:#d97706; display:grid; place-items:center; font-size:20px; box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);">
+                        <i class="bi bi-stars"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939; letter-spacing: -0.3px;">KATALOG TUKAR POIN & HADIAH</h5>
+                        <div class="small mt-1 text-muted" style="font-size: 11px;">Tukarkan saldo tabungan sampah Anda dengan sembako, voucher, dan reward bermanfaat.</div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <% if (canAdmin) { %>
+                    <button type="button" class="btn btn-warning text-dark fw-bold rounded-pill px-3 shadow-sm d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalTambahReward">
+                        <i class="bi bi-plus-circle-fill"></i>
+                        <span>Tambah Hadiah Baru</span>
+                    </button>
+                    <% } %>
+
+                    <div class="d-flex align-items-center gap-2 bg-light px-3 py-2 rounded-pill border shadow-sm">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 28px; height: 28px; background: #dcfce7; color: #16a34a;">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
+                        <div>
+                            <span class="text-muted" style="font-size: 10px; display: block;">Saldo Tabungan Anda</span>
+                            <span class="fw-bold text-success fs-6">Rp <%= balance.toLocaleString('id-ID') %></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Saldo Tersedia</div>
+                            <div class="stat-value text-success">Rp <%= balance.toLocaleString('id-ID') %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Dapat ditukarkan kapan saja</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Total Hadiah</div>
+                            <div class="stat-value text-warning"><%= sum.total_items %></div>
+                        </div>
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Pilihan sembako & voucher</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Siap Diambil</div>
+                            <div class="stat-value text-primary"><%= sum.pending_claims %></div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Klaim dalam proses</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Diserahkan</div>
+                            <div class="stat-value text-dark"><%= sum.completed_claims %></div>
+                        </div>
+                        <div class="stat-icon bg-secondary-subtle text-secondary">
+                            <i class="bi bi-bag-check-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Telah diambil nasabah</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Tabs Kategori -->
+        <div class="d-flex align-items-center gap-2 overflow-auto pb-2 mb-4" style="-webkit-overflow-scrolling: touch;">
+            <a href="/rewards" class="btn btn-sm <%= !flt.category || flt.category === 'semua' ? 'btn-warning text-dark fw-bold shadow-sm' : 'btn-light border' %> rounded-pill px-3 py-2 text-nowrap">
+                <i class="bi bi-grid me-1"></i> Semua Kategori
+            </a>
+            <a href="/rewards?category=sembako" class="btn btn-sm <%= flt.category === 'sembako' ? 'btn-warning text-dark fw-bold shadow-sm' : 'btn-light border' %> rounded-pill px-3 py-2 text-nowrap">
+                <i class="bi bi-basket2-fill me-1"></i> Sembako Pangan
+            </a>
+            <a href="/rewards?category=voucher" class="btn btn-sm <%= flt.category === 'voucher' ? 'btn-warning text-dark fw-bold shadow-sm' : 'btn-light border' %> rounded-pill px-3 py-2 text-nowrap">
+                <i class="bi bi-lightning-charge-fill me-1"></i> Token & Pulsa
+            </a>
+            <a href="/rewards?category=bibit_pupuk" class="btn btn-sm <%= flt.category === 'bibit_pupuk' ? 'btn-warning text-dark fw-bold shadow-sm' : 'btn-light border' %> rounded-pill px-3 py-2 text-nowrap">
+                <i class="bi bi-flower1 me-1"></i> Pupuk Kompos & Bibit
+            </a>
+            <a href="/rewards?category=merchandise" class="btn btn-sm <%= flt.category === 'merchandise' ? 'btn-warning text-dark fw-bold shadow-sm' : 'btn-light border' %> rounded-pill px-3 py-2 text-nowrap">
+                <i class="bi bi-cup-hot-fill me-1"></i> Merchandise
+            </a>
+        </div>
+
+        <!-- Grid Katalog Reward -->
+        <div class="row g-3 mb-5">
+            <% if (list.length === 0) { %>
+            <div class="col-12">
+                <div class="p-5 text-center bg-light rounded-4 text-muted">
+                    <i class="bi bi-inbox fs-1 d-block mb-2 text-warning"></i>
+                    Tidak ada barang hadiah atau sembako dalam kategori ini.
+                </div>
+            </div>
+            <% } else { %>
+            <% list.forEach(item => { 
+                const cat = catNames[item.category] || { label: item.category, class: 'bg-secondary text-white', icon: 'bi-box' };
+                const canAfford = balance >= Number(item.points_cost);
+                const inStock = item.stock > 0;
+                const isExpired = Boolean(item.is_expired || item.status === 'expired');
+                const isInactive = item.status === 'inactive';
+                const canRedeem = canAfford && inStock && !isExpired && !isInactive;
+            %>
+            <div class="col-12 col-sm-6 col-lg-4">
+                <div class="reward-card h-100 p-3 d-flex flex-column <%= (isExpired || isInactive || !inStock) ? 'is-disabled' : '' %>">
+                    <!-- Icon / Media Preview Box -->
+                    <div class="p-3 text-center rounded-3 mb-3 position-relative" style="background: linear-gradient(135deg, #f8fafc, #f1f5f9); min-height: 100px; display: grid; place-items: center;">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 56px; height: 56px; background: #ffffff; color: #f59e0b; font-size: 26px;">
+                            <i class="bi <%= cat.icon %>"></i>
+                        </div>
+
+                        <!-- Admin Edit Badge -->
+                        <% if (canAdmin) { %>
+                        <div class="position-absolute top-0 end-0 p-2">
+                            <button type="button" class="btn btn-sm btn-white bg-white border rounded-circle shadow-sm p-0 d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 30px; height: 30px; padding: 0 !important; line-height: 0 !important; box-shadow: 0 2px 6px rgba(0,0,0,0.08);" onclick='openEditItemModal(<%= JSON.stringify(item) %>)' title="Edit Hadiah, Stok, atau Kedaluwarsa">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="#1e293b" viewBox="0 0 16 16" style="display: block; margin: auto;">
+                                    <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.646 6.061L9.793 2.5 3.293 9H3.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.207zm-7.468 7.468A.5.5 0 0 1 6 13.5V13h-.5a.5.5 0 0 1-.5-.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.5-.5V10h-.5a.5.5 0 0 1-.175-.032l-.179.178a.5.5 0 0 0-.11.168l-2 5a.5.5 0 0 0 .65.65l5-2a.5.5 0 0 0 .168-.11z"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <% } %>
+                    </div>
+
+                    <!-- Category & Status Badge Row -->
+                    <div class="d-flex align-items-center justify-content-between mb-2 gap-1 flex-wrap">
+                        <span class="badge rounded-pill <%= cat.class %>" style="font-size: 10px;"><%= cat.label %></span>
+                        
+                        <% if (isExpired) { %>
+                            <span class="badge rounded-pill bg-danger text-white" style="font-size: 10px;">
+                                <i class="bi bi-clock-history me-1"></i> Kadaluarsa
+                            </span>
+                        <% } else if (isInactive) { %>
+                            <span class="badge rounded-pill bg-secondary text-white" style="font-size: 10px;">
+                                <i class="bi bi-pause-circle me-1"></i> Nonaktif
+                            </span>
+                        <% } else if (!inStock) { %>
+                            <span class="badge rounded-pill bg-warning text-dark" style="font-size: 10px;">
+                                <i class="bi bi-x-circle me-1"></i> Stok Habis
+                            </span>
+                        <% } else { %>
+                            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size: 10px;">
+                                <i class="bi bi-check2-circle me-1"></i> Tersedia: <%= item.stock %> <%= item.unit %>
+                            </span>
+                        <% } %>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mb-1"><%= item.name %></h6>
+                    <p class="text-muted small mb-2 flex-grow-1" style="font-size: 12px; line-height: 1.4;"><%= item.description || 'Barang reward resmi Bank Sampah PilahKita.' %></p>
+
+                    <!-- Info Kedaluwarsa -->
+                    <% if (item.expiry_date) { %>
+                    <div class="small mb-2 <%= isExpired ? 'text-danger fw-bold' : 'text-muted' %>" style="font-size: 11px;">
+                        <i class="bi bi-calendar-event me-1"></i> Exp: <%= new Date(item.expiry_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) %>
+                    </div>
+                    <% } %>
+
+                    <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-auto">
+                        <div>
+                            <span class="text-muted d-block" style="font-size: 10px;">Nilai Tukar</span>
+                            <span class="fs-6 fw-bold text-primary">Rp <%= Number(item.points_cost).toLocaleString('id-ID') %></span>
+                        </div>
+
+                        <% if (isExpired) { %>
+                            <button class="btn btn-sm btn-secondary rounded-pill px-3 py-1 fw-semibold" disabled>
+                                Kadaluarsa
+                            </button>
+                        <% } else if (isInactive) { %>
+                            <button class="btn btn-sm btn-secondary rounded-pill px-3 py-1 fw-semibold" disabled>
+                                Nonaktif
+                            </button>
+                        <% } else if (!inStock) { %>
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1 fw-semibold" disabled>
+                                Habis
+                            </button>
+                        <% } else { %>
+                            <button class="btn btn-sm <%= canAfford ? 'btn-success' : 'btn-outline-secondary' %> rounded-pill px-3 py-1 fw-semibold" 
+                                    <%= !canAfford ? 'disabled' : '' %>
+                                    onclick="openRedeemModal(<%= JSON.stringify(item) %>)">
+                                <i class="bi bi-cart-plus me-1"></i> Tukar
+                            </button>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+            <% }); %>
+            <% } %>
+        </div>
+
+        <!-- Tabel Riwayat Penukaran Hadiah -->
+        <div class="mt-4">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="fw-bold text-dark mb-0">
+                    <i class="bi bi-clock-history me-1 text-primary"></i> Riwayat Klaim & Penukaran Hadiah
+                </h6>
+                <span class="text-muted small">Maksimal 30 transaksi terkini</span>
+            </div>
+
+            <div class="table-card table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Kode Klaim</th>
+                            <th>Barang Hadiah</th>
+                            <th>Jumlah</th>
+                            <th>Nilai Poin (Rp)</th>
+                            <th>Nasabah</th>
+                            <th>Status</th>
+                            <th class="pe-4 text-end">Aksi / Keterangan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (redList.length === 0) { %>
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-stars fs-3 d-block mb-2 text-muted"></i>
+                                Belum ada riwayat penukaran hadiah.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% redList.forEach(r => { 
+                            const st = redStatusBadge[r.status] || { label: r.status, class: 'bg-secondary text-white' };
+                        %>
+                        <tr>
+                            <td class="ps-4 fw-bold text-primary font-monospace">
+                                <%= r.code %>
+                                <div class="text-muted fw-normal" style="font-size: 10px;"><%= new Date(r.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %></div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark"><%= r.reward_name %></div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border px-2 py-1"><%= r.quantity %> <%= r.reward_unit || 'item' %></span>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-success">Rp <%= Number(r.total_points).toLocaleString('id-ID') %></span>
+                            </td>
+                            <td class="small">
+                                <div class="fw-semibold text-dark"><%= r.nasabah_name %></div>
+                                <div class="text-muted" style="font-size: 11px;"><%= r.nasabah_phone || '-' %></div>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill <%= st.class %> px-2 py-1"><%= st.label %></span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <% if (canAdmin && r.status === 'pending') { %>
+                                <form method="POST" action="/rewards/status/<%= r.id %>" class="d-inline">
+                                    <input type="hidden" name="status" value="ready">
+                                    <button type="submit" class="btn btn-sm btn-outline-info rounded-pill px-2 py-1" title="Tandai Siap Diambil">
+                                        <i class="bi bi-box-seam me-1"></i> Siap
+                                    </button>
+                                </form>
+                                <form method="POST" action="/rewards/status/<%= r.id %>" class="d-inline" onsubmit="return confirm('Tolak dan kembalikan saldo tabungan ke nasabah?');">
+                                    <input type="hidden" name="status" value="rejected">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" title="Tolak & Refund">
+                                        <i class="bi bi-x-circle"></i>
+                                    </button>
+                                </form>
+                                <% } else if (canAdmin && r.status === 'ready') { %>
+                                <form method="POST" action="/rewards/status/<%= r.id %>" class="d-inline" onsubmit="return confirm('Barang sudah diserahkan ke nasabah?');">
+                                    <input type="hidden" name="status" value="completed">
+                                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-3 py-1">
+                                        <i class="bi bi-check2-circle me-1"></i> Serahkan
+                                    </button>
+                                </form>
+                                <% } else { %>
+                                <span class="text-muted small"><%= r.notes || '-' %></span>
+                                <% } %>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL TUKAR HADIAH (NASABAH) -->
+<div class="modal fade" id="redeemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-stars text-warning me-2"></i>Konfirmasi Penukaran</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/rewards/redeem">
+                <input type="hidden" id="redeemRewardId" name="reward_id">
+                <div class="modal-body py-3">
+                    <div class="p-3 rounded-4 bg-light mb-3 text-center">
+                        <h5 class="fw-bold text-dark mb-1" id="redeemItemName"></h5>
+                        <div class="fs-5 fw-bold text-primary" id="redeemItemCost"></div>
+                        <div class="small text-muted" id="redeemItemStock"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Jumlah yang Ditukarkan</label>
+                        <input type="number" id="redeemQty" name="quantity" class="form-control rounded-3" value="1" min="1" max="10" required onchange="calculateTotalCost()">
+                    </div>
+
+                    <div class="p-3 rounded-3 mb-3" style="background: #fefce8; border: 1px dashed #facc15;">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="text-muted">Total Saldo Terpotong:</span>
+                            <strong class="text-danger" id="redeemTotalCost">Rp 0</strong>
+                        </div>
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-muted">Sisa Saldo Anda:</span>
+                            <strong class="text-success" id="redeemRemainingBalance">Rp 0</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Catatan Tambahan (Opsional)</label>
+                        <input type="text" name="notes" class="form-control rounded-3" placeholder="Contoh: Titip ke RT / ambil sore hari...">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning text-dark fw-bold rounded-3 px-4">Tukarkan Sekarang</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<% if (canAdmin) { %>
+<!-- MODAL TAMBAH HADIAH BARU (ADMIN) -->
+<div class="modal fade" id="modalTambahReward" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-stars text-warning me-2"></i>Tambah Barang Hadiah Baru</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/rewards/item/create">
+                <div class="modal-body py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Nama Barang Hadiah / Sembako <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control rounded-3" placeholder="Contoh: Beras Premium 5 Kg" required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Kategori <span class="text-danger">*</span></label>
+                            <select name="category" class="form-select rounded-3" required>
+                                <option value="sembako">Sembako Pangan</option>
+                                <option value="voucher">Token Listrik / Pulsa</option>
+                                <option value="bibit_pupuk">Pupuk Kompos / Bibit</option>
+                                <option value="merchandise">Merchandise Daur Ulang</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Satuan Barang <span class="text-danger">*</span></label>
+                            <input type="text" name="unit" class="form-control rounded-3" placeholder="Contoh: sak, liter, pcs" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Harga Poin / Rupiah <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">Rp</span>
+                                <input type="number" name="points_cost" class="form-control rounded-end-3" placeholder="50000" min="100" required>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Stok Awal <span class="text-danger">*</span></label>
+                            <input type="number" name="stock" class="form-control rounded-3" value="10" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Tanggal Kadaluarsa (Opsional)</label>
+                            <input type="date" name="expiry_date" class="form-control rounded-3">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Status Ketersediaan</label>
+                            <select name="status" class="form-select rounded-3">
+                                <option value="active">Aktif & Tersedia</option>
+                                <option value="inactive">Nonaktif Sementara</option>
+                                <option value="expired">Kadaluarsa</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Deskripsi Barang</label>
+                        <textarea name="description" class="form-control rounded-3" rows="2" placeholder="Keterangan singkat produk, merk, dan spesifikasi..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning text-dark fw-bold rounded-3 px-4">Simpan Hadiah</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDIT HADIAH & KADALUARSA (ADMIN) -->
+<div class="modal fade" id="modalEditReward" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square text-warning me-2"></i>Update Hadiah & Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEditReward" method="POST" action="">
+                <div class="modal-body py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Nama Barang Hadiah <span class="text-danger">*</span></label>
+                        <input type="text" id="editItemName" name="name" class="form-control rounded-3" required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Kategori</label>
+                            <select id="editItemCategory" name="category" class="form-select rounded-3">
+                                <option value="sembako">Sembako Pangan</option>
+                                <option value="voucher">Token Listrik / Pulsa</option>
+                                <option value="bibit_pupuk">Pupuk Kompos / Bibit</option>
+                                <option value="merchandise">Merchandise Daur Ulang</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Satuan</label>
+                            <input type="text" id="editItemUnit" name="unit" class="form-control rounded-3" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Harga Poin (Rp)</label>
+                            <input type="number" id="editItemCost" name="points_cost" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Sisa Stok Fisik</label>
+                            <input type="number" id="editItemStock" name="stock" class="form-control rounded-3" min="0" required>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Tanggal Kadaluarsa</label>
+                            <input type="date" id="editItemExpiry" name="expiry_date" class="form-control rounded-3">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Status Ketersediaan</label>
+                            <select id="editItemStatus" name="status" class="form-select rounded-3">
+                                <option value="active">Aktif & Tersedia</option>
+                                <option value="inactive">Nonaktif Sementara</option>
+                                <option value="expired">Kadaluarsa (Tidak bisa ditukar)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Deskripsi</label>
+                        <textarea id="editItemDesc" name="description" class="form-control rounded-3" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill" onclick="deleteRewardItem()">
+                        <i class="bi bi-trash me-1"></i> Hapus Hadiah
+                    </button>
+                    <div>
+                        <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-warning text-dark fw-bold rounded-3 px-4">Update Hadiah</button>
+                    </div>
+                </div>
+            </form>
+            <form id="formDeleteReward" method="POST" action="" style="display:none;"></form>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<script>
+let currentUnitCost = 0;
+let userWalletBalance = <%= balance %>;
+let currentEditingItemId = null;
+
+function openRedeemModal(item) {
+    document.getElementById('redeemRewardId').value = item.id;
+    document.getElementById('redeemItemName').innerText = item.name;
+    document.getElementById('redeemItemCost').innerText = 'Rp ' + Number(item.points_cost).toLocaleString('id-ID') + ' / ' + item.unit;
+    document.getElementById('redeemItemStock').innerText = 'Tersedia: ' + item.stock + ' ' + item.unit;
+    
+    currentUnitCost = Number(item.points_cost);
+    const qtyInput = document.getElementById('redeemQty');
+    qtyInput.value = 1;
+    qtyInput.max = item.stock;
+
+    calculateTotalCost();
+    new bootstrap.Modal(document.getElementById('redeemModal')).show();
+}
+
+function calculateTotalCost() {
+    const qty = parseInt(document.getElementById('redeemQty').value) || 1;
+    const total = currentUnitCost * qty;
+    const remain = userWalletBalance - total;
+
+    document.getElementById('redeemTotalCost').innerText = 'Rp ' + total.toLocaleString('id-ID');
+    document.getElementById('redeemRemainingBalance').innerText = 'Rp ' + Math.max(0, remain).toLocaleString('id-ID');
+}
+
+function openEditItemModal(item) {
+    currentEditingItemId = item.id;
+    document.getElementById('formEditReward').action = '/rewards/item/edit/' + item.id;
+    document.getElementById('editItemName').value = item.name || '';
+    document.getElementById('editItemCategory').value = item.category || 'sembako';
+    document.getElementById('editItemUnit').value = item.unit || 'pcs';
+    document.getElementById('editItemCost').value = item.points_cost || 0;
+    document.getElementById('editItemStock').value = item.stock || 0;
+    document.getElementById('editItemStatus').value = item.status || 'active';
+    document.getElementById('editItemDesc').value = item.description || '';
+    
+    if (item.expiry_date) {
+        document.getElementById('editItemExpiry').value = item.expiry_date.substring(0, 10);
+    } else {
+        document.getElementById('editItemExpiry').value = '';
+    }
+
+    new bootstrap.Modal(document.getElementById('modalEditReward')).show();
+}
+
+function deleteRewardItem() {
+    if (!currentEditingItemId) return;
+    if (confirm('Yakin ingin menghapus barang hadiah ini dari katalog?')) {
+        const delForm = document.getElementById('formDeleteReward');
+        delForm.action = '/rewards/item/delete/' + currentEditingItemId;
+        delForm.submit();
+    }
+}
+</script>

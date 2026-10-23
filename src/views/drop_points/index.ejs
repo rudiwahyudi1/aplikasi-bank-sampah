@@ -1,0 +1,755 @@
+<%
+const list = typeof rows !== "undefined" && Array.isArray(rows) ? rows : [];
+const sum = typeof summary !== "undefined" && summary ? summary : { total_points: 0, active_points: 0, warning_points: 0, full_points: 0, total_capacity_kg: 0, total_load_kg: 0 };
+const logs = typeof recentLogs !== "undefined" && Array.isArray(recentLogs) ? recentLogs : [];
+const staff = typeof officers !== "undefined" && Array.isArray(officers) ? officers : [];
+const flt = typeof filters !== "undefined" && filters ? filters : { keyword: "", category: "", status: "" };
+const pag = typeof pagination !== "undefined" && pagination ? pagination : { page: 1, limit: 12, total: 0, totalPages: 1 };
+const canEdit = typeof canManage !== "undefined" ? canManage : false;
+const isAdministrator = typeof isAdmin !== "undefined" ? isAdmin : false;
+const currentRole = typeof userRole !== "undefined" ? userRole : "nasabah";
+
+const categoryBadge = {
+    unit_bank_sampah: { label: 'Unit Bank Sampah', class: 'bg-success text-white' },
+    dropbox_publik: { label: 'Dropbox Publik', class: 'bg-info text-dark' },
+    tps3r_induk: { label: 'TPS3R Induk', class: 'bg-primary text-white' },
+    sekolah_kampus: { label: 'Sekolah / Kampus', class: 'bg-warning text-dark' },
+    kantor_mitra: { label: 'Kantor / Mitra', class: 'bg-secondary text-white' }
+};
+
+const statusBadge = {
+    aktif: { label: 'Operasional (Normal)', class: 'bg-success text-white' },
+    hampir_penuh: { label: 'Hampir Penuh (≥80%)', class: 'bg-warning text-dark' },
+    penuh: { label: 'Penuh (Segera Angkut)', class: 'bg-danger text-white' },
+    pemeliharaan: { label: 'Perbaikan / Maintenance', class: 'bg-secondary text-white' },
+    nonaktif: { label: 'Non-Aktif', class: 'bg-light text-muted border' }
+};
+%>
+
+<style>
+.droppoint-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 1rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+.progress-container {
+    background-color: #f3f4f6;
+    border-radius: 8px;
+    height: 8px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+.pulse-danger {
+    animation: pulseRed 1.5s infinite;
+}
+@keyframes pulseRed {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="droppoint-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:18px;">
+                        <i class="bi bi-geo-alt-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;">POS DROP POINT & SETOR MANDIRI</h5>
+                        <div class="small mt-1" style="color: #16a34a; font-size: 11px;">Titik kumpul dan pos unit bank sampah terdekat untuk penyetoran sampah terpilah warga.</div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <% if (isAdministrator) { %>
+                    <button type="button" class="btn btn-success fw-semibold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#addDropPointModal">
+                        <i class="bi bi-plus-lg me-1"></i> Tambah Pos Drop Point
+                    </button>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Total Drop Point</div>
+                            <div class="stat-value text-dark"><%= sum.total_points %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-pin-map-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Titik pos & dropbox terdaftar</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Pos Operasional</div>
+                            <div class="stat-value text-success"><%= sum.active_points %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-check2-circle"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Siap menerima setoran warga</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Perlu Diangkut</div>
+                            <div class="stat-value <%= sum.warning_points > 0 ? 'text-danger' : 'text-dark' %>">
+                                <%= sum.warning_points %> <span class="fs-6 fw-normal text-muted">pos</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon <%= sum.warning_points > 0 ? 'bg-danger-subtle text-danger' : 'bg-warning-subtle text-warning' %>">
+                            <i class="bi bi-truck-flatbed"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Muatan ≥ 80% atau penuh</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Kapasitas Tertampung</div>
+                            <div class="stat-value text-primary">
+                                <%= Number(sum.total_load_kg).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %> 
+                                <span class="fs-6 fw-normal text-muted">/ <%= Number(sum.total_capacity_kg).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %> kg</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-inboxes-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Beban sampah terpilah saat ini</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="p-3 bg-light rounded-4 mb-4">
+            <form method="GET" action="/drop-points" class="row g-2 align-items-center">
+                <div class="col-12 col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="keyword" class="form-control bg-white border-start-0" placeholder="Cari nama pos, alamat, kecamatan, atau PIC..." value="<%= flt.keyword || '' %>">
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select name="category" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Kategori Pos</option>
+                        <option value="unit_bank_sampah" <%= flt.category === 'unit_bank_sampah' ? 'selected' : '' %>>Unit Bank Sampah</option>
+                        <option value="dropbox_publik" <%= flt.category === 'dropbox_publik' ? 'selected' : '' %>>Dropbox Publik</option>
+                        <option value="tps3r_induk" <%= flt.category === 'tps3r_induk' ? 'selected' : '' %>>TPS3R Induk</option>
+                        <option value="sekolah_kampus" <%= flt.category === 'sekolah_kampus' ? 'selected' : '' %>>Sekolah / Kampus</option>
+                        <option value="kantor_mitra" <%= flt.category === 'kantor_mitra' ? 'selected' : '' %>>Kantor / Mitra</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select name="status" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Status Muatan</option>
+                        <option value="aktif" <%= flt.status === 'aktif' ? 'selected' : '' %>>Operasional (Normal)</option>
+                        <option value="hampir_penuh" <%= flt.status === 'hampir_penuh' ? 'selected' : '' %>>Hampir Penuh (≥80%)</option>
+                        <option value="penuh" <%= flt.status === 'penuh' ? 'selected' : '' %>>Penuh (Perlu Angkut)</option>
+                        <option value="pemeliharaan" <%= flt.status === 'pemeliharaan' ? 'selected' : '' %>>Pemeliharaan</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3"><i class="bi bi-funnel me-1"></i> Filter</button>
+                    <a href="/drop-points" class="btn btn-outline-secondary rounded-3" title="Reset"><i class="bi bi-arrow-counterclockwise"></i></a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabel Pos Drop Point -->
+        <div class="table-card mb-4">
+            <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
+                <table class="table table-hover align-middle mb-0" style="min-width: 950px;">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Kode & Pos</th>
+                            <th>Kategori & Wilayah</th>
+                            <th>Jam & Hari Operasional</th>
+                            <th>Beban Kontainer</th>
+                            <th>Status Pos</th>
+                            <th>PIC & Kontak</th>
+                            <th class="pe-4 text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (list.length === 0) { %>
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                Belum ada pos drop point yang sesuai dengan pencarian Anda.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% list.forEach(item => { 
+                            const cat = categoryBadge[item.category] || { label: item.category, class: 'bg-secondary text-white' };
+                            const st = statusBadge[item.status] || { label: item.status, class: 'bg-light text-dark' };
+                            const pct = Math.min(100, Math.round((Number(item.current_load_kg) / Number(item.capacity_kg)) * 100));
+                            
+                            let barColor = "bg-success";
+                            if (pct >= 90) barColor = "bg-danger";
+                            else if (pct >= 75) barColor = "bg-warning";
+                        %>
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark"><%= item.name %></div>
+                                <div class="small text-muted font-monospace"><%= item.code %></div>
+                                <div class="small text-secondary mt-1" style="max-width: 260px; line-height: 1.3;">
+                                    <i class="bi bi-geo-alt me-1 text-danger"></i><%= item.address %>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge <%= cat.class %> rounded-pill px-2 py-1 mb-1"><%= cat.label %></span>
+                                <% if (item.district) { %>
+                                <div class="small text-dark fw-semibold"><i class="bi bi-building me-1 text-muted"></i><%= item.district %></div>
+                                <% } %>
+                                <div class="small text-muted" style="font-size: 10.5px;"><%= item.accepted_waste_types %></div>
+                            </td>
+                            <td>
+                                <div class="small fw-semibold text-dark"><i class="bi bi-clock me-1 text-success"></i><%= item.operational_hours %></div>
+                                <div class="small text-muted"><i class="bi bi-calendar3 me-1"></i><%= item.operational_days %></div>
+                            </td>
+                            <td style="min-width: 170px;">
+                                <div class="d-flex justify-content-between align-items-center small mb-1">
+                                    <span class="fw-bold text-dark"><%= Number(item.current_load_kg).toLocaleString('id-ID') %> kg</span>
+                                    <span class="text-muted"><%= pct %>% / <%= Number(item.capacity_kg).toLocaleString('id-ID') %> kg</span>
+                                </div>
+                                <div class="progress-container">
+                                    <div class="progress-bar <%= barColor %>" role="progressbar" style="width: <%= pct %>%; height:100%;"></div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge <%= st.class %> rounded-pill px-2 py-1 <%= item.status === 'penuh' ? 'pulse-danger' : '' %>">
+                                    <i class="bi <%= item.status === 'penuh' ? 'bi-exclamation-triangle-fill' : (item.status === 'hampir_penuh' ? 'bi-exclamation-circle-fill' : 'bi-check-circle-fill') %> me-1"></i>
+                                    <%= st.label %>
+                                </span>
+                                <% if (item.total_emptied_runs > 0) { %>
+                                <div class="small text-muted mt-1" style="font-size: 10px;">
+                                    <i class="bi bi-arrow-repeat me-1"></i><%= item.total_emptied_runs %>x pengangkutan
+                                </div>
+                                <% } %>
+                            </td>
+                            <td>
+                                <% if (item.pic_name) { %>
+                                <div class="small fw-bold text-dark"><%= item.pic_name %></div>
+                                <% if (item.pic_phone) { %>
+                                <a href="https://wa.me/<%= item.pic_phone.replace(/[^0-9]/g, '').replace(/^0/, '62') %>" target="_blank" class="small text-success text-decoration-none d-inline-flex align-items-center gap-1">
+                                    <i class="bi bi-whatsapp"></i> <%= item.pic_phone %>
+                                </a>
+                                <% } %>
+                                <% } else { %>
+                                <span class="text-muted small">-</span>
+                                <% } %>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light rounded-circle shadow-none" type="button" data-bs-toggle="dropdown">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3">
+                                        <% if (canEdit) { %>
+                                        <li>
+                                            <a class="dropdown-item py-2 text-primary" href="javascript:void(0)" 
+                                               onclick="openUpdateLoadModal('<%= item.id %>', '<%= item.name %>', '<%= item.current_load_kg %>', '<%= item.capacity_kg %>', '<%= item.status %>')">
+                                                <i class="bi bi-truck me-2"></i> Update Muatan / Angkut
+                                            </a>
+                                        </li>
+                                        <% } %>
+
+                                        <% if (isAdministrator) { %>
+                                        <li>
+                                            <a class="dropdown-item py-2 text-dark" href="javascript:void(0)"
+                                               onclick="openEditDropPointModal('<%= item.id %>', `<%= item.name %>`, `<%= item.category %>`, `<%= item.address %>`, `<%= item.district || '' %>`, `<%= item.operational_hours %>`, `<%= item.operational_days %>`, `<%= item.accepted_waste_types %>`, `<%= item.capacity_kg %>`, `<%= item.pic_name || '' %>`, `<%= item.pic_phone || '' %>`, `<%= item.status %>`, `<%= item.notes || '' %>`)">
+                                                <i class="bi bi-pencil-square me-2"></i> Edit Informasi Pos
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <form action="/drop-points/<%= item.id %>/delete" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menonaktifkan pos drop point ini?');">
+                                                <button type="submit" class="dropdown-item py-2 text-danger">
+                                                    <i class="bi bi-trash me-2"></i> Nonaktifkan Pos
+                                                </button>
+                                            </form>
+                                        </li>
+                                        <% } %>
+
+                                        <% if (!canEdit) { %>
+                                        <li>
+                                            <a class="dropdown-item py-2 text-dark" href="https://maps.google.com/?q=<%= encodeURIComponent(item.name + ' ' + item.address) %>" target="_blank">
+                                                <i class="bi bi-map me-2 text-success"></i> Buka Rute Google Maps
+                                            </a>
+                                        </li>
+                                        <% } %>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        <% }) %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Riwayat Pengangkutan Drop Point Terkini -->
+        <% if (logs.length > 0) { %>
+        <div class="card border border-light-subtle rounded-4 p-3 p-md-4 bg-light bg-opacity-50">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-clock-history me-2 text-primary"></i>Riwayat Pengangkutan dari Pos ke TPS3R Induk</h6>
+                <span class="badge bg-white text-secondary border px-2 py-1"><%= logs.length %> Pengangkutan Terakhir</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-borderless align-middle mb-0" style="font-size: 12px;">
+                    <thead>
+                        <tr class="text-muted border-bottom">
+                            <th>Tanggal</th>
+                            <th>Nama Drop Point</th>
+                            <th>Berat Diangkut</th>
+                            <th>Petugas / Driver</th>
+                            <th>Catatan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% logs.forEach(log => { %>
+                        <tr class="border-bottom border-light">
+                            <td class="py-2 fw-semibold text-dark"><%= new Date(log.collection_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) %></td>
+                            <td><span class="fw-bold text-dark"><%= log.drop_point_name %></span> <span class="text-muted">(<%= log.drop_point_code %>)</span></td>
+                            <td class="text-success fw-bold"><i class="bi bi-box-arrow-up-right me-1"></i><%= Number(log.weight_collected_kg).toLocaleString('id-ID') %> kg</td>
+                            <td><i class="bi bi-person-badge me-1 text-muted"></i><%= log.officer_name || 'Petugas Lapangan' %></td>
+                            <td class="text-muted"><%= log.notes || '-' %></td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <% } %>
+
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL 1: TAMBAH POS DROP POINT
+============================================================= -->
+<% if (isAdministrator) { %>
+<div class="modal fade" id="addDropPointModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-bottom py-3 px-4" style="background:#f8fafc;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px; height:32px; border-radius:8px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center;">
+                        <i class="bi bi-plus-lg"></i>
+                    </div>
+                    <h6 class="modal-title fw-bold text-dark mb-0">Tambah Pos Drop Point Baru</h6>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/drop-points/add" method="POST">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Kode Drop Point (Opsional)</label>
+                            <input type="text" name="code" class="form-control" placeholder="Otomatis jika kosong, cth: DP-JKT-006">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Nama Pos Drop Point <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required placeholder="Cth: Pos Setor Mandiri RW 08">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Kategori Pos <span class="text-danger">*</span></label>
+                            <select name="category" class="form-select" required>
+                                <option value="unit_bank_sampah">Unit Bank Sampah</option>
+                                <option value="dropbox_publik">Dropbox Publik</option>
+                                <option value="tps3r_induk">TPS3R Induk</option>
+                                <option value="sekolah_kampus">Sekolah / Kampus</option>
+                                <option value="kantor_mitra">Kantor / Mitra</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Kecamatan / Wilayah</label>
+                            <input type="text" name="district" class="form-control" placeholder="Cth: Cilandak, Jakarta Selatan">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Alamat Lengkap Pos <span class="text-danger">*</span></label>
+                            <textarea name="address" class="form-control" rows="2" required placeholder="Jl. Melati No. 15, depan balai warga RW 08..."></textarea>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Jam Operasional</label>
+                            <input type="text" name="operational_hours" class="form-control" value="08:00 - 16:00 WIB">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Hari Buka</label>
+                            <input type="text" name="operational_days" class="form-control" value="Senin - Sabtu">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Jenis Sampah yang Diterima</label>
+                            <input type="text" name="accepted_waste_types" class="form-control" value="Organik, Plastik, Kertas, Logam, Botol Kaca">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Kapasitas Maksimal Kontainer (kg) <span class="text-danger">*</span></label>
+                            <input type="number" step="0.1" name="capacity_kg" class="form-control" required value="500">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Muatan Awal Saat Ini (kg)</label>
+                            <input type="number" step="0.1" name="current_load_kg" class="form-control" value="0">
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Nama PIC / Penjaga Pos</label>
+                            <input type="text" name="pic_name" class="form-control" placeholder="Nama koordinator pos">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Nomor Telepon / WhatsApp PIC</label>
+                            <input type="text" name="pic_phone" class="form-control" placeholder="08123456789">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Catatan Tambahan</label>
+                            <textarea name="notes" class="form-control" rows="2" placeholder="Fasilitas timbangan digital tersedia, petunjuk lokasi..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success fw-semibold rounded-3 px-4">Simpan Drop Point</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<!-- ============================================================
+     MODAL 2: UPDATE MUATAN / PENGANGKUTAN SAMPAH KE TPS3R
+============================================================= -->
+<% if (canEdit) { %>
+<div class="modal fade" id="updateLoadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-bottom py-3 px-4" style="background:#f8fafc;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px; height:32px; border-radius:8px; background:#eff6ff; color:#2563eb; display:grid; place-items:center;">
+                        <i class="bi bi-truck"></i>
+                    </div>
+                    <h6 class="modal-title fw-bold text-dark mb-0">Update Muatan & Pengangkutan</h6>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="updateLoadForm" method="POST">
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border rounded-3 p-3 mb-3">
+                        <div class="small text-muted">Pos Drop Point:</div>
+                        <div class="fw-bold text-dark fs-6" id="modalDpName">-</div>
+                        <div class="small text-secondary mt-1">Kapasitas Maksimal: <span id="modalDpCapacity" class="fw-bold">0</span> kg</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Tindakan Petugas <span class="text-danger">*</span></label>
+                        <select name="action_type" id="actionTypeSelect" class="form-select" onchange="toggleActionFields(this.value)">
+                            <option value="empty_load">Pengangkutan ke Gudang TPS3R (Kosongkan Pos)</option>
+                            <option value="update_load">Sesuaikan Muatan Kontainer Terisi (kg)</option>
+                        </select>
+                    </div>
+
+                    <!-- Mode Pengangkutan (Empty) -->
+                    <div id="emptyFieldsGroup">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Berat Sampah yang Diangkut (kg) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" step="0.1" name="weight_collected_kg" id="modalWeightCollected" class="form-control" placeholder="Jumlah berat timbangan angkut">
+                                <span class="input-group-text">kg</span>
+                            </div>
+                            <div class="form-text">Muatan pos akan otomatis berkurang/dikosongkan setelah diangkut armada.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Tanggal Pengangkutan</label>
+                            <input type="date" name="collection_date" class="form-control" value="<%= new Date().toISOString().slice(0, 10) %>">
+                        </div>
+                    </div>
+
+                    <!-- Mode Update Beban Manual -->
+                    <div id="updateFieldsGroup" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Total Muatan Saat Ini (kg) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" step="0.1" name="current_load_kg" id="modalCurrentLoadInput" class="form-control">
+                                <span class="input-group-text">kg</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Status Pos</label>
+                            <select name="status" id="modalStatusSelect" class="form-select">
+                                <option value="aktif">Aktif (Operasional)</option>
+                                <option value="hampir_penuh">Hampir Penuh (≥80%)</option>
+                                <option value="penuh">Penuh (Perlu Angkut)</option>
+                                <option value="pemeliharaan">Pemeliharaan</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Catatan Operasional</label>
+                        <input type="text" name="notes" class="form-control" placeholder="Armada penjemput, kondisi kontainer, dll">
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-semibold rounded-3 px-4">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<!-- ============================================================
+     MODAL 3: EDIT INFORMASI POS DROP POINT
+============================================================= -->
+<% if (isAdministrator) { %>
+<div class="modal fade" id="editDropPointModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-bottom py-3 px-4" style="background:#f8fafc;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px; height:32px; border-radius:8px; background:#fef3c7; color:#d97706; display:grid; place-items:center;">
+                        <i class="bi bi-pencil-square"></i>
+                    </div>
+                    <h6 class="modal-title fw-bold text-dark mb-0">Edit Informasi Pos Drop Point</h6>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editDropPointForm" method="POST">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Nama Pos Drop Point <span class="text-danger">*</span></label>
+                            <input type="text" name="name" id="editName" class="form-control" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Kategori Pos <span class="text-danger">*</span></label>
+                            <select name="category" id="editCategory" class="form-select" required>
+                                <option value="unit_bank_sampah">Unit Bank Sampah</option>
+                                <option value="dropbox_publik">Dropbox Publik</option>
+                                <option value="tps3r_induk">TPS3R Induk</option>
+                                <option value="sekolah_kampus">Sekolah / Kampus</option>
+                                <option value="kantor_mitra">Kantor / Mitra</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Kecamatan / Wilayah</label>
+                            <input type="text" name="district" id="editDistrict" class="form-control">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Status Operasional</label>
+                            <select name="status" id="editStatus" class="form-select">
+                                <option value="aktif">Operasional (Normal)</option>
+                                <option value="hampir_penuh">Hampir Penuh</option>
+                                <option value="penuh">Penuh</option>
+                                <option value="pemeliharaan">Pemeliharaan</option>
+                                <option value="nonaktif">Non-Aktif</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Alamat Lengkap Pos <span class="text-danger">*</span></label>
+                            <textarea name="address" id="editAddress" class="form-control" rows="2" required></textarea>
+                        </div>
+
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Jam Operasional</label>
+                            <input type="text" name="operational_hours" id="editHours" class="form-control">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fw-semibold small">Hari Buka</label>
+                            <input type="text" name="operational_days" id="editDays" class="form-control">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Jenis Sampah Diterima</label>
+                            <input type="text" name="accepted_waste_types" id="editWasteTypes" class="form-control">
+                        </div>
+
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-semibold small">Kapasitas Maksimal (kg)</label>
+                            <input type="number" step="0.1" name="capacity_kg" id="editCapacity" class="form-control" required>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-semibold small">Nama PIC</label>
+                            <input type="text" name="pic_name" id="editPicName" class="form-control">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fw-semibold small">Telepon PIC</label>
+                            <input type="text" name="pic_phone" id="editPicPhone" class="form-control">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold small">Catatan Tambahan</label>
+                            <textarea name="notes" id="editNotes" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning text-dark fw-semibold rounded-3 px-4">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<script>
+function openUpdateLoadModal(id, name, currentLoad, capacity, status) {
+    const form = document.getElementById('updateLoadForm');
+    form.action = `/drop-points/${id}/update-load`;
+    document.getElementById('modalDpName').innerText = name;
+    document.getElementById('modalDpCapacity').innerText = Number(capacity).toLocaleString('id-ID');
+    document.getElementById('modalWeightCollected').value = Number(currentLoad);
+    document.getElementById('modalCurrentLoadInput').value = Number(currentLoad);
+    document.getElementById('modalStatusSelect').value = status;
+    
+    // Reset to empty action by default
+    document.getElementById('actionTypeSelect').value = 'empty_load';
+    toggleActionFields('empty_load');
+    
+    const modal = new bootstrap.Modal(document.getElementById('updateLoadModal'));
+    modal.show();
+}
+
+function toggleActionFields(actionType) {
+    const emptyGroup = document.getElementById('emptyFieldsGroup');
+    const updateGroup = document.getElementById('updateFieldsGroup');
+    if (actionType === 'empty_load') {
+        emptyGroup.style.display = 'block';
+        updateGroup.style.display = 'none';
+    } else {
+        emptyGroup.style.display = 'none';
+        updateGroup.style.display = 'block';
+    }
+}
+
+function openEditDropPointModal(id, name, category, address, district, hours, days, wasteTypes, capacity, picName, picPhone, status, notes) {
+    const form = document.getElementById('editDropPointForm');
+    form.action = `/drop-points/${id}/update`;
+    document.getElementById('editName').value = name;
+    document.getElementById('editCategory').value = category;
+    document.getElementById('editAddress').value = address;
+    document.getElementById('editDistrict').value = district;
+    document.getElementById('editHours').value = hours;
+    document.getElementById('editDays').value = days;
+    document.getElementById('editWasteTypes').value = wasteTypes;
+    document.getElementById('editCapacity').value = capacity;
+    document.getElementById('editPicName').value = picName;
+    document.getElementById('editPicPhone').value = picPhone;
+    document.getElementById('editStatus').value = status;
+    document.getElementById('editNotes').value = notes;
+
+    const modal = new bootstrap.Modal(document.getElementById('editDropPointModal'));
+    modal.show();
+}
+</script>

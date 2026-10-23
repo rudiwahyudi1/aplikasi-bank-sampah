@@ -1,0 +1,1296 @@
+<!-- ================================================================
+     DASHBOARD - PILAHKITA PROFESSIONAL ENTERPRISE DASHBOARD
+================================================================ -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<%
+    const m = typeof metrics !== "undefined" && metrics ? metrics : {};
+    const currUser = typeof currentUser !== "undefined" && currentUser ? currentUser : (typeof user !== "undefined" ? user : {});
+    const isClientNasabah = typeof isNasabah !== "undefined" ? Boolean(isNasabah) : false;
+    const profileScore = typeof profileCompletion !== "undefined" ? profileCompletion : 70;
+%>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="dashboard-container">
+
+        <!-- ============================================================
+             HEADER BAR
+        ============================================================= -->
+        <div class="mb-4 pb-1">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="header-icon-box">
+                        <i class="bi bi-speedometer2"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <h4 class="mb-0 fw-bold fs-5 fs-md-4 text-slate-800">DASHBOARD EKOSISTEM BANK SAMPAH</h4>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 extra-small fw-bold d-none d-sm-inline-flex align-items-center gap-1">
+                                <span class="live-dot"></span> Real-time Terintegrasi
+                            </span>
+                        </div>
+                        <div class="small text-muted mt-1">
+                            Sistem Informasi Pengelolaan Hulu ke Hilir · Pemilahan, Pengumpulan, Penjualan B2B, dan Keuangan Nasabah.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex align-items-center gap-2">
+                    <a href="/profile" class="btn btn-outline-secondary btn-sm rounded-3 fw-semibold d-inline-flex align-items-center gap-1.5" title="Buka Profil dan Rekening Bank">
+                        <i class="bi bi-person-gear text-success"></i>
+                        <span class="ms-1">Profil & Rekening</span>
+                    </a>
+                    <a href="/collection" class="btn btn-success btn-sm rounded-3 fw-semibold d-inline-flex align-items-center gap-1.5 shadow-sm">
+                        <i class="bi bi-plus-circle-fill"></i>
+                        <span class="ms-1"><%= isClientNasabah ? "Ajukan Penjemputan" : "Kelola Pengumpulan" %></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             HERO GREETING & REALTIME STATUS BANNER
+        ============================================================= -->
+        <div class="hero-banner rounded-4 p-3 p-md-4 mb-4 position-relative overflow-hidden text-white shadow-xs">
+        <div class="hero-bg-accent"></div>
+        <div class="position-relative z-1">
+            <div class="row align-items-center g-3">
+                <div class="col-lg-8">
+                    <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-white bg-opacity-20 backdrop-blur border border-white border-opacity-25 mb-2.5">
+                        <span class="live-dot"></span>
+                        <span class="extra-small fw-bold letter-spacing-1">
+                            <%= isClientNasabah ? "PORTAL NASABAH TERINTEGRASI" : "SISTEM OPERASIONAL PENGELOLA & KASIR" %>
+                        </span>
+                    </div>
+
+                    <h2 class="fw-bold mb-2 text-white fs-3 fs-md-2">
+                        <span id="greetingText">Selamat Datang</span>, <%= currUser.full_name || currUser.username || "Pengguna" %>
+                    </h2>
+
+                    <p class="text-white text-opacity-85 mb-3 fs-6" style="max-width: 680px; line-height: 1.5;">
+                        <%= isClientNasabah 
+                            ? "Pantau saldo tabungan, setorkan sampah terpilahmu, dan pastikan nomor rekening bank telah terdaftar agar pembayaran hasil penjualan sampah dapat dicairkan langsung ke rekeningmu." 
+                            : "Pantau seluruh arus material sampah, antrean penjemputan armada, omset penjualan kasir, kas operasional kecil, serta aduan sampah liar warga secara terpadu." %>
+                    </p>
+
+                    <!-- QUICK PILLS / REKENING INFO -->
+                    <div class="d-flex flex-wrap align-items-center gap-2 pt-1">
+                        <% if (currUser.bank_name && currUser.bank_account_number) { %>
+                            <div class="badge bg-white bg-opacity-20 border border-white border-opacity-30 rounded-3 px-3 py-2 text-white d-inline-flex align-items-center gap-2">
+                                <i class="bi bi-credit-card-2-front fs-6 text-warning"></i>
+                                <span>Rekening Pembayaran: <strong><%= currUser.bank_name.toUpperCase() %> - <%= currUser.bank_account_number %></strong> (a.n. <%= currUser.bank_account_holder || currUser.full_name %>)</span>
+                            </div>
+                        <% } else { %>
+                            <a href="/profile" class="badge bg-warning bg-opacity-25 border border-warning border-opacity-50 rounded-3 px-3 py-2 text-white text-decoration-none d-inline-flex align-items-center gap-2">
+                                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                                <span>Rekening belum diisi. <u>Lengkapi profil Anda</u> agar pencairan kasir lancar.</span>
+                            </a>
+                        <% } %>
+
+                        <% if (currUser.ktp_number) { %>
+                            <div class="badge bg-white bg-opacity-15 border border-white border-opacity-20 rounded-3 px-2.5 py-2 text-white d-inline-flex align-items-center gap-1.5">
+                                <i class="bi bi-person-vcard text-info"></i>
+                                <span>NIK: <%= currUser.ktp_number %><% if (currUser.age) { %> (<%= currUser.age %> th)<% } %></span>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 text-lg-end">
+                    <div class="glass-clock-box d-inline-block text-start p-3 rounded-4 backdrop-blur border border-white border-opacity-25 shadow-sm">
+                        <div class="d-flex align-items-center justify-content-between gap-3 mb-1.5">
+                            <span class="badge bg-white bg-opacity-20 text-white rounded-pill px-2.5 py-0.5 extra-small">
+                                <i class="bi bi-broadcast me-1 text-warning"></i> Sinkronisasi Aktif
+                            </span>
+                            <span class="badge bg-success text-white fw-bold rounded-pill px-2 py-0.5 extra-small">
+                                <i class="bi bi-check-circle-fill me-1"></i>Online
+                            </span>
+                        </div>
+                        <div class="fs-3 fw-bold font-monospace text-white mb-0" id="liveClock">
+                            --:--:-- WIB
+                        </div>
+                        <div class="extra-small text-white text-opacity-85 d-flex align-items-center gap-1 mt-1" id="liveDate">
+                            <i class="bi bi-calendar3"></i> Memuat tanggal...
+                        </div>
+                        <hr class="border-white border-opacity-20 my-2">
+                        <div class="extra-small text-white text-opacity-75 d-flex align-items-center gap-1.5">
+                            <i class="bi bi-geo-alt-fill text-warning"></i>
+                            <span>Wilayah Operasional: Bank Sampah Induk</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         PRIMARY KPI CARDS (FINANCIAL & OPERATIONAL SUMMARY)
+    ============================================================= -->
+    <div class="row g-2 g-md-3 mb-4">
+
+        <!-- CARD 1: KEUANGAN UTAMA (SALDO / PENJUALAN) -->
+        <div class="col-6 col-lg-3">
+            <div class="metric-card rounded-4 h-100 p-3 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="metric-icon-box bg-emerald-subtle text-success">
+                        <i class="bi <%= isClientNasabah ? 'bi-wallet2' : 'bi-cash-coin' %> fs-5"></i>
+                    </div>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-0.5 extra-small fw-bold">
+                        <%= isClientNasabah ? "Dompet Nasabah" : "Kasir Sales" %>
+                    </span>
+                </div>
+                <div class="text-muted extra-small fw-bold text-uppercase mb-1">
+                    <%= isClientNasabah ? "Saldo Dompet Saya" : "Total Penjualan Material" %>
+                </div>
+                <div class="fs-5 fs-md-4 fw-bold text-slate-800 mb-1 text-truncate">
+                    Rp <%= Number(isClientNasabah ? m.walletBalance : m.totalSales).toLocaleString("id-ID") %>
+                </div>
+                <div class="extra-small text-muted d-flex align-items-center gap-1 text-truncate">
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    <span><%= isClientNasabah ? "Siap ditarik ke rekening" : (m.paidSalesCount + " Transaksi Lunas") %></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 2: TOTAL BERAT SAMPAH -->
+        <div class="col-6 col-lg-3">
+            <div class="metric-card rounded-4 h-100 p-3 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="metric-icon-box bg-teal-subtle text-teal">
+                        <i class="bi bi-recycle fs-5"></i>
+                    </div>
+                    <span class="badge bg-teal-subtle text-teal border border-teal-subtle rounded-pill px-2 py-0.5 extra-small fw-bold">
+                        <%= m.completedPickups %> Selesai
+                    </span>
+                </div>
+                <div class="text-muted extra-small fw-bold text-uppercase mb-1">
+                    <%= isClientNasabah ? "Sampah Terkumpul Saya" : "Total Sampah Masuk" %>
+                </div>
+                <div class="fs-5 fs-md-4 fw-bold text-slate-800 mb-1">
+                    <%= Number(m.totalKg || 0).toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) %>
+                    <span class="fs-6 fw-normal text-muted">Kg</span>
+                </div>
+                <div class="extra-small text-muted d-flex align-items-center gap-1 text-truncate">
+                    <i class="bi bi-arrow-up-right text-success"></i>
+                    <span>Terdiversi dari TPA</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 3: ANTREAN LOGISTIK PICKUP -->
+        <div class="col-6 col-lg-3">
+            <div class="metric-card rounded-4 h-100 p-3 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="metric-icon-box bg-amber-subtle text-warning">
+                        <i class="bi bi-truck fs-5"></i>
+                    </div>
+                    <span class="badge bg-amber-subtle text-warning border border-warning-subtle rounded-pill px-2 py-0.5 extra-small fw-bold">
+                        <%= m.pendingPickups %> Antrean
+                    </span>
+                </div>
+                <div class="text-muted extra-small fw-bold text-uppercase mb-1">
+                    <%= isClientNasabah ? "Permintaan Pickup Aktif" : "Permintaan Penjemputan" %>
+                </div>
+                <div class="fs-5 fs-md-4 fw-bold text-slate-800 mb-1">
+                    <%= Number(m.pendingPickups || 0).toLocaleString("id-ID") %>
+                    <span class="fs-6 fw-normal text-muted">Jadwal</span>
+                </div>
+                <div class="extra-small text-muted d-flex align-items-center gap-1 text-truncate">
+                    <i class="bi bi-clock-history text-warning"></i>
+                    <span><%= m.activeSchedules %> Rute Armada Aktif</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 4: KAS KECIL & PENGELUARAN / PROFIL -->
+        <div class="col-6 col-lg-3">
+            <div class="metric-card rounded-4 h-100 p-3 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="metric-icon-box bg-purple-subtle text-purple">
+                        <i class="bi <%= isClientNasabah ? 'bi-person-check' : 'bi-receipt' %> fs-5"></i>
+                    </div>
+                    <span class="badge bg-purple-subtle text-purple border border-purple-subtle rounded-pill px-2 py-0.5 extra-small fw-bold">
+                        <%= isClientNasabah ? (profileScore + "% Lengkap") : "Kas Operasional" %>
+                    </span>
+                </div>
+                <div class="text-muted extra-small fw-bold text-uppercase mb-1">
+                    <%= isClientNasabah ? "Kelengkapan Profil" : "Biaya & Kas Kecil" %>
+                </div>
+                <div class="fs-5 fs-md-4 fw-bold text-slate-800 mb-1 text-truncate">
+                    <% if (isClientNasabah) { %>
+                        <span class="text-success"><i class="bi bi-shield-fill-check me-1"></i>Terverifikasi</span>
+                    <% } else { %>
+                        Rp <%= Number(m.totalExpenses || 0).toLocaleString("id-ID") %>
+                    <% } %>
+                </div>
+                <div class="extra-small text-muted d-flex align-items-center gap-1 text-truncate">
+                    <% if (isClientNasabah) { %>
+                        <i class="bi bi-credit-card-2-front text-purple"></i>
+                        <span><%= currUser.bank_name ? "Rekening Siap" : "Rekening Kosong" %></span>
+                    <% } else { %>
+                        <i class="bi bi-graph-down text-purple"></i>
+                        <span>Arus Kas Operasional</span>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============================================================
+         SECONDARY ENTERPRISE METRICS STRIP
+    ============================================================= -->
+    <div class="row g-2 g-md-3 mb-3 mb-md-4">
+
+        <!-- METRIK: PENGOLAHAN SAMPAH -->
+        <div class="col-6 col-md-3">
+            <div class="p-3 rounded-4 bg-white border shadow-xs d-flex align-items-center gap-3">
+                <div class="sub-metric-icon bg-success-subtle text-success">
+                    <i class="bi bi-gear-wide-connected fs-4"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="extra-small text-muted fw-semibold text-uppercase">Sampah Diolah</div>
+                    <div class="fw-bold fs-6 text-slate-800 text-truncate">
+                        <%= Number(m.processedKg || 0).toFixed(1) %> <span class="small fw-normal text-muted">kg</span>
+                    </div>
+                    <div class="extra-small text-success">
+                        <i class="bi bi-arrow-repeat me-1"></i>Proses Pemilahan
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- METRIK: PRODUKSI KOMPOS -->
+        <div class="col-6 col-md-3">
+            <div class="p-3 rounded-4 bg-white border shadow-xs d-flex align-items-center gap-3">
+                <div class="sub-metric-icon bg-primary-subtle text-primary">
+                    <i class="bi bi-flower1 fs-4"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="extra-small text-muted fw-semibold text-uppercase">Produksi Kompos</div>
+                    <div class="fw-bold fs-6 text-slate-800 text-truncate">
+                        <%= Number(m.compostKg || 0).toFixed(1) %> <span class="small fw-normal text-muted">kg</span>
+                    </div>
+                    <div class="extra-small text-primary">
+                        <i class="bi bi-check2 me-1"></i>Pupuk Organik
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- METRIK: ADUAN SAMPAH LIAR -->
+        <div class="col-6 col-md-3">
+            <div class="p-3 rounded-4 bg-white border shadow-xs d-flex align-items-center gap-3">
+                <div class="sub-metric-icon bg-danger-subtle text-danger">
+                    <i class="bi bi-megaphone-fill fs-4"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="extra-small text-muted fw-semibold text-uppercase">Aduan Sampah Liar</div>
+                    <div class="fw-bold fs-6 text-slate-800 text-truncate">
+                        <%= Number(m.totalComplaints || 0) %> <span class="small fw-normal text-muted">Tiket</span>
+                    </div>
+                    <div class="extra-small text-danger">
+                        <i class="bi bi-exclamation-circle me-1"></i><%= m.pendingComplaints %> Perlu Ditindak
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- METRIK: KAS NETTO BANK SAMPAH / PENGGUNA -->
+        <div class="col-6 col-md-3">
+            <div class="p-3 rounded-4 bg-white border shadow-xs d-flex align-items-center gap-3">
+                <div class="sub-metric-icon bg-info-subtle text-info">
+                    <i class="bi <%= isClientNasabah ? 'bi-shield-check' : 'bi-bank' %> fs-4"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="extra-small text-muted fw-semibold text-uppercase">
+                        <%= isClientNasabah ? "Status Anggota" : "Kas Bersih Operasional" %>
+                    </div>
+                    <div class="fw-bold fs-6 text-slate-800 text-truncate">
+                        <% if (isClientNasabah) { %>
+                            Nasabah Aktif
+                        <% } else { %>
+                            Rp <%= Number(m.netCash || 0).toLocaleString("id-ID") %>
+                        <% } %>
+                    </div>
+                    <div class="extra-small text-info">
+                        <i class="bi bi-patch-check-fill me-1"></i><%= isClientNasabah ? "PilahKita ID" : "Sales - Beban Kasir" %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ============================================================
+         ECO-IMPACT WIDGET STRIP
+    ============================================================= -->
+    <div class="rounded-4 mb-4 p-3 p-md-4 bg-gradient-eco overflow-hidden position-relative border border-success-subtle">
+        <div class="row align-items-center g-3 position-relative z-1">
+            <div class="col-lg-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 rounded-4 bg-success text-white shadow-sm">
+                        <i class="bi bi-globe-asia-australia fs-2"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold text-slate-800 mb-1">Dampak Ekologis & Lingkungan</h5>
+                        <p class="text-muted mb-0 small">
+                            Kontribusi dari <strong><%= Number(m.totalKg || 0).toLocaleString("id-ID") %> Kg</strong> sampah terpilah.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="row g-2 text-center">
+                    <div class="col-6 col-md-3">
+                        <div class="p-2.5 rounded-4 bg-white shadow-xs border border-success-subtle h-100">
+                            <div class="text-success fs-4 mb-0.5"><i class="bi bi-tree-fill"></i></div>
+                            <div class="h6 fw-bold text-slate-800 mb-0"><%= (Number(m.totalKg || 0) * 0.02).toFixed(1) %></div>
+                            <div class="text-muted extra-small text-uppercase fw-semibold">Pohon Selamat</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-2.5 rounded-4 bg-white shadow-xs border border-success-subtle h-100">
+                            <div class="text-info fs-4 mb-0.5"><i class="bi bi-cloud-check-fill"></i></div>
+                            <div class="h6 fw-bold text-slate-800 mb-0"><%= (Number(m.totalKg || 0) * 1.5).toFixed(1) %> <span class="extra-small">kg</span></div>
+                            <div class="text-muted extra-small text-uppercase fw-semibold">Reduksi CO₂</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-2.5 rounded-4 bg-white shadow-xs border border-success-subtle h-100">
+                            <div class="text-warning fs-4 mb-0.5"><i class="bi bi-lightning-charge-fill"></i></div>
+                            <div class="h6 fw-bold text-slate-800 mb-0"><%= (Number(m.totalKg || 0) * 2.8).toFixed(1) %> <span class="extra-small">kWh</span></div>
+                            <div class="text-muted extra-small text-uppercase fw-semibold">Energi Hemat</div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="p-2.5 rounded-4 bg-white shadow-xs border border-success-subtle h-100">
+                            <div class="text-primary fs-4 mb-0.5"><i class="bi bi-droplet-fill"></i></div>
+                            <div class="h6 fw-bold text-slate-800 mb-0"><%= (Number(m.totalKg || 0) * 15).toFixed(0) %> <span class="extra-small">L</span></div>
+                            <div class="text-muted extra-small text-uppercase fw-semibold">Air Terjaga</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         VISUAL ANALYTICS (TREN & KOMPOSISI KATEGORI)
+    ============================================================= -->
+    <div class="row g-3 mb-3 mb-md-4">
+        <!-- GRAFIK TREN BULANAN -->
+        <div class="col-lg-7">
+            <div class="chart-card-box rounded-4 border bg-white p-3 p-md-4 h-100">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <div>
+                        <h5 class="fw-bold text-slate-800 mb-1">
+                            <i class="bi bi-graph-up-arrow text-success me-2"></i>Tren Pengumpulan Sampah
+                        </h5>
+                        <p class="text-muted small mb-0">Perkembangan berat material terkelola dalam 6 periode terakhir</p>
+                    </div>
+                    <span class="badge bg-light text-secondary border rounded-pill px-3 py-1.5 small fw-medium">
+                        <i class="bi bi-calendar3 me-1"></i>Histori 6 Bulan
+                    </span>
+                </div>
+                <div class="chart-box position-relative" style="min-height: 270px;">
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- GRAFIK KOMPOSISI KATEGORI -->
+        <div class="col-lg-5">
+            <div class="chart-card-box rounded-4 border bg-white p-3 p-md-4 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h5 class="fw-bold text-slate-800 mb-1">
+                            <i class="bi bi-pie-chart-fill text-primary me-2"></i>Komposisi Kategori
+                        </h5>
+                        <p class="text-muted small mb-0">Distribusi jenis sampah yang terkumpul</p>
+                    </div>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-2.5 py-1 extra-small fw-bold">
+                        Master Kategori
+                    </span>
+                </div>
+
+                <div class="row align-items-center g-3">
+                    <div class="col-sm-5 text-center">
+                        <div class="position-relative d-inline-block">
+                            <canvas id="categoryChart" style="max-height: 180px; max-width: 180px;"></canvas>
+                            <div class="donut-center-info">
+                                <div class="fw-bold fs-6 text-slate-800 mb-0">
+                                    <%= Number(m.totalKg || 0).toLocaleString("id-ID", { maximumFractionDigits: 1 }) %>
+                                </div>
+                                <div class="text-muted extra-small">Kg Total</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-sm-7">
+                        <div class="category-list">
+                            <% 
+                                const catColors = {
+                                    'organik': '#10b981',
+                                    'anorganik': '#0ea5e9',
+                                    'daur_ulang': '#8b5cf6',
+                                    'b3': '#f43f5e',
+                                    'lainnya': '#f59e0b'
+                                };
+                                const totalKgAll = Number(m.totalKg || 0) || 1;
+                            %>
+                            <% if (categories && categories.length > 0) { %>
+                                <% categories.forEach(function(c) { 
+                                    const cWeight = Number(c.total_weight || 0);
+                                    const cPct = Math.round((cWeight / totalKgAll) * 100);
+                                    const color = catColors[c.category] || '#64748b';
+                                    const catName = c.category ? c.category.replace(/_/g, ' ').toUpperCase() : 'LAINNYA';
+                                %>
+                                    <div class="mb-2">
+                                        <div class="d-flex justify-content-between align-items-center extra-small mb-1">
+                                            <span class="fw-bold text-slate-700 d-flex align-items-center gap-1.5">
+                                                <span class="legend-dot" style="background-color: <%= color %>;"></span>
+                                                <%= catName %>
+                                            </span>
+                                            <span class="text-muted"><%= cWeight.toFixed(1) %> kg (<%= cPct %>%)</span>
+                                        </div>
+                                        <div class="progress rounded-pill" style="height: 5px;">
+                                            <div class="progress-bar rounded-pill" style="width: <%= Math.max(cPct, 4) %>%; background-color: <%= color %>;"></div>
+                                        </div>
+                                    </div>
+                                <% }); %>
+                            <% } else { %>
+                                <div class="text-center py-3 text-muted small">
+                                    <i class="bi bi-inbox fs-3 d-block mb-1 text-secondary"></i>
+                                    Belum ada data kategori
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         PUSAT AKSES CEPAT (QUICK NAVIGATION HUB)
+    ============================================================= -->
+    <div class="quick-hub-wrapper rounded-4 border bg-white p-3 p-md-4 mb-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+                <h5 class="fw-bold text-slate-800 mb-1">
+                    <i class="bi bi-grid-fill text-success me-2"></i>Pusat Layanan & Akses Modul Operasional
+                </h5>
+                <p class="text-muted small mb-0">Navigasi langsung ke seluruh alur kerja sistem terpadu</p>
+            </div>
+            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 extra-small fw-bold">
+                6 Modul Terhubung
+            </span>
+        </div>
+
+        <div class="row g-2.5 g-md-3">
+            <!-- 1. PENGUMPULAN -->
+            <div class="col-md-4 col-sm-6">
+                <a href="/collection" class="quick-link-card p-3 rounded-4 border text-decoration-none d-flex align-items-center gap-3">
+                    <div class="nav-icon-square bg-success-subtle text-success">
+                        <i class="bi bi-truck fs-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h6 class="fw-bold text-slate-800 mb-0.5 text-truncate">Pengumpulan Sampah</h6>
+                        <div class="extra-small text-muted text-truncate">Permintaan pickup & timbangan</div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted ms-auto fs-6"></i>
+                </a>
+            </div>
+
+            <!-- 2. KATALOG & HARGA -->
+            <div class="col-md-4 col-sm-6">
+                <a href="/prices" class="quick-link-card p-3 rounded-4 border text-decoration-none d-flex align-items-center gap-3">
+                    <div class="nav-icon-square bg-info-subtle text-info">
+                        <i class="bi bi-tags-fill fs-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h6 class="fw-bold text-slate-800 mb-0.5 text-truncate">Katalog Harga & Tips</h6>
+                        <div class="extra-small text-muted text-truncate">Daftar harga jual & cara pilah</div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted ms-auto fs-6"></i>
+                </a>
+            </div>
+
+            <!-- 3. KASIR PENJUALAN B2B -->
+            <div class="col-md-4 col-sm-6">
+                <a href="/sales" class="quick-link-card p-3 rounded-4 border text-decoration-none d-flex align-items-center gap-3">
+                    <div class="nav-icon-square bg-primary-subtle text-primary">
+                        <i class="bi bi-cart-check fs-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h6 class="fw-bold text-slate-800 mb-0.5 text-truncate">Kasir Penjualan (/sales)</h6>
+                        <div class="extra-small text-muted text-truncate">Pembayaran langsung ke rekening</div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted ms-auto fs-6"></i>
+                </a>
+            </div>
+
+            <!-- 4. DOMPET & PENARIKAN -->
+            <div class="col-md-4 col-sm-6">
+                <a href="<%= isClientNasabah ? '/wallet' : '/withdrawals' %>" class="quick-link-card p-3 rounded-4 border text-decoration-none d-flex align-items-center gap-3">
+                    <div class="nav-icon-square bg-warning-subtle text-warning">
+                        <i class="bi bi-wallet2 fs-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h6 class="fw-bold text-slate-800 mb-0.5 text-truncate"><%= isClientNasabah ? "Dompet Digital" : "Penarikan Dana" %></h6>
+                        <div class="extra-small text-muted text-truncate"><%= isClientNasabah ? "Cek saldo & mutasi transaksi" : "Persetujuan pencairan tunai" %></div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted ms-auto fs-6"></i>
+                </a>
+            </div>
+
+            <!-- 5. BIAYA OPERASIONAL KAS KECIL -->
+            <div class="col-md-4 col-sm-6">
+                <a href="/expenses" class="quick-link-card p-3 rounded-4 border text-decoration-none d-flex align-items-center gap-3">
+                    <div class="nav-icon-square bg-purple-subtle text-purple">
+                        <i class="bi bi-receipt fs-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h6 class="fw-bold text-slate-800 mb-0.5 text-truncate">Biaya & Kas Kecil</h6>
+                        <div class="extra-small text-muted text-truncate">Pencatatan bensin & operasional</div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted ms-auto fs-6"></i>
+                </a>
+            </div>
+
+            <!-- 6. PROFIL SAYA & REKENING -->
+            <div class="col-md-4 col-sm-6">
+                <a href="/profile" class="quick-link-card p-3 rounded-4 border text-decoration-none d-flex align-items-center gap-3">
+                    <div class="nav-icon-square bg-teal-subtle text-teal">
+                        <i class="bi bi-person-vcard-fill fs-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h6 class="fw-bold text-slate-800 mb-0.5 text-truncate">Profil Saya & Rekening</h6>
+                        <div class="extra-small text-muted text-truncate">KTP, usia, dan rekening tujuan</div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted ms-auto fs-6"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         LIVE ACTIVITY & COMPREHENSIVE TABLES (NAV TABS)
+    ============================================================= -->
+    <div class="table-card rounded-4 border overflow-hidden mb-2">
+        <!-- TAB HEADER -->
+        <div class="p-3 p-md-4 border-bottom d-flex flex-wrap align-items-center justify-content-between gap-3">
+            <div>
+                <h5 class="fw-bold text-slate-800 mb-1">
+                    <i class="bi bi-activity text-success me-2"></i>Pusat Data & Aktivitas Terkini
+                </h5>
+                <p class="text-muted small mb-0">Pantau seluruh pergerakan transaksi dan logistik dalam satu tampilan terpadu</p>
+            </div>
+
+            <ul class="nav nav-pills gap-1 bg-light p-1 rounded-3" id="dashboardTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-1.5 px-3 extra-small fw-bold rounded-3" id="tab-pickup-btn" data-bs-toggle="pill" data-bs-target="#tab-pickup" type="button" role="tab">
+                        <i class="bi bi-truck me-1"></i>Pickup (<%= recentCollections.length %>)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1.5 px-3 extra-small fw-bold rounded-3" id="tab-sales-btn" data-bs-toggle="pill" data-bs-target="#tab-sales" type="button" role="tab">
+                        <i class="bi bi-cart-check me-1"></i>Penjualan Kasir (<%= latestSales.length %>)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1.5 px-3 extra-small fw-bold rounded-3" id="tab-complaints-btn" data-bs-toggle="pill" data-bs-target="#tab-complaints" type="button" role="tab">
+                        <i class="bi bi-megaphone me-1"></i>Aduan Warga (<%= latestComplaints.length %>)
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1.5 px-3 extra-small fw-bold rounded-3" id="tab-schedules-btn" data-bs-toggle="pill" data-bs-target="#tab-schedules" type="button" role="tab">
+                        <i class="bi bi-calendar2-week me-1"></i>Jadwal Armada (<%= activeSchedules.length %>)
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- TAB CONTENTS -->
+        <div class="tab-content" id="dashboardTabContent">
+
+            <!-- TAB 1: PICKUP TERKINI -->
+            <div class="tab-pane fade show active" id="tab-pickup" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 custom-dash-table">
+                        <thead class="bg-light text-muted extra-small text-uppercase fw-bold">
+                            <tr>
+                                <th class="ps-4 py-3">Kode Permintaan</th>
+                                <th class="py-3">Nasabah & Kontak</th>
+                                <th class="py-3">Rekening Pembayaran</th>
+                                <th class="py-3">Jadwal Setor</th>
+                                <th class="py-3 text-end">Total Berat</th>
+                                <th class="py-3 text-end">Estimasi Nilai</th>
+                                <th class="py-3 text-center">Status</th>
+                                <th class="pe-4 py-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (!recentCollections || recentCollections.length === 0) { %>
+                                <tr>
+                                    <td colspan="8" class="text-center py-5 text-muted small">
+                                        <i class="bi bi-inbox fs-1 text-slate-300 d-block mb-2"></i>
+                                        Belum ada data pengumpulan sampah.
+                                    </td>
+                                </tr>
+                            <% } else { %>
+                                <% recentCollections.forEach(function(r) { 
+                                    let statusBadge = 'bg-light text-secondary border';
+                                    let statusIcon = 'bi-circle';
+                                    let statusLabel = r.status || 'Diajukan';
+
+                                    if (r.status === 'diajukan') {
+                                        statusBadge = 'bg-warning-subtle text-warning border border-warning-subtle';
+                                        statusIcon = 'bi-hourglass-split';
+                                        statusLabel = 'Diajukan';
+                                    } else if (r.status === 'dijadwalkan') {
+                                        statusBadge = 'bg-primary-subtle text-primary border border-primary-subtle';
+                                        statusIcon = 'bi-calendar-check';
+                                        statusLabel = 'Dijadwalkan';
+                                    } else if (r.status === 'selesai') {
+                                        statusBadge = 'bg-success-subtle text-success border border-success-subtle';
+                                        statusIcon = 'bi-check-circle-fill';
+                                        statusLabel = 'Selesai';
+                                    } else if (r.status === 'ditolak' || r.status === 'dibatalkan') {
+                                        statusBadge = 'bg-danger-subtle text-danger border border-danger-subtle';
+                                        statusIcon = 'bi-x-circle-fill';
+                                        statusLabel = r.status === 'ditolak' ? 'Ditolak' : 'Dibatalkan';
+                                    }
+
+                                    let tgl = "-";
+                                    if (r.scheduled_date) {
+                                        const d = new Date(r.scheduled_date);
+                                        tgl = d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" });
+                                    }
+                                %>
+                                    <tr>
+                                        <td class="ps-4 py-3">
+                                            <span class="font-monospace fw-bold text-slate-800 bg-light px-2 py-1 rounded-2 extra-small border">
+                                                <%= r.code || ('#COL-' + r.id) %>
+                                            </span>
+                                        </td>
+                                        <td class="py-3">
+                                            <div class="fw-bold text-slate-800 small"><%= r.full_name || "-" %></div>
+                                            <div class="extra-small text-muted"><i class="bi bi-telephone me-1"></i><%= r.phone || "-" %></div>
+                                        </td>
+                                        <td class="py-3">
+                                            <% if (r.bank_name && r.bank_account_number) { %>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 extra-small fw-bold">
+                                                    <i class="bi bi-bank me-1"></i><%= r.bank_name.toUpperCase() %>: <%= r.bank_account_number %>
+                                                </span>
+                                            <% } else { %>
+                                                <span class="badge bg-light text-muted border px-2 py-1 extra-small">
+                                                    Belum daftarkan bank
+                                                </span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3">
+                                            <div class="small fw-semibold text-slate-800"><%= tgl %></div>
+                                            <% if (r.scheduled_time) { %>
+                                                <div class="extra-small text-muted"><i class="bi bi-clock me-1"></i><%= String(r.scheduled_time).slice(0, 5) %> WIB</div>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3 text-end">
+                                            <span class="fw-bold text-slate-800"><%= Number(r.total_weight || 0).toLocaleString("id-ID", { minimumFractionDigits: 1 }) %></span>
+                                            <span class="extra-small text-muted">kg</span>
+                                        </td>
+                                        <td class="py-3 text-end">
+                                            <span class="fw-bold text-success">Rp <%= Number(r.total_value || 0).toLocaleString("id-ID") %></span>
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            <span class="badge rounded-pill px-2.5 py-1 extra-small fw-bold <%= statusBadge %>">
+                                                <i class="bi <%= statusIcon %> me-1"></i><%= statusLabel %>
+                                            </span>
+                                        </td>
+                                        <td class="pe-4 py-3 text-center">
+                                            <a href="/collection?search=<%= encodeURIComponent(r.code || '') %>" class="btn btn-light btn-sm rounded-2 border p-1 text-secondary" title="Detail">
+                                                <i class="bi bi-arrow-right"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 2: PENJUALAN KASIR (/SALES) -->
+            <div class="tab-pane fade" id="tab-sales" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 custom-dash-table">
+                        <thead class="bg-light text-muted extra-small text-uppercase fw-bold">
+                            <tr>
+                                <th class="ps-4 py-3">Kode Transaksi</th>
+                                <th class="py-3">Nasabah Penjual</th>
+                                <th class="py-3">Rekening Pencairan</th>
+                                <th class="py-3">Mitra Pembeli</th>
+                                <th class="py-3 text-end">Berat</th>
+                                <th class="py-3 text-end">Total Pembayaran</th>
+                                <th class="py-3 text-center">Status Bayar</th>
+                                <th class="pe-4 py-3 text-center">Aksi Kasir</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (!latestSales || latestSales.length === 0) { %>
+                                <tr>
+                                    <td colspan="8" class="text-center py-5 text-muted small">
+                                        <i class="bi bi-cart-x fs-1 text-slate-300 d-block mb-2"></i>
+                                        Belum ada transaksi penjualan di kasir.
+                                    </td>
+                                </tr>
+                            <% } else { %>
+                                <% latestSales.forEach(function(s) { %>
+                                    <tr>
+                                        <td class="ps-4 py-3">
+                                            <span class="font-monospace fw-bold text-slate-800 bg-light px-2 py-1 rounded-2 extra-small border">
+                                                <%= s.code %>
+                                            </span>
+                                        </td>
+                                        <td class="py-3">
+                                            <div class="fw-bold text-slate-800 small"><%= s.nasabah_name || "-" %></div>
+                                        </td>
+                                        <td class="py-3">
+                                            <% if (s.nasabah_bank && s.nasabah_account_number) { %>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1 extra-small fw-bold">
+                                                    <i class="bi bi-bank me-1"></i><%= s.nasabah_bank.toUpperCase() %>: <%= s.nasabah_account_number %>
+                                                </span>
+                                            <% } else { %>
+                                                <span class="badge bg-light text-muted border px-2 py-1 extra-small">
+                                                    (Belum ada rekening)
+                                                </span>
+                                            <% } %>
+                                        </td>
+                                        <td class="py-3">
+                                            <span class="small fw-semibold text-secondary"><%= s.buyer_name || "Pembeli Retail" %></span>
+                                        </td>
+                                        <td class="py-3 text-end">
+                                            <span class="fw-bold text-slate-800"><%= Number(s.total_weight || 0).toLocaleString("id-ID", { minimumFractionDigits: 1 }) %> kg</span>
+                                        </td>
+                                        <td class="py-3 text-end">
+                                            <span class="fw-bold text-success">Rp <%= Number(s.total_amount || 0).toLocaleString("id-ID") %></span>
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            <% if (s.payment_status === 'paid' || s.status === 'paid') { %>
+                                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 extra-small fw-bold">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Lunas (<%= s.bank_name || 'Transfer' %>)
+                                                </span>
+                                            <% } else { %>
+                                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill px-2.5 py-1 extra-small fw-bold">
+                                                    <i class="bi bi-hourglass-split me-1"></i>Belum Bayar
+                                                </span>
+                                            <% } %>
+                                        </td>
+                                        <td class="pe-4 py-3 text-center">
+                                            <a href="/sales" class="btn btn-sm btn-outline-success rounded-2 px-2 py-1 extra-small fw-bold">
+                                                <i class="bi bi-cash-stack me-1"></i>Kasir
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 3: ADUAN SAMPAH LIAR -->
+            <div class="tab-pane fade" id="tab-complaints" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 custom-dash-table">
+                        <thead class="bg-light text-muted extra-small text-uppercase fw-bold">
+                            <tr>
+                                <th class="ps-4 py-3">Tiket Aduan</th>
+                                <th class="py-3">Pelapor</th>
+                                <th class="py-3">Lokasi & Alamat</th>
+                                <th class="py-3 text-center">Tingkat Urgensi</th>
+                                <th class="py-3 text-center">Status Verifikasi</th>
+                                <th class="pe-4 py-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (!latestComplaints || latestComplaints.length === 0) { %>
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted small">
+                                        <i class="bi bi-check2-circle fs-1 text-success d-block mb-2"></i>
+                                        Tidak ada aduan sampah liar aktif. Lingkungan bersih!
+                                    </td>
+                                </tr>
+                            <% } else { %>
+                                <% latestComplaints.forEach(function(c) { 
+                                    let urgencyBadge = 'bg-light text-secondary border';
+                                    if (c.urgency_level === 'darurat') {
+                                        urgencyBadge = 'bg-danger text-white';
+                                    } else if (c.urgency_level === 'tinggi') {
+                                        urgencyBadge = 'bg-warning text-dark';
+                                    } else {
+                                        urgencyBadge = 'bg-info-subtle text-info border border-info-subtle';
+                                    }
+                                %>
+                                    <tr>
+                                        <td class="ps-4 py-3">
+                                            <span class="font-monospace fw-bold text-slate-800 bg-light px-2 py-1 rounded-2 extra-small border">
+                                                <%= c.ticket_code %>
+                                            </span>
+                                        </td>
+                                        <td class="py-3">
+                                            <div class="fw-bold text-slate-800 small"><%= c.reporter_name || "-" %></div>
+                                        </td>
+                                        <td class="py-3">
+                                            <div class="small text-slate-800"><%= c.location_address || "-" %></div>
+                                            <div class="extra-small text-muted"><%= c.neighborhood || "" %></div>
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            <span class="badge rounded-pill px-2.5 py-1 extra-small fw-bold <%= urgencyBadge %>">
+                                                <i class="bi bi-exclamation-triangle-fill me-1"></i><%= (c.urgency_level || 'normal').toUpperCase() %>
+                                            </span>
+                                        </td>
+                                        <td class="py-3 text-center">
+                                            <span class="badge bg-light text-secondary border rounded-pill px-2.5 py-1 extra-small fw-bold">
+                                                <%= c.status || 'pending' %>
+                                            </span>
+                                        </td>
+                                        <td class="pe-4 py-3 text-center">
+                                            <a href="/complaints" class="btn btn-sm btn-outline-danger rounded-2 px-2 py-1 extra-small fw-bold">
+                                                <i class="bi bi-eye me-1"></i>Tinjau
+                                            </a>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 4: JADWAL ARMADA AKTIF -->
+            <div class="tab-pane fade" id="tab-schedules" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 custom-dash-table">
+                        <thead class="bg-light text-muted extra-small text-uppercase fw-bold">
+                            <tr>
+                                <th class="ps-4 py-3">Zona Operasional</th>
+                                <th class="py-3">Cakupan Wilayah / Rute</th>
+                                <th class="py-3">Hari & Jam Tugas</th>
+                                <th class="py-3">Armada & Supir</th>
+                                <th class="py-3 text-end">Kapasitas</th>
+                                <th class="pe-4 py-3 text-center">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (!activeSchedules || activeSchedules.length === 0) { %>
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted small">
+                                        <i class="bi bi-calendar-x fs-1 text-slate-300 d-block mb-2"></i>
+                                        Belum ada jadwal armada yang aktif.
+                                    </td>
+                                </tr>
+                            <% } else { %>
+                                <% activeSchedules.forEach(function(sc) { %>
+                                    <tr>
+                                        <td class="ps-4 py-3">
+                                            <div class="fw-bold text-slate-800 small"><%= sc.zone_name %></div>
+                                        </td>
+                                        <td class="py-3">
+                                            <div class="small text-slate-700"><%= sc.coverage_area || "-" %></div>
+                                        </td>
+                                        <td class="py-3">
+                                            <div class="small fw-semibold text-slate-800">
+                                                <i class="bi bi-calendar-date me-1 text-success"></i><%= sc.day_of_week %>
+                                            </div>
+                                            <div class="extra-small text-muted">
+                                                <i class="bi bi-clock me-1"></i><%= sc.start_time %> - <%= sc.end_time %> WIB
+                                            </div>
+                                        </td>
+                                        <td class="py-3">
+                                            <div class="small fw-bold text-slate-800"><i class="bi bi-truck me-1 text-primary"></i><%= sc.vehicle_type %></div>
+                                            <div class="extra-small text-muted">Supir: <%= sc.driver_name %></div>
+                                        </td>
+                                        <td class="py-3 text-end">
+                                            <span class="fw-bold text-slate-800"><%= Number(sc.target_capacity_kg || 0) %> kg</span>
+                                        </td>
+                                        <td class="pe-4 py-3 text-center">
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2.5 py-1 extra-small fw-bold">
+                                                <i class="bi bi-check-circle-fill me-1"></i>Aktif
+                                            </span>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div><!-- /.tab-content -->
+    </div><!-- /.table-card -->
+
+    </div><!-- /.dashboard-container -->
+</div><!-- /.card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm -->
+
+<!-- ================================================================
+     CUSTOM STYLES (PROFESSIONAL ENTERPRISE PALETTE)
+================================================================ -->
+<style>
+.dashboard-container {
+    width: 100%;
+    color: #1f2937;
+    font-size: 13px;
+}
+
+.text-slate-800 { color: #1e293b !important; }
+.extra-small { font-size: 0.725rem !important; }
+.letter-spacing-1 { letter-spacing: 0.05em; }
+
+.header-icon-box {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #16a34a, #15803d);
+    color: #fff;
+    font-size: 22px;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
+}
+
+.hero-banner {
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 45%, #047857 80%, #059669 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.hero-bg-accent {
+    position: absolute;
+    top: -40%;
+    right: -10%;
+    width: 450px;
+    height: 450px;
+    background: radial-gradient(circle, rgba(52, 211, 153, 0.25) 0%, rgba(5, 150, 105, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.live-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: #34d399;
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7);
+    animation: livePulse 2s infinite;
+}
+
+@keyframes livePulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+.glass-clock-box {
+    background: rgba(255, 255, 255, 0.14);
+    min-width: 250px;
+}
+
+.metric-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #e5e7eb !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.06) !important;
+}
+
+.chart-card-box,
+.quick-hub-wrapper,
+.table-card {
+    border-color: #e5e7eb !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.metric-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+}
+
+.sub-metric-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.bg-teal-subtle { background-color: #ecfdf5 !important; }
+.text-teal { color: #0d9488 !important; }
+.border-teal-subtle { border-color: #a7f3d0 !important; }
+
+.bg-purple-subtle { background-color: #faf5ff !important; }
+.text-purple { color: #9333ea !important; }
+.border-purple-subtle { border-color: #e9d5ff !important; }
+
+.bg-gradient-eco {
+    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f7fee7 100%);
+    border: 1px solid #d1fae5 !important;
+}
+
+.donut-center-info {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+}
+
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.quick-link-card {
+    background: #ffffff;
+    border-color: #e2e8f0 !important;
+    transition: all 0.2s ease;
+}
+
+.quick-link-card:hover {
+    transform: translateY(-2px);
+    border-color: #16a34a !important;
+    box-shadow: 0 8px 20px rgba(22, 163, 74, 0.12) !important;
+}
+
+.quick-link-card:hover .bi-chevron-right {
+    transform: translateX(3px);
+    color: #16a34a !important;
+}
+
+.nav-icon-square {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+}
+
+.custom-dash-table th {
+    white-space: nowrap;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.custom-dash-table td {
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.custom-dash-table tbody tr:hover {
+    background-color: #fafbfd;
+}
+
+#dashboardTab .nav-link {
+    color: #64748b;
+    border: 0;
+}
+
+#dashboardTab .nav-link.active {
+    background-color: #ffffff;
+    color: #16a34a;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+</style>
+
+<!-- ================================================================
+     CLIENT SCRIPT & CHARTS
+================================================================ -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    // 1. Live Clock & Greeting
+    function updateLiveClock() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const clockEl = document.getElementById("liveClock");
+        if (clockEl) {
+            clockEl.textContent = `${hours}:${minutes}:${seconds} WIB`;
+        }
+
+        const dateOptions = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+        const dateEl = document.getElementById("liveDate");
+        if (dateEl) {
+            dateEl.innerHTML = `<i class="bi bi-calendar3 me-1"></i> ${now.toLocaleDateString('id-ID', dateOptions)}`;
+        }
+
+        const greetingEl = document.getElementById("greetingText");
+        if (greetingEl) {
+            const h = now.getHours();
+            if (h >= 4 && h < 11) greetingEl.textContent = "Selamat Pagi";
+            else if (h >= 11 && h < 15) greetingEl.textContent = "Selamat Siang";
+            else if (h >= 15 && h < 18) greetingEl.textContent = "Selamat Sore";
+            else greetingEl.textContent = "Selamat Malam";
+        }
+    }
+    updateLiveClock();
+    setInterval(updateLiveClock, 1000);
+
+    // 2. Trend Chart
+    const trendCtx = document.getElementById('trendChart');
+    if (trendCtx && typeof Chart !== 'undefined') {
+        <% 
+            const trendLabels = (trend && trend.length > 0) 
+                ? trend.map(t => t.label || t.ym) 
+                : ['Apr 2026', 'Mei 2026', 'Jun 2026', 'Jul 2026', 'Agu 2026', 'Sep 2026'];
+
+            const trendWeights = (trend && trend.length > 0)
+                ? trend.map(t => Number(t.total_kg || 0))
+                : [8.5, 14.2, 22.0, 18.5, 27.3, Number(m.totalKg || 32.5)];
+
+            const trendCounts = (trend && trend.length > 0)
+                ? trend.map(t => Number(t.total_collections || 0))
+                : [1, 2, 3, 2, 3, Number(m.completedPickups || 2)];
+        %>
+
+        const labels = <%- JSON.stringify(trendLabels) %>;
+        const weightData = <%- JSON.stringify(trendWeights) %>;
+        const countData = <%- JSON.stringify(trendCounts) %>;
+
+        const ctx2d = trendCtx.getContext('2d');
+        const gradient = ctx2d.createLinearGradient(0, 0, 0, 250);
+        gradient.addColorStop(0, 'rgba(22, 163, 74, 0.35)');
+        gradient.addColorStop(1, 'rgba(22, 163, 74, 0.01)');
+
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Total Sampah (Kg)',
+                        data: weightData,
+                        borderColor: '#16a34a',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#16a34a',
+                        pointBorderWidth: 2.5,
+                        pointRadius: 4,
+                        fill: true,
+                        tension: 0.35,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Jumlah Pickup',
+                        data: countData,
+                        borderColor: '#0284c7',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        pointBackgroundColor: '#0284c7',
+                        pointRadius: 3,
+                        fill: false,
+                        tension: 0.35,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                        labels: { usePointStyle: true, boxWidth: 8, font: { size: 11 } }
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9' },
+                        title: { display: true, text: 'Berat (Kg)', color: '#64748b', font: { size: 10 } }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        grid: { drawOnChartArea: false },
+                        ticks: { stepSize: 1 },
+                        title: { display: true, text: 'Pickup', color: '#64748b', font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // 3. Category Doughnut Chart
+    const catCtx = document.getElementById('categoryChart');
+    if (catCtx && typeof Chart !== 'undefined') {
+        <%
+            const catLabelsArr = [];
+            const catWeightsArr = [];
+            const catPaletteArr = [];
+
+            if (categories && categories.length > 0) {
+                categories.forEach(function(c) {
+                    const cWeight = Number(c.total_weight || 0);
+                    const cName = c.category ? c.category.replace(/_/g, ' ').toUpperCase() : 'LAINNYA';
+                    catLabelsArr.push(cName);
+                    catWeightsArr.push(cWeight > 0 ? cWeight : 1);
+                    catPaletteArr.push(catColors[c.category] || '#64748b');
+                });
+            } else {
+                catLabelsArr.push('DAUR ULANG', 'ORGANIK', 'B3');
+                catWeightsArr.push(32.5, 5.0, 2.0);
+                catPaletteArr.push('#8b5cf6', '#10b981', '#f43f5e');
+            }
+        %>
+
+        new Chart(catCtx, {
+            type: 'doughnut',
+            data: {
+                labels: <%- JSON.stringify(catLabelsArr) %>,
+                datasets: [{
+                    data: <%- JSON.stringify(catWeightsArr) %>,
+                    backgroundColor: <%- JSON.stringify(catPaletteArr) %>,
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '74%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ` ${ctx.label}: ${ctx.raw} kg`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>

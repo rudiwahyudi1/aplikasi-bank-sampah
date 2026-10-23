@@ -1,0 +1,456 @@
+<%
+const list = typeof rows !== "undefined" && Array.isArray(rows) ? rows : [];
+const sum = typeof summary !== "undefined" && summary ? summary : { total_batches: 0, in_progress: 0, completed: 0, total_input_weight: 0, total_output_weight: 0 };
+const types = typeof wasteTypes !== "undefined" && Array.isArray(wasteTypes) ? wasteTypes : [];
+const pics = typeof picUsers !== "undefined" && Array.isArray(picUsers) ? picUsers : [];
+const flt = typeof filters !== "undefined" && filters ? filters : { keyword: "", process_type: "", status: "" };
+const pag = typeof pagination !== "undefined" && pagination ? pagination : { page: 1, limit: 10, total: 0, totalPages: 1 };
+const canEdit = typeof canManage !== "undefined" ? canManage : false;
+
+const typeBadge = {
+    kompos: { label: 'Pengomposan', class: 'bg-success text-white' },
+    maggot: { label: 'Budidaya Maggot', class: 'bg-warning text-dark' },
+    cacah_plastik: { label: 'Cacah Plastik', class: 'bg-info text-dark' },
+    press_bal: { label: 'Press Bal Kardus/Logam', class: 'bg-primary text-white' },
+    kerajinan: { label: 'Daur Ulang Kerajinan', class: 'bg-secondary text-white' },
+    lainnya: { label: 'Lainnya', class: 'bg-light text-dark border' }
+};
+
+const statusBadge = {
+    direncanakan: { label: 'Direncanakan', class: 'bg-secondary text-white' },
+    proses: { label: 'Sedang Proses', class: 'bg-warning text-dark' },
+    selesai: { label: 'Selesai Panen', class: 'bg-success text-white' },
+    gagal: { label: 'Gagal / Rusak', class: 'bg-danger text-white' }
+};
+%>
+
+<style>
+.processing-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 1rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="processing-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:18px;">
+                        <i class="bi bi-gear-wide-connected"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;">PENGOLAHAN & DAUR ULANG</h5>
+                        <div class="small mt-1" style="color: #16a34a; font-size: 11px;">Konversi sampah organik dan anorganik menjadi produk bernilai ekonomi.</div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <% if (canEdit) { %>
+                    <button type="button" class="btn btn-success fw-semibold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#addProcessModal">
+                        <i class="bi bi-plus-lg me-1"></i> Mulai Batch Olahan
+                    </button>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Total Batch</div>
+                            <div class="stat-value text-dark"><%= sum.total_batches %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-layers-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Seluruh batch terdaftar</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Sedang Proses</div>
+                            <div class="stat-value text-warning"><%= sum.in_progress %></div>
+                        </div>
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-arrow-repeat"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Fermentasi / pengolahan</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Bahan Masuk</div>
+                            <div class="stat-value text-primary"><%= Number(sum.total_input_weight).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %> <span class="fs-6 fw-normal text-muted">kg</span></div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-box-arrow-in-down"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Sampah mentah dialokasikan</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Hasil Panen</div>
+                            <div class="stat-value text-success"><%= Number(sum.total_output_weight).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %> <span class="fs-6 fw-normal text-muted">kg</span></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-check2-circle"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Kompos, maggot, flakes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="p-3 bg-light rounded-4 mb-4">
+            <form method="GET" action="/processing" class="row g-2 align-items-center">
+                <div class="col-12 col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="keyword" class="form-control bg-white border-start-0" placeholder="Cari kode, produk, atau jenis sampah..." value="<%= flt.keyword || '' %>">
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select name="process_type" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Metode Olahan</option>
+                        <option value="kompos" <%= flt.process_type === 'kompos' ? 'selected' : '' %>>Pengomposan</option>
+                        <option value="maggot" <%= flt.process_type === 'maggot' ? 'selected' : '' %>>Budidaya Maggot BSF</option>
+                        <option value="cacah_plastik" <%= flt.process_type === 'cacah_plastik' ? 'selected' : '' %>>Pencacahan Plastik</option>
+                        <option value="press_bal" <%= flt.process_type === 'press_bal' ? 'selected' : '' %>>Press Bal</option>
+                        <option value="kerajinan" <%= flt.process_type === 'kerajinan' ? 'selected' : '' %>>Kerajinan Daur Ulang</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select name="status" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Status</option>
+                        <option value="proses" <%= flt.status === 'proses' ? 'selected' : '' %>>Sedang Proses</option>
+                        <option value="selesai" <%= flt.status === 'selesai' ? 'selected' : '' %>>Selesai Panen</option>
+                        <option value="direncanakan" <%= flt.status === 'direncanakan' ? 'selected' : '' %>>Direncanakan</option>
+                        <option value="gagal" <%= flt.status === 'gagal' ? 'selected' : '' %>>Gagal</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3"><i class="bi bi-funnel me-1"></i> Filter</button>
+                    <a href="/processing" class="btn btn-outline-secondary rounded-3" title="Reset"><i class="bi bi-arrow-counterclockwise"></i></a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabel Batch Pengolahan -->
+        <div class="table-card">
+            <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
+                <table class="table table-hover align-middle mb-0" style="min-width: 800px;">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Kode Batch</th>
+                            <th>Metode & Sampah</th>
+                            <th>Bahan Baku</th>
+                            <th>Produk Output</th>
+                            <th>Periode</th>
+                            <th>Status</th>
+                            <th>Penanggung Jawab</th>
+                            <th class="pe-4 text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (list.length === 0) { %>
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                                Belum ada catatan batch pengolahan sampah.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% list.forEach(item => { 
+                            const meta = typeBadge[item.process_type] || { label: item.process_type, class: 'bg-light text-dark' };
+                            const st = statusBadge[item.status] || { label: item.status, class: 'bg-secondary' };
+                        %>
+                        <tr>
+                            <td class="ps-4">
+                                <span class="fw-bold text-dark"><%= item.code %></span>
+                                <div class="small text-muted" style="font-size: 11px;"><%= formatDate(item.created_at) %></div>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill <%= meta.class %> mb-1"><%= meta.label %></span>
+                                <div class="fw-semibold text-dark"><%= item.waste_type_name %></div>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-primary"><%= Number(item.input_weight).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %></span>
+                                <span class="small text-muted"><%= item.waste_unit || 'kg' %></span>
+                            </td>
+                            <td>
+                                <% if (item.output_product_name) { %>
+                                    <div class="fw-semibold text-dark"><%= item.output_product_name %></div>
+                                    <% if (item.output_weight) { %>
+                                    <span class="badge bg-success bg-opacity-10 text-success fw-bold">
+                                        <%= Number(item.output_weight).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %> kg
+                                    </span>
+                                    <% } %>
+                                <% } else { %>
+                                    <span class="text-muted fst-italic">Menunggu proses...</span>
+                                <% } %>
+                            </td>
+                            <td class="small">
+                                <div><i class="bi bi-calendar-event text-muted me-1"></i><%= formatDate(item.start_date) %></div>
+                                <% if (item.end_date) { %>
+                                <div class="text-success"><i class="bi bi-check-circle me-1"></i><%= formatDate(item.end_date) %></div>
+                                <% } %>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill <%= st.class %> px-2 py-1"><%= st.label %></span>
+                            </td>
+                            <td class="small">
+                                <div class="fw-semibold text-dark"><%= item.pic_name || 'Petugas Lapangan' %></div>
+                                <% if (item.notes) { %>
+                                <div class="text-muted text-truncate" style="max-width: 140px;" title="<%= item.notes %>"><%= item.notes %></div>
+                                <% } %>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <% if (canEdit && item.status === 'proses') { %>
+                                <button class="btn btn-sm btn-outline-success rounded-pill px-3" onclick="openFinishModal(<%= JSON.stringify(item) %>)">
+                                    <i class="bi bi-check-lg me-1"></i> Selesaikan
+                                </button>
+                                <% } %>
+                                <% if (canEdit) { %>
+                                <form method="POST" action="/processing/<%= item.id %>/delete" class="d-inline" onsubmit="return confirm('Hapus batch pengolahan ini?');">
+                                    <button type="submit" class="btn btn-sm btn-link text-danger p-1" title="Hapus"><i class="bi bi-trash"></i></button>
+                                </form>
+                                <% } %>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL TAMBAH BATCH PENGOLAHAN -->
+<div class="modal fade" id="addProcessModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-gear-wide-connected text-success me-2"></i>Mulai Batch Olahan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/processing/add">
+                <div class="modal-body py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Pilih Sampah Masuk</label>
+                        <select name="waste_type_id" class="form-select rounded-3" required>
+                            <option value="">-- Pilih Jenis Sampah --</option>
+                            <% types.forEach(t => { %>
+                            <option value="<%= t.id %>"><%= t.name %> (<%= t.category.toUpperCase() %>)</option>
+                            <% }); %>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Metode Pengolahan</label>
+                        <select name="process_type" class="form-select rounded-3" required>
+                            <option value="kompos">Pengomposan (Kompos Organik)</option>
+                            <option value="maggot">Biokonversi Maggot BSF</option>
+                            <option value="cacah_plastik">Pencacahan Plastik (Flakes)</option>
+                            <option value="press_bal">Press Bal (Kardus/Kaleng)</option>
+                            <option value="kerajinan">Daur Ulang Kerajinan Tangan</option>
+                            <option value="lainnya">Lainnya</option>
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Berat Bahan Baku (kg)</label>
+                            <input type="number" step="0.1" name="input_weight" class="form-control rounded-3" placeholder="Contoh: 50.0" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Tanggal Mulai</label>
+                            <input type="date" name="start_date" class="form-control rounded-3" value="<%= new Date().toISOString().slice(0, 10) %>" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Target Hasil Produk (Opsional)</label>
+                        <input type="text" name="output_product_name" class="form-control rounded-3" placeholder="Contoh: Pupuk Kompos Organik PilahKita">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Penanggung Jawab (PIC)</label>
+                        <select name="pic_user_id" class="form-select rounded-3">
+                            <% pics.forEach(p => { %>
+                            <option value="<%= p.id %>"><%= p.full_name %> (<%= p.username %>)</option>
+                            <% }); %>
+                        </select>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Catatan Tambahan</label>
+                        <textarea name="notes" rows="2" class="form-control rounded-3" placeholder="Contoh: Menggunakan aktivator EM4 fermentasi 21 hari..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success rounded-3 px-4">Mulai Proses</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SELESAIKAN BATCH & PANEN OUTPUT -->
+<div class="modal fade" id="finishProcessModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-check2-circle text-success me-2"></i>Panen Hasil Olahan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="finishProcessForm" method="POST">
+                <div class="modal-body py-3">
+                    <p class="text-muted small mb-3">Selesaikan batch olahan <strong id="finishBatchCode"></strong> dan catat hasil produksi akhir.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Status Pengolahan</label>
+                        <select name="status" class="form-select rounded-3">
+                            <option value="selesai">Selesai Berhasil (Panen)</option>
+                            <option value="gagal">Gagal / Terkontaminasi</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Nama Produk Jadi</label>
+                        <input type="text" id="finishProductName" name="output_product_name" class="form-control rounded-3" placeholder="Contoh: Kompos Halus Grade A" required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Berat Hasil Panen (kg)</label>
+                            <input type="number" step="0.1" name="output_weight" class="form-control rounded-3" placeholder="Contoh: 25.0" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Tanggal Selesai</label>
+                            <input type="date" name="end_date" class="form-control rounded-3" value="<%= new Date().toISOString().slice(0, 10) %>" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Catatan Evaluasi Panen</label>
+                        <textarea name="notes" rows="2" class="form-control rounded-3" placeholder="Kualitas baik, siap dikemas / dijual..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success rounded-3 px-4">Simpan Hasil Panen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openFinishModal(item) {
+    document.getElementById('finishProcessForm').action = '/processing/' + item.id + '/finish';
+    document.getElementById('finishBatchCode').innerText = item.code;
+    document.getElementById('finishProductName').value = item.output_product_name || (item.waste_type_name + ' Olahan');
+    new bootstrap.Modal(document.getElementById('finishProcessModal')).show();
+}
+</script>

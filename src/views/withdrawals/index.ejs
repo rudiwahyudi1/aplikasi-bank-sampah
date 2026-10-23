@@ -1,0 +1,545 @@
+<%
+const list = typeof rows !== "undefined" && Array.isArray(rows) ? rows : [];
+const sum = typeof summary !== "undefined" && summary ? summary : { total_requests: 0, pending_count: 0, approved_count: 0, paid_count: 0, total_paid_amount: 0, total_pending_amount: 0 };
+const userBalance = typeof balance !== "undefined" ? Number(balance) : 0;
+const flt = typeof filters !== "undefined" && filters ? filters : { keyword: "", status: "" };
+const pag = typeof pagination !== "undefined" && pagination ? pagination : { page: 1, limit: 12, total: 0, totalPages: 1 };
+const canEdit = typeof canManage !== "undefined" ? canManage : false;
+const isUserNasabah = typeof isNasabah !== "undefined" ? isNasabah : false;
+
+const statusBadge = {
+    pending: { label: 'Menunggu Verifikasi', class: 'bg-warning text-dark', icon: 'bi-clock-history' },
+    approved: { label: 'Disetujui (Antre Transfer)', class: 'bg-info text-dark', icon: 'bi-check-circle' },
+    paid: { label: 'Selesai Ditransfer', class: 'bg-success text-white', icon: 'bi-check2-circle' },
+    rejected: { label: 'Ditolak', class: 'bg-danger text-white', icon: 'bi-x-circle' }
+};
+%>
+
+<style>
+.withdrawal-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 1rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+.pulse-warning {
+    animation: pulseWarn 1.5s infinite;
+}
+@keyframes pulseWarn {
+    0% { opacity: 1; }
+    50% { opacity: 0.45; }
+    100% { opacity: 1; }
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="withdrawal-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:18px;">
+                        <i class="bi bi-cash-stack"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;">PENARIKAN SALDO & PENCAIRAN</h5>
+                        <div class="small mt-1" style="color: #16a34a; font-size: 11px;">Pencairan saldo tabungan bank sampah ke rekening bank atau dompet digital (e-wallet).</div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-success fw-semibold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#requestWithdrawalModal">
+                        <i class="bi bi-wallet2 me-1"></i> Ajukan Penarikan Baru
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <% if (isUserNasabah) { %>
+            <!-- Tampilan Nasabah -->
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Saldo Tersedia</div>
+                            <div class="stat-value text-success">
+                                Rp <%= userBalance.toLocaleString('id-ID') %>
+                            </div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Dapat ditarik kapan saja</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Menunggu Transfer</div>
+                            <div class="stat-value text-warning">
+                                <%= sum.pending_count %> <span class="fs-6 fw-normal text-muted">antrean</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Total: Rp <%= sum.total_pending_amount.toLocaleString('id-ID') %></div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Berhasil Ditarik</div>
+                            <div class="stat-value text-primary">
+                                Rp <%= sum.total_paid_amount.toLocaleString('id-ID') %>
+                            </div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-check2-circle"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2"><%= sum.paid_count %> kali pencairan selesai</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Total Permohonan</div>
+                            <div class="stat-value text-dark">
+                                <%= sum.total_requests %>
+                            </div>
+                        </div>
+                        <div class="stat-icon bg-secondary-subtle text-secondary">
+                            <i class="bi bi-receipt"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Riwayat transaksi penarikan</div>
+                </div>
+            </div>
+
+            <% } else { %>
+            <!-- Tampilan Pengelola / Admin -->
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Total Permohonan</div>
+                            <div class="stat-value text-dark"><%= sum.total_requests %></div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-inboxes-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Seluruh pengajuan nasabah</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Perlu Diproses</div>
+                            <div class="stat-value <%= sum.pending_count > 0 ? 'text-warning' : 'text-dark' %>">
+                                <%= sum.pending_count %> <span class="fs-6 fw-normal text-muted">antrean</span>
+                            </div>
+                        </div>
+                        <div class="stat-icon <%= sum.pending_count > 0 ? 'bg-warning-subtle text-warning' : 'bg-light text-muted' %>">
+                            <i class="bi bi-hourglass-bottom"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Menunggu persetujuan admin</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Selesai Ditransfer</div>
+                            <div class="stat-value text-success"><%= sum.paid_count %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-check2-all"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Pencairan sukses dikirim</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Total Dana Cair</div>
+                            <div class="stat-value text-success">
+                                Rp <%= Number(sum.total_paid_amount).toLocaleString('id-ID') %>
+                            </div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-cash-coin"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Kas keluar transfer nasabah</div>
+                </div>
+            </div>
+            <% } %>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="p-3 bg-light rounded-4 mb-4">
+            <form method="GET" action="/withdrawals" class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="keyword" class="form-control bg-white border-start-0" placeholder="Cari nama nasabah, bank, no rekening..." value="<%= flt.keyword || '' %>">
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
+                    <select name="status" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Status Penarikan</option>
+                        <option value="pending" <%= flt.status === 'pending' ? 'selected' : '' %>>Menunggu Verifikasi (Pending)</option>
+                        <option value="approved" <%= flt.status === 'approved' ? 'selected' : '' %>>Disetujui (Approved)</option>
+                        <option value="paid" <%= flt.status === 'paid' ? 'selected' : '' %>>Selesai Ditransfer (Paid)</option>
+                        <option value="rejected" <%= flt.status === 'rejected' ? 'selected' : '' %>>Ditolak (Rejected)</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3"><i class="bi bi-funnel me-1"></i> Filter</button>
+                    <a href="/withdrawals" class="btn btn-outline-secondary rounded-3" title="Reset"><i class="bi bi-arrow-counterclockwise"></i></a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabel Riwayat Penarikan -->
+        <div class="table-card mb-4">
+            <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
+                <table class="table table-hover align-middle mb-0" style="min-width: 900px;">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Tanggal Pengajuan</th>
+                            <th>Nasabah Pemohon</th>
+                            <th>Nominal Penarikan</th>
+                            <th>Rekening / E-Wallet Tujuan</th>
+                            <th>Status Pencairan</th>
+                            <th>Catatan / Tanggal Proses</th>
+                            <th class="pe-4 text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (list.length === 0) { %>
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-cash-stack fs-1 d-block mb-2 text-secondary"></i>
+                                Belum ada permohonan penarikan saldo yang sesuai.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% list.forEach(item => { 
+                            const st = statusBadge[item.status] || { label: item.status, class: 'bg-light text-dark', icon: 'bi-circle' };
+                        %>
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark"><%= new Date(item.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) %></div>
+                                <div class="small text-muted"><%= new Date(item.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) %> WIB</div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div style="width:32px; height:32px; border-radius:50%; background:#e2e8f0; color:#334155; font-weight:bold; font-size:12px; display:grid; place-items:center;">
+                                        <%= (item.full_name || 'U').charAt(0).toUpperCase() %>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark"><%= item.full_name %></div>
+                                        <div class="small text-muted font-monospace">@<%= item.username %></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-success fs-6">
+                                    Rp <%= Number(item.amount).toLocaleString('id-ID') %>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">
+                                    <i class="bi bi-bank me-1 text-primary"></i><%= item.bank_name %>
+                                </div>
+                                <div class="small text-muted font-monospace"><%= item.account_number %></div>
+                                <div class="small text-secondary" style="font-size:11px;">a.n. <%= item.account_name %></div>
+                            </td>
+                            <td>
+                                <span class="badge <%= st.class %> rounded-pill px-2 py-1 <%= item.status === 'pending' ? 'pulse-warning' : '' %>">
+                                    <i class="bi <%= st.icon %> me-1"></i><%= st.label %>
+                                </span>
+                            </td>
+                            <td>
+                                <% if (item.status === 'rejected' && item.rejected_reason) { %>
+                                <div class="small text-danger"><i class="bi bi-exclamation-circle me-1"></i><%= item.rejected_reason %></div>
+                                <% } else if (item.processed_at) { %>
+                                <div class="small text-muted">Diproses: <%= new Date(item.processed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) %></div>
+                                <% } else { %>
+                                <div class="small text-muted fst-italic">Menunggu proses admin</div>
+                                <% } %>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <% if (canEdit && item.status !== 'paid') { %>
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3"
+                                        onclick="openProcessModal('<%= item.id %>', '<%= item.full_name %>', '<%= item.amount %>', '<%= item.bank_name %>', '<%= item.account_number %>', '<%= item.account_name %>', '<%= item.status %>')">
+                                    <i class="bi bi-gear-fill me-1"></i> Proses
+                                </button>
+                                <% } else if (item.status === 'paid') { %>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1">
+                                    <i class="bi bi-check-all me-1"></i>Tuntas
+                                </span>
+                                <% } else { %>
+                                <span class="text-muted small">-</span>
+                                <% } %>
+                            </td>
+                        </tr>
+                        <% }) %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL AJUKAN PENARIKAN SALDO BARU
+============================================================= -->
+<div class="modal fade" id="requestWithdrawalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-bottom py-3 px-4" style="background:#f8fafc;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px; height:32px; border-radius:8px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center;">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <h6 class="modal-title fw-bold text-dark mb-0">Ajukan Penarikan Saldo</h6>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/withdrawals/request" method="POST">
+                <div class="modal-body p-4">
+                    <div class="alert alert-success border-0 bg-success bg-opacity-10 rounded-3 p-3 mb-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <div class="small text-muted">Saldo Tabungan Tersedia:</div>
+                            <div class="fw-bold text-success fs-5">Rp <%= userBalance.toLocaleString('id-ID') %></div>
+                        </div>
+                        <i class="bi bi-shield-check fs-2 text-success"></i>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Nominal Penarikan (Rp) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">Rp</span>
+                            <input type="number" name="amount" class="form-control" placeholder="Contoh: 50000" min="10000" max="<%= userBalance %>" required>
+                        </div>
+                        <div class="form-text">Minimal penarikan Rp 10.000 (Maks: Rp <%= userBalance.toLocaleString('id-ID') %>).</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Bank atau E-Wallet Tujuan <span class="text-danger">*</span></label>
+                        <select name="bank_name" class="form-select" required>
+                            <option value="">-- Pilih Bank / E-Wallet --</option>
+                            <optgroup label="Bank Transfer">
+                                <option value="BCA">Bank Central Asia (BCA)</option>
+                                <option value="Mandiri">Bank Mandiri</option>
+                                <option value="BRI">Bank Rakyat Indonesia (BRI)</option>
+                                <option value="BNI">Bank Negara Indonesia (BNI)</option>
+                                <option value="BSI">Bank Syariah Indonesia (BSI)</option>
+                                <option value="CIMB">CIMB Niaga</option>
+                            </optgroup>
+                            <optgroup label="Dompet Digital (E-Wallet)">
+                                <option value="GoPay">GoPay</option>
+                                <option value="OVO">OVO</option>
+                                <option value="DANA">DANA</option>
+                                <option value="ShopeePay">ShopeePay</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Nomor Rekening / No. HP E-Wallet <span class="text-danger">*</span></label>
+                        <input type="text" name="account_number" class="form-control" placeholder="Contoh: 1234567890 atau 08123456789" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Nama Pemilik Rekening / Akun <span class="text-danger">*</span></label>
+                        <input type="text" name="account_name" class="form-control" placeholder="Sesuai nama yang terdaftar di buku tabungan/aplikasi" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success fw-semibold rounded-3 px-4">Kirim Permohonan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL PROSES STATUS PENARIKAN (ADMIN)
+============================================================= -->
+<% if (canEdit) { %>
+<div class="modal fade" id="processWithdrawalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-bottom py-3 px-4" style="background:#f8fafc;">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px; height:32px; border-radius:8px; background:#eff6ff; color:#2563eb; display:grid; place-items:center;">
+                        <i class="bi bi-gear-fill"></i>
+                    </div>
+                    <h6 class="modal-title fw-bold text-dark mb-0">Proses Penarikan Saldo</h6>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="processWithdrawalForm" method="POST">
+                <div class="modal-body p-4">
+                    <div class="alert alert-light border rounded-3 p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted small">Nasabah:</span>
+                            <span class="fw-bold text-dark" id="modalWdrName">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="text-muted small">Nominal:</span>
+                            <span class="fw-bold text-success fs-6" id="modalWdrAmount">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted small">Tujuan:</span>
+                            <span class="text-dark small" id="modalWdrTarget">-</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Perbarui Status Penarikan <span class="text-danger">*</span></label>
+                        <select name="status" id="modalWdrStatus" class="form-select" onchange="toggleRejectReason(this.value)" required>
+                            <option value="approved">Setujui (Disetujui, Antre Transfer)</option>
+                            <option value="paid">Selesai Ditransfer (Potong Saldo & Catat Mutasi)</option>
+                            <option value="rejected">Tolak Permohonan</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3" id="rejectReasonBox" style="display: none;">
+                        <label class="form-label fw-semibold small text-danger">Alasan Penolakan <span class="text-danger">*</span></label>
+                        <textarea name="rejected_reason" class="form-control" rows="2" placeholder="Nomor rekening tidak valid, nama pemilik tidak sesuai..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary fw-semibold rounded-3 px-4">Simpan Status</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<script>
+function openProcessModal(id, name, amount, bank, accNo, accName, status) {
+    const form = document.getElementById('processWithdrawalForm');
+    form.action = `/withdrawals/${id}/status`;
+    document.getElementById('modalWdrName').innerText = name;
+    document.getElementById('modalWdrAmount').innerText = 'Rp ' + Number(amount).toLocaleString('id-ID');
+    document.getElementById('modalWdrTarget').innerText = `${bank} - ${accNo} (a.n. ${accName})`;
+    document.getElementById('modalWdrStatus').value = status === 'pending' ? 'approved' : status;
+    toggleRejectReason(document.getElementById('modalWdrStatus').value);
+
+    const modal = new bootstrap.Modal(document.getElementById('processWithdrawalModal'));
+    modal.show();
+}
+
+function toggleRejectReason(val) {
+    const box = document.getElementById('rejectReasonBox');
+    if (box) {
+        box.style.display = val === 'rejected' ? 'block' : 'none';
+    }
+}
+</script>

@@ -1,0 +1,1053 @@
+<!doctype html>
+
+<html lang="id">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta name="viewport"
+    content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<meta name="theme-color" content="#16a34a">
+
+<meta name="description"
+    content="PilahKita - Sistem Pengelolaan Sampah Terintegrasi">
+
+<title>PILAHKITA | REGISTER</title>
+
+
+<!-- =========================================================
+     BOOTSTRAP
+========================================================== -->
+
+<link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+    rel="stylesheet">
+
+
+<!-- =========================================================
+     BOOTSTRAP ICONS
+========================================================== -->
+
+<link
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+    rel="stylesheet">
+
+
+<!-- =========================================================
+     CUSTOM CSS
+========================================================== -->
+
+<link rel="stylesheet" href="/css/style.css">
+<link rel="icon" type="image/png" href="/images/pilahkita.png">
+
+
+<style>
+
+    /* =====================================================
+       RESET
+    ====================================================== */
+
+    * {
+        box-sizing: border-box;
+    }
+
+    html,
+    body {
+        width: 100%;
+        min-height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+
+
+    /* =====================================================
+       PAGE
+    ====================================================== */
+
+    body.register-page {
+
+        min-height: 100vh;
+        min-height: 100dvh;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        padding: 24px;
+
+        background:
+            radial-gradient(
+                circle at 10% 10%,
+                rgba(34, 197, 94, 0.12),
+                transparent 35%
+            ),
+            radial-gradient(
+                circle at 90% 90%,
+                rgba(16, 185, 129, 0.08),
+                transparent 35%
+            ),
+            #f5f7fb;
+
+        font-family:
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            Roboto,
+            Helvetica,
+            Arial,
+            sans-serif;
+
+        color: #172033;
+    }
+
+
+    /* =====================================================
+       REGISTER CARD
+    ====================================================== */
+
+    .register-card {
+
+        width: 100%;
+        max-width: 470px;
+
+        background: rgba(255, 255, 255, 0.96);
+
+        border: 1px solid rgba(226, 232, 240, 0.9);
+
+        border-radius: 24px;
+
+        padding: 34px 32px 28px;
+
+        box-shadow:
+            0 25px 60px rgba(15, 23, 42, 0.10),
+            0 5px 20px rgba(15, 23, 42, 0.04);
+
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+
+    /* =====================================================
+       LOGO
+    ====================================================== */
+
+    .register-logo {
+
+        width: 58px;
+        height: 58px;
+
+        margin: 0 auto 16px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 17px;
+
+        background:
+            linear-gradient(
+                135deg,
+                #16a34a,
+                #22c55e
+            );
+
+        color: #ffffff;
+
+        font-size: 28px;
+
+        box-shadow:
+            0 10px 25px rgba(22, 163, 74, 0.25);
+    }
+
+
+    /* =====================================================
+       TITLE
+    ====================================================== */
+
+    .register-title {
+
+        text-align: center;
+
+        font-size: 24px;
+        font-weight: 800;
+
+        line-height: 1.2;
+
+        color: #172033;
+
+        margin-bottom: 6px;
+    }
+
+
+    .register-sub {
+
+        text-align: center;
+
+        font-size: 12px;
+
+        color: #94a3b8;
+
+        margin-bottom: 25px;
+    }
+
+
+    /* =====================================================
+       ALERT
+    ====================================================== */
+
+    .register-alert {
+
+        border: 0;
+
+        border-radius: 12px;
+
+        padding: 11px 13px;
+
+        font-size: 12px;
+
+        margin-bottom: 20px;
+    }
+
+
+    /* =====================================================
+       LABEL
+    ====================================================== */
+
+    .register-card .form-label {
+
+        display: block;
+
+        margin-bottom: 7px;
+
+        font-size: 12px;
+
+        font-weight: 700;
+
+        color: #475569;
+    }
+
+
+    /* =====================================================
+       INPUT GROUP
+    ====================================================== */
+
+    .register-input-group {
+
+        display: flex;
+
+        width: 100%;
+
+        margin-bottom: 17px;
+    }
+
+
+    /* =====================================================
+       INPUT ICON
+    ====================================================== */
+
+    .register-input-icon {
+
+        width: 48px;
+        min-width: 48px;
+
+        height: 46px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        background: #ffffff;
+
+        border: 1px solid #dbe3ed;
+
+        border-right: 0;
+
+        color: #64748b;
+
+        font-size: 15px;
+
+        border-radius: 12px 0 0 12px;
+    }
+
+
+    /* =====================================================
+       INPUT
+    ====================================================== */
+
+    .register-input {
+
+        height: 46px;
+
+        border: 1px solid #dbe3ed;
+
+        background: #ffffff;
+
+        color: #172033;
+
+        font-size: 13px;
+
+        box-shadow: none !important;
+    }
+
+
+    .register-input::placeholder {
+        color: #a8b3c2;
+    }
+
+
+    .register-input:focus {
+
+        border-color: #86efac;
+
+        background: #ffffff;
+
+        box-shadow:
+            0 0 0 3px rgba(34, 197, 94, 0.10) !important;
+    }
+
+
+    .register-input-group .register-input {
+        border-radius: 0 12px 12px 0;
+    }
+
+
+    /* =====================================================
+       PASSWORD
+    ====================================================== */
+
+    .password-input {
+        border-radius: 0 !important;
+    }
+
+
+    .password-toggle {
+
+        width: 48px;
+        min-width: 48px;
+
+        height: 46px;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        border: 1px solid #dbe3ed !important;
+
+        border-left: 0 !important;
+
+        background: #ffffff !important;
+
+        color: #64748b !important;
+
+        border-radius: 0 12px 12px 0 !important;
+
+        box-shadow: none !important;
+
+        cursor: pointer;
+    }
+
+
+    .password-toggle:hover {
+        background: #f8fafc !important;
+    }
+
+
+    .password-toggle:focus {
+        box-shadow: none !important;
+    }
+
+
+    /* =====================================================
+       TWO COLUMN FIELD
+    ====================================================== */
+
+    .register-row {
+
+        display: grid;
+
+        grid-template-columns: 1fr 1fr;
+
+        gap: 12px;
+    }
+
+
+    /* =====================================================
+       REGISTER BUTTON
+    ====================================================== */
+
+    .btn-register {
+
+        width: 100%;
+
+        height: 47px;
+
+        border: 0;
+
+        border-radius: 12px;
+
+        background:
+            linear-gradient(
+                135deg,
+                #16a34a,
+                #16a34a
+            );
+
+        color: #ffffff;
+
+        font-size: 13px;
+
+        font-weight: 700;
+
+        box-shadow:
+            0 8px 18px rgba(22, 163, 74, 0.18);
+
+        transition:
+            transform .15s ease,
+            box-shadow .15s ease,
+            background .15s ease;
+    }
+
+
+    .btn-register:hover {
+
+        background: #15803d;
+
+        color: #ffffff;
+
+        transform: translateY(-1px);
+
+        box-shadow:
+            0 10px 22px rgba(22, 163, 74, 0.24);
+    }
+
+
+    .btn-register:active {
+        transform: translateY(0);
+    }
+
+
+    /* =====================================================
+       LOGIN AREA
+    ====================================================== */
+
+    .login-area {
+
+        text-align: center;
+
+        margin-top: 22px;
+
+        font-size: 12px;
+    }
+
+
+    .login-text {
+        color: #94a3b8;
+    }
+
+
+    .login-link {
+
+        color: #16a34a;
+
+        font-weight: 700;
+
+        text-decoration: none;
+    }
+
+
+    .login-link:hover {
+
+        color: #15803d;
+
+        text-decoration: underline;
+    }
+
+
+    /* =====================================================
+       FOOTER
+    ====================================================== */
+
+    .register-footer {
+
+        text-align: center;
+
+        margin-top: 22px;
+
+        padding-top: 18px;
+
+        border-top: 1px solid #e9eef4;
+
+        color: #94a3b8;
+
+        font-size: 11px;
+    }
+
+
+    /* =====================================================
+       MOBILE
+    ====================================================== */
+
+    @media (max-width: 576px) {
+
+        body.register-page {
+            padding: 16px;
+        }
+
+        .register-card {
+
+            max-width: 100%;
+
+            padding: 28px 22px 24px;
+
+            border-radius: 22px;
+        }
+
+        .register-logo {
+
+            width: 54px;
+            height: 54px;
+
+            font-size: 25px;
+        }
+
+        .register-title {
+            font-size: 22px;
+        }
+
+        .register-sub {
+
+            font-size: 11px;
+
+            margin-bottom: 22px;
+        }
+
+    }
+
+
+    /* =====================================================
+       VERY SMALL PHONE
+    ====================================================== */
+
+    @media (max-width: 400px) {
+
+        body.register-page {
+            padding: 10px;
+        }
+
+        .register-card {
+            padding: 24px 18px 20px;
+        }
+
+        .register-title {
+            font-size: 20px;
+        }
+
+        .register-row {
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+
+    }
+
+</style>
+
+</head>
+
+<body class="register-page">
+
+<!-- =========================================================
+     REGISTER CARD
+========================================================== -->
+
+<main class="register-card">
+
+
+    <!-- =====================================================
+         LOGO
+    ====================================================== -->
+
+    <div class="register-logo">
+        <i class="bi bi-recycle"></i>
+    </div>
+
+
+    <!-- =====================================================
+         TITLE
+    ====================================================== -->
+
+    <div class="register-title">
+        Buat Akun Nasabah
+    </div>
+
+    <div class="register-sub">
+        Daftar untuk mengajukan pickup dan mengelola saldo.
+    </div>
+
+
+    <!-- =====================================================
+         ERROR
+    ====================================================== -->
+
+    <% if (typeof error_msg !== "undefined" && error_msg) { %>
+
+        <div
+            class="alert alert-danger register-alert d-flex align-items-center gap-2"
+            role="alert">
+
+            <i class="bi bi-exclamation-circle-fill"></i>
+
+            <span>
+                <%= error_msg %>
+            </span>
+
+        </div>
+
+    <% } %>
+
+
+    <!-- =====================================================
+         REGISTER FORM
+    ====================================================== -->
+
+    <form
+        method="POST"
+        action="/register"
+        autocomplete="on"
+        id="registerForm">
+
+
+        <!-- =================================================
+             NAMA LENGKAP
+        ================================================== -->
+
+        <div>
+
+            <label
+                for="full_name"
+                class="form-label">
+
+                Nama Lengkap
+
+            </label>
+
+            <div class="register-input-group">
+
+                <span class="register-input-icon">
+                    <i class="bi bi-person"></i>
+                </span>
+
+                <input
+                    type="text"
+                    class="form-control register-input"
+                    id="full_name"
+                    name="full_name"
+                    placeholder="Masukkan nama lengkap"
+                    autocomplete="name"
+                    required>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             USERNAME
+        ================================================== -->
+
+        <div>
+
+            <label
+                for="username"
+                class="form-label">
+
+                Username
+
+            </label>
+
+            <div class="register-input-group">
+
+                <span class="register-input-icon">
+                    <i class="bi bi-person-circle"></i>
+                </span>
+
+                <input
+                    type="text"
+                    class="form-control register-input"
+                    id="username"
+                    name="username"
+                    placeholder="Masukkan username"
+                    autocomplete="username"
+                    autocapitalize="none"
+                    spellcheck="false"
+                    required>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             EMAIL
+        ================================================== -->
+
+        <div>
+
+            <label
+                for="email"
+                class="form-label">
+
+                Email
+
+            </label>
+
+            <div class="register-input-group">
+
+                <span class="register-input-icon">
+                    <i class="bi bi-envelope"></i>
+                </span>
+
+                <input
+                    type="email"
+                    class="form-control register-input"
+                    id="email"
+                    name="email"
+                    placeholder="Masukkan email"
+                    autocomplete="email"
+                    required>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             PASSWORD
+        ================================================== -->
+
+        <div>
+
+            <label
+                for="password"
+                class="form-label">
+
+                Password
+
+            </label>
+
+            <div class="register-input-group">
+
+                <span class="register-input-icon">
+                    <i class="bi bi-lock"></i>
+                </span>
+
+                <input
+                    type="password"
+                    class="form-control register-input password-input"
+                    id="password"
+                    name="password"
+                    placeholder="Masukkan password"
+                    autocomplete="new-password"
+                    required>
+
+                <button
+                    type="button"
+                    class="password-toggle"
+                    id="showPass"
+                    aria-label="Tampilkan password">
+
+                    <i
+                        class="bi bi-eye"
+                        id="showPassIcon">
+                    </i>
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             TELEPON + ALAMAT
+        ================================================== -->
+
+        <div class="register-row">
+
+
+            <!-- =============================================
+                 TELEPON
+            ============================================== -->
+
+            <div>
+
+                <label
+                    for="phone"
+                    class="form-label">
+
+                    Telepon
+
+                </label>
+
+                <div class="register-input-group">
+
+                    <span class="register-input-icon">
+                        <i class="bi bi-telephone"></i>
+                    </span>
+
+                    <input
+                        type="text"
+                        class="form-control register-input"
+                        id="phone"
+                        name="phone"
+                        placeholder="Telepon"
+                        autocomplete="tel">
+
+                </div>
+
+            </div>
+
+
+            <!-- =============================================
+                 ALAMAT
+            ============================================== -->
+
+            <div>
+
+                <label
+                    for="address"
+                    class="form-label">
+
+                    Alamat
+
+                </label>
+
+                <div class="register-input-group">
+
+                    <span class="register-input-icon">
+                        <i class="bi bi-geo-alt"></i>
+                    </span>
+
+                    <input
+                        type="text"
+                        class="form-control register-input"
+                        id="address"
+                        name="address"
+                        placeholder="Alamat"
+                        autocomplete="street-address">
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             REGISTER BUTTON
+        ================================================== -->
+
+        <button
+            type="submit"
+            class="btn btn-register"
+            id="registerButton">
+
+            <i class="bi bi-person-plus me-2"></i>
+
+            <span id="registerButtonText">
+                Daftar
+            </span>
+
+        </button>
+
+    </form>
+
+
+    <!-- =====================================================
+         LOGIN
+    ====================================================== -->
+
+    <div class="login-area">
+
+        <span class="login-text">
+            Sudah punya akun?
+        </span>
+
+        <a
+            href="/login"
+            class="login-link">
+
+            Masuk sekarang
+
+        </a>
+
+    </div>
+
+
+    <!-- =====================================================
+         FOOTER
+    ====================================================== -->
+
+    <div class="register-footer">
+
+        <i class="bi bi-leaf me-1"></i>
+
+        Kelola · Pilah · Kumpulkan · Daur Ulang
+
+    </div>
+
+
+</main>
+
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================== -->
+<script>
+
+    document.addEventListener(
+        "DOMContentLoaded",
+        function () {
+
+
+            /* =================================================
+               PASSWORD TOGGLE
+            ================================================== */
+
+            const showPass =
+                document.getElementById("showPass");
+
+            const password =
+                document.getElementById("password");
+
+            const showPassIcon =
+                document.getElementById("showPassIcon");
+
+
+            if (
+                showPass &&
+                password &&
+                showPassIcon
+            ) {
+
+                showPass.addEventListener(
+                    "click",
+                    function () {
+
+                        const isPassword =
+                            password.type === "password";
+
+
+                        password.type =
+                            isPassword
+                                ? "text"
+                                : "password";
+
+
+                        showPassIcon.className =
+                            isPassword
+                                ? "bi bi-eye-slash"
+                                : "bi bi-eye";
+
+
+                        showPass.setAttribute(
+                            "aria-label",
+                            isPassword
+                                ? "Sembunyikan password"
+                                : "Tampilkan password"
+                        );
+
+                    }
+                );
+
+            }
+
+
+            /* =================================================
+               REGISTER FORM
+            ================================================== */
+
+            const registerForm =
+                document.getElementById("registerForm");
+
+            const registerButton =
+                document.getElementById("registerButton");
+
+            const registerButtonText =
+                document.getElementById(
+                    "registerButtonText"
+                );
+
+
+            if (registerForm) {
+
+                registerForm.addEventListener(
+                    "submit",
+                    function (event) {
+
+                        const fullName =
+                            document
+                                .getElementById("full_name")
+                                ?.value
+                                ?.trim();
+
+                        const username =
+                            document
+                                .getElementById("username")
+                                ?.value
+                                ?.trim();
+
+                        const email =
+                            document
+                                .getElementById("email")
+                                ?.value
+                                ?.trim();
+
+                        const passwordValue =
+                            document
+                                .getElementById("password")
+                                ?.value;
+
+
+                        if (
+                            !fullName ||
+                            !username ||
+                            !email ||
+                            !passwordValue
+                        ) {
+
+                            event.preventDefault();
+
+                            return;
+
+                        }
+
+
+                        /* Jangan submit dua kali */
+
+                        if (registerButton) {
+                            registerButton.disabled = true;
+                        }
+
+
+                        if (registerButtonText) {
+
+                            registerButtonText.textContent =
+                                "Mendaftarkan...";
+
+                        }
+
+                    }
+                );
+
+            }
+
+        }
+    );
+
+</script>
+
+</body>
+
+</html>

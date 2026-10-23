@@ -1,0 +1,518 @@
+<%
+const list = typeof articles !== "undefined" && Array.isArray(articles) ? articles : [];
+const flt = typeof filters !== "undefined" && filters ? filters : { category: "", search: "" };
+const canAdmin = typeof canManage !== "undefined" ? canManage : false;
+
+const catMeta = {
+    pilah_plastik: { label: 'Pilah Plastik', class: 'bg-info text-dark', icon: 'bi-recycle', theme: '#0284c7' },
+    kompos_mandiri: { label: 'Kompos Mandiri', class: 'bg-success text-white', icon: 'bi-flower1', theme: '#16a34a' },
+    limbah_b3: { label: 'Limbah B3 Rumah Tangga', class: 'bg-danger text-white', icon: 'bi-radioactive', theme: '#dc2626' },
+    info_bank_sampah: { label: 'Tips Bank Sampah', class: 'bg-warning text-dark', icon: 'bi-wallet2', theme: '#d97706' },
+    pilah_kertas_logam: { label: 'Kertas & Logam', class: 'bg-primary text-white', icon: 'bi-box-seam', theme: '#2563eb' },
+    pilah_organik: { label: 'Sampah Organik', class: 'bg-success text-white', icon: 'bi-tree', theme: '#059669' }
+};
+%>
+
+<style>
+.education-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 18px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 0.95rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.article-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    transition: transform .2s, box-shadow .2s;
+    background: #fff;
+    position: relative;
+}
+.article-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.07);
+}
+.article-body-text {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="education-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:40px; height:40px; border-radius:12px; background:linear-gradient(135deg, #dcfce7, #bbf7d0); color:#16a34a; display:grid; place-items:center; font-size:20px; box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2);">
+                        <i class="bi bi-book-half"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939; letter-spacing: -0.3px;">PUSAT EDUKASI & PANDUAN 3R</h5>
+                        <div class="small mt-1 text-muted" style="font-size: 11px;">Kanal informasi, panduan pemilahan sampah mandiri, dan inovasi daur ulang terpercaya.</div>
+                    </div>
+                </div>
+
+                <% if (canAdmin) { %>
+                <button type="button" class="btn btn-success rounded-pill px-3 shadow-sm d-flex align-items-center gap-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalTambahArtikel">
+                    <i class="bi bi-plus-circle-fill"></i>
+                    <span>Tulis Artikel Baru</span>
+                </button>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- 4 Quick Tips Cards (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Pilah dari Dapur</div>
+                            <div class="stat-value text-success">Organik & Kering</div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-house-door-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Pisahkan sejak awal dari rumah</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Bilas Wadah</div>
+                            <div class="stat-value text-primary">Cuci & Kering</div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-droplet-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Botol bersih bernilai lebih tinggi</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Waspada B3</div>
+                            <div class="stat-value text-danger">Baterai & Lampu</div>
+                        </div>
+                        <div class="stat-icon bg-danger-subtle text-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Jangan buang ke tempat sampah umum</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Manfaat Kompos</div>
+                            <div class="stat-value text-warning">Suburkan Tanah</div>
+                        </div>
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-flower1"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Ubah sisa dapur jadi pupuk subur</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="p-3 bg-light rounded-4 mb-4 border">
+            <form method="GET" action="/education" class="row g-2 align-items-center">
+                <div class="col-12 col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
+                        <input type="text" name="search" class="form-control border-start-0 bg-white" placeholder="Cari topik pemilahan, plastik, kompos..." value="<%= flt.search || '' %>">
+                    </div>
+                </div>
+                <div class="col-8 col-md-4">
+                    <select name="category" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Kategori Panduan</option>
+                        <option value="pilah_plastik" <%= flt.category === 'pilah_plastik' ? 'selected' : '' %>>Pilah Sampah Plastik</option>
+                        <option value="kompos_mandiri" <%= flt.category === 'kompos_mandiri' ? 'selected' : '' %>>Kompos Mandiri di Rumah</option>
+                        <option value="limbah_b3" <%= flt.category === 'limbah_b3' ? 'selected' : '' %>>Limbah B3 Rumah Tangga</option>
+                        <option value="info_bank_sampah" <%= flt.category === 'info_bank_sampah' ? 'selected' : '' %>>Tips Bank Sampah</option>
+                        <option value="pilah_kertas_logam" <%= flt.category === 'pilah_kertas_logam' ? 'selected' : '' %>>Pilah Kertas & Logam</option>
+                        <option value="pilah_organik" <%= flt.category === 'pilah_organik' ? 'selected' : '' %>>Pilah Sampah Organik</option>
+                    </select>
+                </div>
+                <div class="col-4 col-md-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3">Cari</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Grid Artikel Edukasi -->
+        <div class="row g-3">
+            <% if (list.length === 0) { %>
+            <div class="col-12">
+                <div class="p-5 text-center bg-light rounded-4 text-muted">
+                    <i class="bi bi-journal-x fs-1 d-block mb-2 text-muted"></i>
+                    Tidak ada panduan edukasi yang sesuai dengan pencarian.
+                </div>
+            </div>
+            <% } else { %>
+            <% list.forEach(art => { 
+                const cat = catMeta[art.category] || { label: art.category, class: 'bg-secondary text-white', icon: 'bi-file-text' };
+            %>
+            <div class="col-12 col-md-6">
+                <div class="article-card h-100 p-3 p-md-4 d-flex flex-column">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="badge rounded-pill <%= cat.class %> px-3 py-1" style="font-size: 11px;">
+                            <i class="bi <%= cat.icon %> me-1"></i> <%= cat.label %>
+                        </span>
+                        <span class="text-muted small" style="font-size: 12px;">
+                            <i class="bi bi-clock me-1"></i> <%= art.reading_time %> menit baca
+                        </span>
+                    </div>
+
+                    <h5 class="fw-bold text-dark mb-2" style="line-height: 1.35; letter-spacing: -0.3px;"><%= art.title %></h5>
+                    <p class="text-muted small mb-4 flex-grow-1" style="font-size: 13px; line-height: 1.5;"><%= art.summary %></p>
+
+                    <div class="d-flex align-items-center justify-content-between pt-3 border-top mt-auto flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2 text-muted small" style="font-size: 11px;">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 26px; height: 26px; background: #ecfdf5; color: #16a34a;">
+                                <i class="bi bi-newspaper" style="font-size: 12px;"></i>
+                            </div>
+                            <span class="fw-semibold text-dark"><%= art.author_name || 'Tim Redaksi PilahKita' %></span>
+                            <i class="bi bi-patch-check-fill text-success"></i>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            <% if (canAdmin) { %>
+                            <button class="btn btn-sm btn-light border rounded-pill px-2 py-1 text-muted" onclick='openEditArticleModal(<%= JSON.stringify(art) %>)' title="Edit Artikel">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <% } %>
+                            <button class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-semibold" onclick="readArticle(<%= JSON.stringify(art) %>)">
+                                <span>Baca Lengkap</span> <i class="bi bi-arrow-right ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% }); %>
+            <% } %>
+        </div>
+    </div>
+</div>
+
+<!-- =======================================================
+     MODAL BACA ARTIKEL EDUKASI (MODERN UI BERITA PROFESIONAL)
+======================================================== -->
+<div class="modal fade" id="readArticleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content rounded-4 border-0 shadow overflow-hidden">
+            <!-- Hero Header Berita Profesional -->
+            <div class="position-relative p-4 text-white" style="background: linear-gradient(135deg, #064e3b 0%, #047857 55%, #0d9488 100%);">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span id="articleBadge" class="badge rounded-pill bg-white text-dark px-3 py-1 shadow-sm fw-bold" style="font-size: 11px; letter-spacing: 0.5px;"></span>
+                    <button type="button" class="btn btn-sm bg-white bg-opacity-25 text-white border-0 rounded-circle d-grid place-items-center" data-bs-dismiss="modal" style="width: 32px; height: 32px;">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <h4 class="fw-bolder text-white mb-3" id="articleTitle" style="line-height: 1.35; letter-spacing: -0.4px;"></h4>
+                
+                <!-- Byline Editorial Bar -->
+                <div class="d-flex flex-wrap align-items-center gap-3 small text-white-50 pt-2 border-top border-white border-opacity-25">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-circle bg-white shadow-sm d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 28px; height: 28px; box-shadow: 0 2px 6px rgba(0,0,0,0.15);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="#047857" viewBox="0 0 16 16" style="display: block; margin: auto;">
+                                <path d="M3 14s-1 0-1-1 1-4 6-4 6 3 6 4-1 1-1 1zm5-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6"/>
+                            </svg>
+                        </div>
+                        <span class="text-white fw-semibold" id="articleAuthor">Tim Redaksi PilahKita</span>
+                        <i class="bi bi-patch-check-fill text-warning"></i>
+                    </div>
+                    <span>•</span>
+                    <span id="articleDate"><i class="bi bi-calendar3 me-1"></i> -</span>
+                    <span>•</span>
+                    <span id="articleReadingTime"><i class="bi bi-stopwatch me-1"></i> -</span>
+                </div>
+            </div>
+
+            <!-- Konten Berita Editorial -->
+            <div class="modal-body py-4 px-4 bg-white">
+                <!-- Lead Quote / Summary Highlight -->
+                <div class="p-3 p-md-4 rounded-3 mb-4" style="background: #f0fdf4; border-left: 4px solid #10b981;">
+                    <div class="d-flex align-items-center gap-2 mb-1 text-success fw-bold small text-uppercase" style="letter-spacing: 0.5px;">
+                        <i class="bi bi-lightbulb-fill fs-5"></i> Poin Kunci Redaksi
+                    </div>
+                    <p class="mb-0 text-dark fw-medium" id="articleSummary" style="font-size: 14.5px; line-height: 1.65;"></p>
+                </div>
+
+                <!-- Isi Artikel Berita -->
+                <div id="articleContent" class="article-body-text" style="font-size: 14.5px; line-height: 1.8; color: #334155; white-space: pre-line;"></div>
+
+                <!-- Box Rekomendasi Aksi Nyata -->
+                <div class="mt-4 p-3 rounded-3 bg-light border d-flex align-items-center justify-content-between flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="rounded-circle d-grid place-items-center text-primary" style="width: 32px; height: 32px; background: #e0f2fe;">
+                            <i class="bi bi-check2-circle fs-5"></i>
+                        </div>
+                        <div class="small">
+                            <span class="fw-bold text-dark d-block">Mulai Terapkan Sekarang di Rumah!</span>
+                            <span class="text-muted">Kumpulkan sampah terpilah Anda dan jadwalkan penjemputan ke Bank Sampah.</span>
+                        </div>
+                    </div>
+                    <a href="/collection" class="btn btn-sm btn-primary rounded-pill px-3">
+                        <i class="bi bi-truck me-1"></i> Jemput Sampah
+                    </a>
+                </div>
+            </div>
+
+            <!-- Footer Berita -->
+            <div class="modal-footer border-0 pt-0 pb-3 px-4 d-flex justify-content-between align-items-center bg-white">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="copyArticleLink()">
+                    <i class="bi bi-share me-1"></i> Salin Info
+                </button>
+                <button type="button" class="btn btn-light rounded-pill px-4 border fw-semibold" data-bs-dismiss="modal">
+                    Tutup Bacaan
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<% if (canAdmin) { %>
+<!-- =======================================================
+     MODAL TAMBAH ARTIKEL EDUKASI BARU (ADMIN)
+======================================================== -->
+<div class="modal fade" id="modalTambahArtikel" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-journal-plus text-success me-2"></i>Tulis Artikel Edukasi 3R Baru</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/education/create">
+                <div class="modal-body py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Judul Panduan / Berita Edukasi <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control rounded-3" placeholder="Contoh: 5 Cara Memilah Sampah Plastik Rumah Tangga Agar Bernilai Tinggi" required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Kategori <span class="text-danger">*</span></label>
+                            <select name="category" class="form-select rounded-3" required>
+                                <option value="pilah_plastik">Pilah Sampah Plastik</option>
+                                <option value="kompos_mandiri">Kompos Mandiri di Rumah</option>
+                                <option value="limbah_b3">Limbah B3 Rumah Tangga</option>
+                                <option value="info_bank_sampah">Info & Tips Bank Sampah</option>
+                                <option value="pilah_kertas_logam">Kertas & Logam</option>
+                                <option value="pilah_organik">Sampah Organik</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Nama Penulis / Redaksi</label>
+                            <input type="text" name="author_name" class="form-control rounded-3" value="Tim Redaksi PilahKita" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Estimasi Baca (Menit)</label>
+                            <input type="number" name="reading_time" class="form-control rounded-3" value="3" min="1" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Ringkasan Utama (Lead Headline) <span class="text-danger">*</span></label>
+                        <textarea name="summary" class="form-control rounded-3" rows="2" placeholder="Tulis rangkuman 1-2 kalimat pemikat pembaca..." required></textarea>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Isi Lengkap Artikel Berita <span class="text-danger">*</span></label>
+                        <textarea name="content" class="form-control rounded-3" rows="8" placeholder="Tulis penjelasan lengkap, langkah aksi bernomor (1, 2, 3), dan tips pemilahan praktis..." required></textarea>
+                        <span class="text-muted" style="font-size: 11px;">Gunakan baris baru (Enter) untuk memisahkan paragraf atau poin langkah-langkah.</span>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success rounded-3 px-4 fw-bold">Terbitkan Artikel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- =======================================================
+     MODAL EDIT ARTIKEL EDUKASI (ADMIN)
+======================================================== -->
+<div class="modal fade" id="modalEditArtikel" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square text-success me-2"></i>Edit Artikel Edukasi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEditArtikel" method="POST" action="">
+                <div class="modal-body py-3">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Judul Panduan / Berita Edukasi <span class="text-danger">*</span></label>
+                        <input type="text" id="editArticleTitle" name="title" class="form-control rounded-3" required>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label small fw-semibold">Kategori</label>
+                            <select id="editArticleCategory" name="category" class="form-select rounded-3">
+                                <option value="pilah_plastik">Pilah Sampah Plastik</option>
+                                <option value="kompos_mandiri">Kompos Mandiri di Rumah</option>
+                                <option value="limbah_b3">Limbah B3 Rumah Tangga</option>
+                                <option value="info_bank_sampah">Info & Tips Bank Sampah</option>
+                                <option value="pilah_kertas_logam">Kertas & Logam</option>
+                                <option value="pilah_organik">Sampah Organik</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Nama Penulis / Redaksi</label>
+                            <input type="text" id="editArticleAuthor" name="author_name" class="form-control rounded-3" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small fw-semibold">Estimasi Baca (Menit)</label>
+                            <input type="number" id="editArticleReading" name="reading_time" class="form-control rounded-3" min="1" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Ringkasan Utama</label>
+                        <textarea id="editArticleSummary" name="summary" class="form-control rounded-3" rows="2" required></textarea>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Isi Lengkap Artikel</label>
+                        <textarea id="editArticleContent" name="content" class="form-control rounded-3" rows="8" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill" onclick="deleteArticle()">
+                        <i class="bi bi-trash me-1"></i> Hapus Artikel
+                    </button>
+                    <div>
+                        <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success rounded-3 px-4 fw-bold">Update Artikel</button>
+                    </div>
+                </div>
+            </form>
+            <form id="formDeleteArtikel" method="POST" action="" style="display:none;"></form>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<script>
+let currentViewingArticle = null;
+let currentEditingArticleId = null;
+
+function readArticle(art) {
+    currentViewingArticle = art;
+    document.getElementById('articleTitle').innerText = art.title || '';
+    document.getElementById('articleSummary').innerText = art.summary || '';
+    document.getElementById('articleContent').innerText = art.content || '';
+    document.getElementById('articleAuthor').innerText = art.author_name || 'Tim Redaksi PilahKita';
+    
+    const d = art.created_at ? new Date(art.created_at) : new Date();
+    document.getElementById('articleDate').innerHTML = '<i class="bi bi-calendar3 me-1"></i> ' + d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    document.getElementById('articleReadingTime').innerHTML = '<i class="bi bi-stopwatch me-1"></i> ' + (art.reading_time || 3) + ' menit baca';
+    
+    const badge = document.getElementById('articleBadge');
+    badge.innerText = (art.category || 'Panduan 3R').toUpperCase().replace(/_/g, ' ');
+
+    new bootstrap.Modal(document.getElementById('readArticleModal')).show();
+}
+
+function copyArticleLink() {
+    if (!currentViewingArticle) return;
+    const shareText = `*${currentViewingArticle.title}*\n\nBaca panduan edukasi selengkapnya di aplikasi PilahKita:\n${window.location.origin}/education`;
+    navigator.clipboard.writeText(shareText).then(() => {
+        alert('Informasi artikel berhasil disalin! Anda dapat membagikannya ke WhatsApp.');
+    }).catch(() => {
+        prompt('Salin tautan:', window.location.href);
+    });
+}
+
+function openEditArticleModal(art) {
+    currentEditingArticleId = art.id;
+    document.getElementById('formEditArtikel').action = '/education/edit/' + art.id;
+    document.getElementById('editArticleTitle').value = art.title || '';
+    document.getElementById('editArticleCategory').value = art.category || 'info_bank_sampah';
+    document.getElementById('editArticleAuthor').value = art.author_name || 'Tim Redaksi PilahKita';
+    document.getElementById('editArticleReading').value = art.reading_time || 3;
+    document.getElementById('editArticleSummary').value = art.summary || '';
+    document.getElementById('editArticleContent').value = art.content || '';
+
+    new bootstrap.Modal(document.getElementById('modalEditArtikel')).show();
+}
+
+function deleteArticle() {
+    if (!currentEditingArticleId) return;
+    if (confirm('Yakin ingin menghapus artikel edukasi ini?')) {
+        const delForm = document.getElementById('formDeleteArtikel');
+        delForm.action = '/education/delete/' + currentEditingArticleId;
+        delForm.submit();
+    }
+}
+</script>

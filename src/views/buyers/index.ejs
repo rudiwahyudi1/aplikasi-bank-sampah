@@ -1,0 +1,2293 @@
+<%
+/* ============================================================
+SAFE DATA
+============================================================ */
+const buyerRows = (typeof rows !== "undefined" && Array.isArray(rows))
+? rows
+: [];
+
+const buyerCanManage = (typeof canManage !== "undefined")
+? canManage
+: false;
+
+/* Statistik */
+const totalBuyer = buyerRows.length;
+
+const individualBuyer = buyerRows.filter(r =>
+String(r.type || "").toLowerCase().includes("perorangan") ||
+String(r.type || "").toLowerCase().includes("individual")
+).length;
+
+const companyBuyer = buyerRows.filter(r =>
+String(r.type || "").toLowerCase().includes("perusahaan") ||
+String(r.type || "").toLowerCase().includes("company")
+).length;
+
+const totalTransaction = buyerRows.reduce((sum, r) =>
+sum + Number(r.sales_count || 0), 0
+);
+
+const totalValue = buyerRows.reduce((sum, r) =>
+sum + Number(r.sales_value || 0), 0
+);
+%>
+
+<style>
+/* ============================================================
+   iOS BUYER UI
+============================================================ */
+
+.ios-page {
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "SF Pro Display",
+        "SF Pro Text",
+        "Inter",
+        "Segoe UI",
+        sans-serif;
+    color: #1d1d1f;
+}
+
+/* Main card */
+.ios-card {
+    background: rgba(255,255,255,.96);
+    border: 1px solid #e8e8ed;
+    border-radius: 22px;
+    box-shadow:
+        0 8px 30px rgba(0,0,0,.055),
+        0 2px 8px rgba(0,0,0,.025);
+    overflow: hidden;
+}
+
+/* Header */
+.ios-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid #ededf2;
+    background: linear-gradient(
+        180deg,
+        #ffffff 0%,
+        #fbfbfd 100%
+    );
+}
+
+.ios-title {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -.35px;
+    margin: 0;
+}
+
+.ios-subtitle {
+    color: #8e8e93;
+    font-size: 12px;
+    margin-top: 3px;
+}
+
+/* Icon */
+.ios-title-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: #e9f8ee;
+    color: #22a447;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+/* Buttons */
+.btn-ios-success {
+    border: 0;
+    background: #22a447;
+    color: #fff;
+    border-radius: 12px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 3px 10px rgba(34,164,71,.18);
+    transition: .2s ease;
+}
+
+.btn-ios-success:hover {
+    background: #1d963f;
+    color: #fff;
+    transform: translateY(-1px);
+}
+
+.btn-ios-light {
+    border: 1px solid #e5e5ea;
+    background: #f8f8fa;
+    color: #3a3a3c;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 10px;
+}
+
+.btn-ios-light:hover {
+    background: #eeeeF2;
+}
+
+/* ============================================================
+   STAT CARDS
+============================================================ */
+
+.ios-stats {
+    padding: 14px 16px 4px;
+}
+
+.ios-stat {
+    border: 1px solid #ededf2;
+    background: #fff;
+    border-radius: 16px;
+    padding: 12px 13px;
+    height: 100%;
+    transition: .2s ease;
+}
+
+.ios-stat:hover {
+    border-color: #d8d8de;
+    transform: translateY(-1px);
+}
+
+.ios-stat-label {
+    color: #8e8e93;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .35px;
+}
+
+.ios-stat-value {
+    margin-top: 3px;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -.4px;
+}
+
+.ios-stat-icon {
+    width: 31px;
+    height: 31px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+}
+
+/* ============================================================
+   SEARCH BAR
+============================================================ */
+
+.ios-toolbar {
+    padding: 12px 16px;
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    border-bottom: 1px solid #ededf2;
+    background: #fff;
+}
+
+.ios-search {
+    position: relative;
+    flex: 1;
+}
+
+.ios-search i {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8e8e93;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.ios-search input {
+    width: 100%;
+    height: 38px;
+    border: 1px solid #e5e5ea;
+    background: #f7f7f9;
+    border-radius: 12px;
+    padding: 0 38px 0 36px;
+    font-size: 13px;
+    outline: none;
+    color: #1d1d1f;
+    transition: .2s ease;
+}
+
+.ios-search input:focus {
+    background: #fff;
+    border-color: #b8b8bd;
+    box-shadow: 0 0 0 3px rgba(0,0,0,.04);
+}
+
+.ios-search-clear {
+    position: absolute;
+    right: 9px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 23px;
+    height: 23px;
+    border: 0;
+    border-radius: 50%;
+    background: #d1d1d6;
+    color: #fff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+}
+
+.ios-count {
+    white-space: nowrap;
+    font-size: 11px;
+    color: #8e8e93;
+    font-weight: 600;
+}
+
+/* ============================================================
+   TABLE
+============================================================ */
+
+.ios-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.ios-table {
+    width: 100%;
+    margin: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 850px;
+}
+
+.ios-table thead th {
+    background: #f8f8fa;
+    color: #8e8e93;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    padding: 11px 14px;
+    border-bottom: 1px solid #e5e5ea;
+    white-space: nowrap;
+}
+
+.ios-table tbody td {
+    padding: 12px 14px;
+    font-size: 12px;
+    border-bottom: 1px solid #f0f0f2;
+    vertical-align: middle;
+}
+
+.ios-table tbody tr {
+    transition: background .15s ease;
+}
+
+.ios-table tbody tr:hover {
+    background: #fafafa;
+}
+
+.ios-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* Buyer */
+.buyer-name {
+    font-weight: 700;
+    font-size: 13px;
+    color: #1d1d1f;
+}
+
+.buyer-id {
+    font-size: 10px;
+    color: #8e8e93;
+    margin-top: 2px;
+}
+
+.buyer-company {
+    font-size: 12px;
+    color: #48484a;
+}
+
+.buyer-contact {
+    line-height: 1.45;
+}
+
+.buyer-contact small {
+    color: #8e8e93;
+}
+
+/* Badge */
+.ios-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 9px;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.ios-badge-person {
+    background: #edf5ff;
+    color: #2878d4;
+}
+
+.ios-badge-company {
+    background: #f0eaff;
+    color: #7355c7;
+}
+
+.ios-badge-default {
+    background: #f1f1f3;
+    color: #636366;
+}
+
+/* Transaction */
+.transaction-count {
+    font-weight: 700;
+    color: #1d1d1f;
+}
+
+.transaction-value {
+    font-weight: 700;
+    color: #22a447;
+    white-space: nowrap;
+}
+
+/* Action */
+.ios-action {
+    width: 31px;
+    height: 31px;
+    border: 1px solid #e5e5ea;
+    background: #f8f8fa;
+    color: #636366;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: .18s ease;
+}
+
+.ios-action:hover {
+    background: #eeeeF2;
+    color: #1d1d1f;
+}
+
+.ios-action.delete:hover {
+    background: #fff0f0;
+    color: #ff3b30;
+    border-color: #ffd6d3;
+}
+
+/* ============================================================
+   EMPTY STATE
+============================================================ */
+
+.ios-empty {
+    padding: 42px 20px;
+    text-align: center;
+    display: none;
+}
+
+.ios-empty-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 17px;
+    background: #f2f2f7;
+    color: #8e8e93;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-bottom: 12px;
+}
+
+.ios-empty-title {
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.ios-empty-text {
+    font-size: 11px;
+    color: #8e8e93;
+    margin-top: 3px;
+}
+
+/* ============================================================
+   PAGINATION
+============================================================ */
+
+.ios-pagination-wrap {
+    border-top: 1px solid #ededf2;
+    padding: 11px 15px;
+    background: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.ios-page-info {
+    color: #8e8e93;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.ios-pagination {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.ios-page-btn {
+    min-width: 29px;
+    height: 29px;
+    border: 1px solid #e5e5ea;
+    background: #fff;
+    border-radius: 9px;
+    color: #636366;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0 8px;
+}
+
+.ios-page-btn:hover {
+    background: #f2f2f7;
+}
+
+.ios-page-btn.active {
+    background: #1d1d1f;
+    color: #fff;
+    border-color: #1d1d1f;
+}
+
+.ios-page-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   ALERT
+============================================================ */
+
+.ios-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1090;
+    min-width: 290px;
+    max-width: 380px;
+    border: 0;
+    border-radius: 15px;
+    box-shadow: 0 12px 35px rgba(0,0,0,.13);
+    font-size: 12px;
+}
+
+/* ============================================================
+   MODAL iOS
+============================================================ */
+
+.ios-modal {
+    border: 0;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 25px 70px rgba(0,0,0,.2);
+}
+
+.ios-modal .modal-header {
+    border-bottom: 1px solid #ededf2;
+    padding: 15px 18px;
+    background: #fff;
+}
+
+.ios-modal .modal-body {
+    background: #fbfbfd;
+    padding: 17px;
+}
+
+.ios-modal .modal-footer {
+    border-top: 1px solid #ededf2;
+    padding: 12px 16px;
+    background: #fff;
+}
+
+
+/* ============================================================
+   ICON INPUT DI MODAL
+   Ikon berada di kiri dan sejajar dengan input.
+============================================================ */
+
+.ios-modal .buyer-input-group {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    margin-bottom: 0;
+}
+
+.ios-modal .buyer-input-icon {
+    width: 44px;
+    min-width: 44px;
+    border: 1px solid #e5e5ea;
+    border-right: 0;
+    background: #f8f8fa;
+    color: #22a447;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px 0 0 11px;
+    font-size: 15px;
+}
+
+.ios-modal .buyer-input-group .form-control,
+.ios-modal .buyer-input-group .form-select {
+    min-height: 42px;
+    border: 1px solid #e5e5ea;
+    border-radius: 0 11px 11px 0;
+    background: #fff;
+    color: #1d1d1f;
+    font-size: 13px;
+    box-shadow: none;
+}
+
+.ios-modal .buyer-input-group textarea.form-control {
+    min-height: 90px;
+    resize: vertical;
+    border-radius: 0 11px 11px 0;
+}
+
+.ios-modal .buyer-input-group .form-control:focus,
+.ios-modal .buyer-input-group .form-select:focus {
+    border-color: #22a447;
+    box-shadow: 0 0 0 3px rgba(34,164,71,.08);
+    position: relative;
+    z-index: 2;
+}
+
+.ios-modal .buyer-input-group:focus-within .buyer-input-icon {
+    border-color: #22a447;
+    background: #e9f8ee;
+    color: #22a447;
+}
+
+.ios-modal .buyer-input-group input[type="file"] {
+    padding: 9px 12px;
+}
+
+.ios-modal .buyer-input-group input[type="file"]::file-selector-button {
+    border: 0;
+    background: #e9f8ee;
+    color: #22a447;
+    border-radius: 7px;
+    padding: 5px 9px;
+    margin-right: 8px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Label modal */
+.ios-modal .form-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #3a3a3c;
+    margin-bottom: 6px;
+}
+
+/* Spacing field */
+.ios-modal .mb-3,
+.ios-modal .mb-4 {
+    margin-bottom: 15px !important;
+}
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (max-width: 768px) {
+
+    .ios-header {
+        padding: 14px;
+    }
+
+    .ios-title {
+        font-size: 17px;
+    }
+
+    .ios-subtitle {
+        font-size: 11px;
+    }
+
+    .ios-toolbar {
+        padding: 10px 12px;
+    }
+
+    .ios-count {
+        display: none;
+    }
+
+    .ios-pagination-wrap {
+        padding: 10px 12px;
+    }
+
+    .ios-page-info {
+        font-size: 9px;
+    }
+
+    .ios-pagination {
+        gap: 3px;
+    }
+
+    .ios-page-btn {
+        min-width: 27px;
+        height: 27px;
+        font-size: 10px;
+    }
+
+    .ios-alert {
+        left: 12px;
+        right: 12px;
+        top: 12px;
+        min-width: auto;
+    }
+
+    .ios-modal .modal-body {
+        padding: 12px;
+    }
+
+    .ios-modal .buyer-input-icon {
+        width: 40px;
+        min-width: 40px;
+    }
+
+}
+</style>
+
+<div class="card bg-white border-0 rounded-4 shadow-sm p-2 p-md-3">
+
+    <div class="ios-page">
+
+        <!-- ========================================================
+            MAIN CARD
+        ========================================================= -->
+        <div class="ios-card">
+
+            <!-- HEADER -->
+            <div class="ios-header">
+
+                <div class="d-flex justify-content-between align-items-center gap-3">
+
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div class="ios-title-icon">
+                            <i class="bi bi-person-badge"></i>
+                        </div>
+
+                        <div class="ios-hero-text">
+
+                            <h5 class="mb-0">
+                                PEMBELI
+                            </h5>
+
+                        </div>
+
+                    </div>
+
+                    <% if (buyerCanManage) { %>
+
+                        <button
+                            type="button"
+                            class="btn-ios-success"
+                            data-bs-toggle="modal"
+                            data-bs-target="#addBuyerModal">
+
+                            <i class="bi bi-plus-lg me-1"></i>
+                            Tambah
+
+                        </button>
+
+                    <% } %>
+
+                </div>
+
+            </div>
+
+
+            <!-- ====================================================
+                STATISTICS
+            ===================================================== -->
+            <div class="ios-stats">
+
+                <div class="row g-2">
+
+                    <!-- Total -->
+                    <div class="col-6 col-md-3">
+
+                        <div class="ios-stat">
+
+                            <div class="d-flex justify-content-between align-items-center">
+
+                                <div>
+
+                                    <div class="ios-stat-label">
+                                        Total Pembeli
+                                    </div>
+
+                                    <div class="ios-stat-value">
+                                        <%= totalBuyer.toLocaleString('id-ID') %>
+                                    </div>
+
+                                </div>
+
+                                <div
+                                    class="ios-stat-icon"
+                                    style="background:#eef2ff;color:#536dfe">
+
+                                    <i class="bi bi-people"></i>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Perorangan -->
+                    <div class="col-6 col-md-3">
+
+                        <div class="ios-stat">
+
+                            <div class="d-flex justify-content-between align-items-center">
+
+                                <div>
+
+                                    <div class="ios-stat-label">
+                                        Perorangan
+                                    </div>
+
+                                    <div class="ios-stat-value">
+                                        <%= individualBuyer.toLocaleString('id-ID') %>
+                                    </div>
+
+                                </div>
+
+                                <div
+                                    class="ios-stat-icon"
+                                    style="background:#edf5ff;color:#2878d4">
+
+                                    <i class="bi bi-person"></i>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Perusahaan -->
+                    <div class="col-6 col-md-3">
+
+                        <div class="ios-stat">
+
+                            <div class="d-flex justify-content-between align-items-center">
+
+                                <div>
+
+                                    <div class="ios-stat-label">
+                                        Perusahaan
+                                    </div>
+
+                                    <div class="ios-stat-value">
+                                        <%= companyBuyer.toLocaleString('id-ID') %>
+                                    </div>
+
+                                </div>
+
+                                <div
+                                    class="ios-stat-icon"
+                                    style="background:#f0eaff;color:#7355c7">
+
+                                    <i class="bi bi-building"></i>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- Transaksi -->
+                    <div class="col-6 col-md-3">
+
+                        <div class="ios-stat">
+
+                            <div class="d-flex justify-content-between align-items-center">
+
+                                <div>
+
+                                    <div class="ios-stat-label">
+                                        Transaksi
+                                    </div>
+
+                                    <div class="ios-stat-value">
+                                        <%= totalTransaction.toLocaleString('id-ID') %>
+                                    </div>
+
+                                </div>
+
+                                <div
+                                    class="ios-stat-icon"
+                                    style="background:#e9f8ee;color:#22a447">
+
+                                    <i class="bi bi-receipt"></i>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ====================================================
+                SEARCH TOOLBAR
+            ===================================================== -->
+            <div class="ios-toolbar">
+
+                <div class="ios-search">
+
+                    <i class="bi bi-search"></i>
+
+                    <input
+                        type="text"
+                        id="buyerSearch"
+                        autocomplete="off"
+                        placeholder="Cari nama, perusahaan, telepon, email..."
+                    >
+
+                    <button
+                        type="button"
+                        id="clearBuyerSearch"
+                        class="ios-search-clear">
+
+                        <i class="bi bi-x"></i>
+
+                    </button>
+
+                </div>
+
+                <div
+                    id="buyerCount"
+                    class="ios-count">
+
+                    <%= totalBuyer %> data
+
+                </div>
+
+            </div>
+
+
+            <!-- ====================================================
+                TABLE
+            ===================================================== -->
+            <div class="ios-table-wrap p-3">
+
+                <table class="ios-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Nama</th>
+
+                            <th>Tipe</th>
+
+                            <th>Perusahaan</th>
+
+                            <th>Kontak</th>
+
+                            <th>Transaksi</th>
+
+                            <th>Nilai</th>
+
+                            <% if (buyerCanManage) { %>
+
+                                <th class="text-end">
+                                    Aksi
+                                </th>
+
+                            <% } %>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="buyerTableBody">
+
+                        <% buyerRows.forEach((r, index) => { %>
+
+                            <tr
+                                class="buyer-row"
+                                data-index="<%= index %>"
+                                data-search="
+                                    <%= String(
+                                        (r.name || '') + ' ' +
+                                        (r.type || '') + ' ' +
+                                        (r.company || '') + ' ' +
+                                        (r.phone || '') + ' ' +
+                                        (r.email || '')
+                                    ).toLowerCase() %>
+                                ">
+
+                                <!-- NAMA -->
+                                <td>
+
+                                    <div class="buyer-name">
+                                        <%= r.name || '-' %>
+                                    </div>
+
+                                    <div class="buyer-id">
+                                        ID #<%= r.id %>
+                                    </div>
+
+                                </td>
+
+
+                                <!-- TIPE -->
+                                <td>
+
+                                    <%
+                                        const buyerType =
+                                            String(r.type || '').toLowerCase();
+
+                                        let badgeClass =
+                                            'ios-badge-default';
+
+                                        if (
+                                            buyerType.includes('perorangan') ||
+                                            buyerType.includes('individual')
+                                        ) {
+
+                                            badgeClass =
+                                                'ios-badge-person';
+
+                                        } else if (
+                                            buyerType.includes('perusahaan') ||
+                                            buyerType.includes('company')
+                                        ) {
+
+                                            badgeClass =
+                                                'ios-badge-company';
+
+                                        }
+                                    %>
+
+                                    <span class="ios-badge <%= badgeClass %>">
+
+                                        <% if (
+                                            buyerType.includes('perorangan') ||
+                                            buyerType.includes('individual')
+                                        ) { %>
+
+                                            <i class="bi bi-person me-1"></i>
+
+                                        <% } else if (
+                                            buyerType.includes('perusahaan') ||
+                                            buyerType.includes('company')
+                                        ) { %>
+
+                                            <i class="bi bi-building me-1"></i>
+
+                                        <% } else { %>
+
+                                            <i class="bi bi-person-badge me-1"></i>
+
+                                        <% } %>
+
+                                        <%= r.type || '-' %>
+
+                                    </span>
+
+                                </td>
+
+
+                                <!-- PERUSAHAAN -->
+                                <td>
+
+                                    <div class="buyer-company">
+
+                                        <i class="bi bi-building me-1 text-secondary"></i>
+
+                                        <%= r.company || '-' %>
+
+                                    </div>
+
+                                </td>
+
+
+                                <!-- KONTAK -->
+                                <td>
+
+                                    <div class="buyer-contact">
+
+                                        <div>
+
+                                            <i class="bi bi-telephone me-1 text-secondary"></i>
+
+                                            <%= r.phone || '-' %>
+
+                                        </div>
+
+                                        <% if (r.email) { %>
+
+                                            <small>
+
+                                                <i class="bi bi-envelope me-1"></i>
+
+                                                <%= r.email %>
+
+                                            </small>
+
+                                        <% } %>
+
+                                    </div>
+
+                                </td>
+
+
+                                <!-- TRANSAKSI -->
+                                <td>
+
+                                    <span class="transaction-count">
+
+                                        <%= Number(
+                                            r.sales_count || 0
+                                        ).toLocaleString('id-ID') %>
+
+                                    </span>
+
+                                </td>
+
+
+                                <!-- NILAI -->
+                                <td>
+
+                                    <span class="transaction-value">
+
+                                        Rp
+
+                                        <%= Number(
+                                            r.sales_value || 0
+                                        ).toLocaleString('id-ID') %>
+
+                                    </span>
+
+                                </td>
+
+
+                                <!-- AKSI -->
+                                <% if (buyerCanManage) { %>
+
+                                    <td class="text-end">
+
+                                        <div class="d-flex justify-content-end gap-1">
+
+                                            <!-- EDIT -->
+                                            <button
+                                                type="button"
+                                                class="ios-action"
+                                                title="Edit"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editBuyer<%= r.id %>">
+
+                                                <i class="bi bi-pencil"></i>
+
+                                            </button>
+
+
+                                            <!-- DELETE -->
+                                            <form
+                                                method="post"
+                                                action="/buyers/<%= r.id %>/delete"
+                                                class="d-inline buyer-delete-form"
+                                                data-name="<%= r.name || 'Pembeli ini' %>">
+
+                                                <button
+                                                    type="submit"
+                                                    class="ios-action delete"
+                                                    title="Hapus">
+
+                                                    <i class="bi bi-trash"></i>
+
+                                                </button>
+
+                                            </form>
+
+                                        </div>
+
+                                    </td>
+
+                                <% } %>
+
+                            </tr>
+
+                        <% }) %>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            <!-- ====================================================
+                EMPTY STATE
+            ===================================================== -->
+            <div
+                id="buyerEmpty"
+                class="ios-empty">
+
+                <div class="ios-empty-icon">
+
+                    <i class="bi bi-search"></i>
+
+                </div>
+
+                <div class="ios-empty-title">
+                    Data tidak ditemukan
+                </div>
+
+                <div class="ios-empty-text">
+                    Tidak ada pembeli yang cocok dengan pencarian.
+                </div>
+
+            </div>
+
+
+            <!-- ====================================================
+                PAGINATION
+            ===================================================== -->
+            <div
+                id="buyerPaginationWrap"
+                class="ios-pagination-wrap">
+
+                <div
+                    id="buyerPageInfo"
+                    class="ios-page-info">
+
+                    Menampilkan 0 data
+
+                </div>
+
+                <div
+                    id="buyerPagination"
+                    class="ios-pagination">
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ============================================================
+     ALERT CONTAINER
+============================================================ -->
+
+<div
+    id="buyerAlertContainer"
+    class="position-fixed top-0 end-0 p-3"
+    style="z-index:2000">
+</div>
+
+<% if (buyerCanManage) { %>
+
+<!-- ============================================================
+     MODAL TAMBAH PEMBELI
+============================================================ -->
+
+<div
+    class="modal fade"
+    id="addBuyerModal"
+    tabindex="-1"
+    aria-labelledby="addBuyerModalLabel"
+    aria-hidden="true">
+
+```
+<div class="modal-dialog modal-dialog-centered modal-lg">
+
+    <form
+        class="modal-content ios-modal"
+        method="post"
+        action="/buyers/add">
+
+        <!-- HEADER -->
+        <div class="modal-header">
+
+            <div class="d-flex align-items-center gap-3">
+
+                <div class="bg-success-subtle text-success rounded-3 p-2">
+
+                    <i class="bi bi-person-plus fs-5"></i>
+
+                </div>
+
+                <div>
+
+                    <h5
+                        class="modal-title fw-bold mb-1"
+                        id="addBuyerModalLabel">
+
+                        Tambah Pembeli
+
+                    </h5>
+
+                    <div class="small text-secondary">
+
+                        Masukkan informasi pembeli baru.
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Tutup">
+            </button>
+
+        </div>
+
+
+        <!-- BODY -->
+        <div class="modal-body">
+
+            <div class="bg-white border rounded-4 p-3 p-md-4">
+
+                <%- include('../partials/form-buyer', { r: null }) %>
+
+            </div>
+
+        </div>
+
+
+        <!-- FOOTER -->
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="btn btn-light border rounded-3"
+                data-bs-dismiss="modal">
+
+                <i class="bi bi-x-lg me-1"></i>
+
+                Batal
+
+            </button>
+
+            <button
+                type="submit"
+                class="btn btn-success rounded-3">
+
+                <i class="bi bi-check-lg me-1"></i>
+
+                Simpan
+
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+```
+
+</div>
+
+<!-- ============================================================
+     MODAL EDIT PEMBELI
+============================================================ -->
+
+<% buyerRows.forEach(r => { %>
+
+<div
+    class="modal fade"
+    id="editBuyer<%= r.id %>"
+    tabindex="-1"
+    aria-labelledby="editBuyerLabel<%= r.id %>"
+    aria-hidden="true">
+
+```
+<div class="modal-dialog modal-dialog-centered modal-lg">
+
+    <form
+        class="modal-content ios-modal"
+        method="post"
+        action="/buyers/<%= r.id %>/update">
+
+        <!-- HEADER -->
+        <div class="modal-header">
+
+            <div class="d-flex align-items-center gap-3">
+
+                <div class="bg-success-subtle text-success rounded-3 p-2">
+
+                    <i class="bi bi-person-gear fs-5"></i>
+
+                </div>
+
+                <div>
+
+                    <h5
+                        class="modal-title fw-bold mb-1"
+                        id="editBuyerLabel<%= r.id %>">
+
+                        Edit Pembeli
+
+                    </h5>
+
+                    <div class="small text-secondary">
+
+                        Perbarui informasi pembeli.
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Tutup">
+            </button>
+
+        </div>
+
+
+        <!-- BODY -->
+        <div class="modal-body">
+
+            <div class="bg-white border rounded-4 p-3 p-md-4">
+
+                <%- include('../partials/form-buyer', { r: r }) %>
+
+            </div>
+
+        </div>
+
+
+        <!-- FOOTER -->
+        <div class="modal-footer">
+
+            <button
+                type="button"
+                class="btn btn-light border rounded-3"
+                data-bs-dismiss="modal">
+
+                <i class="bi bi-x-lg me-1"></i>
+
+                Batal
+
+            </button>
+
+            <button
+                type="submit"
+                class="btn btn-success rounded-3">
+
+                <i class="bi bi-check-lg me-1"></i>
+
+                Simpan Perubahan
+
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+</div>
+
+<% }) %>
+
+<% } %>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    /* ========================================================
+       ICON INPUT MODAL
+       Tidak mengubah name/value/action/function input.
+    ======================================================== */
+
+    function getBuyerInputIcon(element) {
+
+        const name =
+            String(element.getAttribute("name") || "").toLowerCase();
+
+        const id =
+            String(element.getAttribute("id") || "").toLowerCase();
+
+        const placeholder =
+            String(element.getAttribute("placeholder") || "").toLowerCase();
+
+        const type =
+            String(element.getAttribute("type") || "").toLowerCase();
+
+        const text =
+            `${name} ${id} ${placeholder}`;
+
+
+        /* Nama */
+        if (
+            text.includes("nama") ||
+            text.includes("name") ||
+            text.includes("buyer")
+        ) {
+            return "bi-person";
+        }
+
+
+        /* Tipe */
+        if (
+            text.includes("type") ||
+            text.includes("tipe") ||
+            text.includes("jenis")
+        ) {
+            return "bi-person-badge";
+        }
+
+
+        /* Perusahaan */
+        if (
+            text.includes("company") ||
+            text.includes("perusahaan") ||
+            text.includes("organization") ||
+            text.includes("organisasi")
+        ) {
+            return "bi-building";
+        }
+
+
+        /* Telepon */
+        if (
+            text.includes("phone") ||
+            text.includes("telepon") ||
+            text.includes("telp") ||
+            text.includes("mobile") ||
+            text.includes("whatsapp") ||
+            text.includes("wa")
+        ) {
+            return "bi-telephone";
+        }
+
+
+        /* Email */
+        if (
+            text.includes("email") ||
+            text.includes("mail")
+        ) {
+            return "bi-envelope";
+        }
+
+
+        /* Alamat */
+        if (
+            text.includes("address") ||
+            text.includes("alamat") ||
+            text.includes("jalan") ||
+            text.includes("street")
+        ) {
+            return "bi-geo-alt";
+        }
+
+
+        /* Kota */
+        if (
+            text.includes("city") ||
+            text.includes("kota")
+        ) {
+            return "bi-buildings";
+        }
+
+
+        /* Provinsi */
+        if (
+            text.includes("province") ||
+            text.includes("provinsi")
+        ) {
+            return "bi-map";
+        }
+
+
+        /* Kode Pos */
+        if (
+            text.includes("postal") ||
+            text.includes("postcode") ||
+            text.includes("kodepos") ||
+            text.includes("kode_pos") ||
+            text.includes("zip")
+        ) {
+            return "bi-mailbox";
+        }
+
+
+        /* NIK */
+        if (
+            text.includes("nik") ||
+            text.includes("identity") ||
+            text.includes("identitas")
+        ) {
+            return "bi-person-vcard";
+        }
+
+
+        /* NPWP */
+        if (
+            text.includes("npwp") ||
+            text.includes("tax")
+        ) {
+            return "bi-receipt";
+        }
+
+
+        /* Harga / nilai */
+        if (
+            text.includes("price") ||
+            text.includes("harga") ||
+            text.includes("value") ||
+            text.includes("nilai") ||
+            text.includes("amount") ||
+            text.includes("nominal")
+        ) {
+            return "bi-cash-stack";
+        }
+
+
+        /* Catatan */
+        if (
+            text.includes("note") ||
+            text.includes("catatan") ||
+            text.includes("description") ||
+            text.includes("deskripsi") ||
+            text.includes("keterangan")
+        ) {
+            return "bi-card-text";
+        }
+
+
+        /* File */
+        if (type === "file") {
+            return "bi-image";
+        }
+
+
+        /* Password */
+        if (type === "password") {
+            return "bi-lock";
+        }
+
+
+        /* Select */
+        if (element.tagName === "SELECT") {
+            return "bi-list-check";
+        }
+
+
+        /* Textarea */
+        if (element.tagName === "TEXTAREA") {
+            return "bi-chat-left-text";
+        }
+
+
+        /* Default */
+        return "bi-pencil-square";
+    }
+
+
+    function addBuyerInputIcons() {
+
+        document
+            .querySelectorAll(".ios-modal")
+            .forEach(function (modal) {
+
+                const fields =
+                    modal.querySelectorAll(
+                        "input:not([type='hidden']):not([type='submit']):not([type='button']):not([type='reset']), select, textarea"
+                    );
+
+
+                fields.forEach(function (field) {
+
+                    /* Jangan proses dua kali */
+                    if (
+                        field.closest(".buyer-input-group")
+                    ) {
+                        return;
+                    }
+
+
+                    /*
+                     * Jangan mengganggu checkbox/radio.
+                     * Fungsi dan value tetap asli.
+                     */
+                    if (
+                        field.type === "checkbox" ||
+                        field.type === "radio"
+                    ) {
+                        return;
+                    }
+
+
+                    const parent =
+                        field.parentElement;
+
+                    if (!parent) return;
+
+
+                    const group =
+                        document.createElement("div");
+
+                    group.className =
+                        "buyer-input-group";
+
+
+                    const icon =
+                        document.createElement("span");
+
+                    icon.className =
+                        "buyer-input-icon";
+
+
+                    const iconElement =
+                        document.createElement("i");
+
+                    iconElement.className =
+                        "bi " +
+                        getBuyerInputIcon(field);
+
+
+                    icon.appendChild(
+                        iconElement
+                    );
+
+
+                    /*
+                     * Pindahkan field ke wrapper.
+                     * Atribut name, id, value, required,
+                     * validation, dan event tetap berada
+                     * pada element field asli.
+                     */
+                    parent.insertBefore(
+                        group,
+                        field
+                    );
+
+
+                    group.appendChild(icon);
+
+                    group.appendChild(field);
+
+                });
+
+            });
+
+    }
+
+
+    /*
+     * Jalankan saat halaman selesai.
+     */
+    addBuyerInputIcons();
+
+
+    /*
+     * Jalankan kembali ketika modal dibuka.
+     * Aman karena field yang sudah diproses
+     * tidak akan diproses ulang.
+     */
+    document
+        .querySelectorAll(".ios-modal")
+        .forEach(function (modal) {
+
+            modal.addEventListener(
+                "shown.bs.modal",
+                function () {
+
+                    addBuyerInputIcons();
+
+                }
+            );
+
+        });
+
+
+    /* ========================================================
+       CONFIG
+    ======================================================== */
+
+    const rows = Array.from(
+        document.querySelectorAll(".buyer-row")
+    );
+
+    const searchInput =
+        document.getElementById("buyerSearch");
+
+    const clearButton =
+        document.getElementById("clearBuyerSearch");
+
+    const pagination =
+        document.getElementById("buyerPagination");
+
+    const pageInfo =
+        document.getElementById("buyerPageInfo");
+
+    const countInfo =
+        document.getElementById("buyerCount");
+
+    const emptyState =
+        document.getElementById("buyerEmpty");
+
+    const paginationWrap =
+        document.getElementById("buyerPaginationWrap");
+
+    const pageSize = 10;
+
+    let currentPage = 1;
+
+    let filteredRows = [...rows];
+
+
+    /* ========================================================
+       ALERT
+    ======================================================== */
+
+    function showBuyerAlert(
+        message,
+        type = "warning",
+        icon = "bi-exclamation-circle"
+    ) {
+
+        const container =
+            document.getElementById(
+                "buyerAlertContainer"
+            );
+
+        if (!container) return;
+
+        const alertId =
+            "buyerAlert_" + Date.now();
+
+        const html = `
+            <div
+                id="${alertId}"
+                class="alert alert-${type} alert-dismissible fade show ios-alert d-flex align-items-center gap-2"
+                role="alert">
+
+                <i class="bi ${icon} fs-5"></i>
+
+                <div>
+                    ${message}
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-close ms-auto"
+                    data-bs-dismiss="alert">
+                </button>
+
+            </div>
+        `;
+
+        container.insertAdjacentHTML(
+            "beforeend",
+            html
+        );
+
+        setTimeout(() => {
+
+            const alertElement =
+                document.getElementById(alertId);
+
+            if (alertElement) {
+
+                const alert =
+                    bootstrap.Alert.getOrCreateInstance(
+                        alertElement
+                    );
+
+                alert.close();
+
+            }
+
+        }, 3500);
+    }
+
+
+    /* ========================================================
+       RENDER PAGINATION
+    ======================================================== */
+
+    function renderPagination() {
+
+        pagination.innerHTML = "";
+
+        if (filteredRows.length === 0) {
+
+            paginationWrap.style.display = "none";
+
+            return;
+        }
+
+        paginationWrap.style.display = "flex";
+
+        const totalPages =
+            Math.ceil(
+                filteredRows.length / pageSize
+            );
+
+
+        /* Previous */
+
+        const prev =
+            document.createElement("button");
+
+        prev.type = "button";
+
+        prev.className =
+            "ios-page-btn";
+
+        prev.innerHTML =
+            '<i class="bi bi-chevron-left"></i>';
+
+        prev.disabled =
+            currentPage === 1;
+
+        prev.addEventListener(
+            "click",
+            function () {
+
+                if (currentPage > 1) {
+
+                    currentPage--;
+
+                    renderTable();
+
+                }
+
+            }
+        );
+
+        pagination.appendChild(prev);
+
+
+        /* Number pagination */
+
+        let startPage =
+            Math.max(
+                1,
+                currentPage - 2
+            );
+
+        let endPage =
+            Math.min(
+                totalPages,
+                startPage + 4
+            );
+
+        if (endPage - startPage < 4) {
+
+            startPage =
+                Math.max(
+                    1,
+                    endPage - 4
+                );
+
+        }
+
+
+        for (
+            let page = startPage;
+            page <= endPage;
+            page++
+        ) {
+
+            const button =
+                document.createElement("button");
+
+            button.type = "button";
+
+            button.className =
+                "ios-page-btn" +
+                (
+                    page === currentPage
+                        ? " active"
+                        : ""
+                );
+
+            button.textContent =
+                page;
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    currentPage = page;
+
+                    renderTable();
+
+                }
+            );
+
+            pagination.appendChild(button);
+
+        }
+
+
+        /* Next */
+
+        const next =
+            document.createElement("button");
+
+        next.type = "button";
+
+        next.className =
+            "ios-page-btn";
+
+        next.innerHTML =
+            '<i class="bi bi-chevron-right"></i>';
+
+        next.disabled =
+            currentPage === totalPages;
+
+        next.addEventListener(
+            "click",
+            function () {
+
+                if (
+                    currentPage <
+                    totalPages
+                ) {
+
+                    currentPage++;
+
+                    renderTable();
+
+                }
+
+            }
+        );
+
+        pagination.appendChild(next);
+
+    }
+
+
+    /* ========================================================
+       RENDER TABLE
+    ======================================================== */
+
+    function renderTable() {
+
+        rows.forEach(row => {
+
+            row.style.display = "none";
+
+        });
+
+
+        /* EMPTY */
+
+        if (filteredRows.length === 0) {
+
+            emptyState.style.display = "block";
+
+            paginationWrap.style.display = "none";
+
+            pageInfo.textContent =
+                "Tidak ada data";
+
+            countInfo.textContent =
+                "0 data";
+
+            return;
+        }
+
+
+        emptyState.style.display = "none";
+
+
+        const totalPages =
+            Math.ceil(
+                filteredRows.length / pageSize
+            );
+
+
+        if (currentPage > totalPages) {
+
+            currentPage = totalPages;
+
+        }
+
+
+        const start =
+            (currentPage - 1) *
+            pageSize;
+
+        const end =
+            start + pageSize;
+
+
+        const pageRows =
+            filteredRows.slice(
+                start,
+                end
+            );
+
+
+        pageRows.forEach(row => {
+
+            row.style.display = "";
+
+        });
+
+
+        /* INFO */
+
+        const from =
+            start + 1;
+
+        const to =
+            Math.min(
+                end,
+                filteredRows.length
+            );
+
+        pageInfo.textContent =
+            `Menampilkan ${from}-${to} dari ${filteredRows.length} data`;
+
+        countInfo.textContent =
+            `${filteredRows.length} data`;
+
+
+        renderPagination();
+
+    }
+
+
+    /* ========================================================
+       SEARCH
+    ======================================================== */
+
+    function doSearch(showAlert = true) {
+
+        const keyword =
+            String(
+                searchInput.value || ""
+            )
+            .trim()
+            .toLowerCase();
+
+
+        /* Clear button */
+
+        clearButton.style.display =
+            keyword
+                ? "flex"
+                : "none";
+
+
+        filteredRows =
+            rows.filter(row => {
+
+                const searchData =
+                    String(
+                        row.dataset.search || ""
+                    ).toLowerCase();
+
+                return searchData.includes(
+                    keyword
+                );
+
+            });
+
+
+        currentPage = 1;
+
+
+        renderTable();
+
+
+        /* Alert jika kosong */
+
+        if (
+            showAlert &&
+            keyword &&
+            filteredRows.length === 0
+        ) {
+
+            showBuyerAlert(
+                `Pembeli dengan kata kunci "<strong>${escapeHtml(keyword)}</strong>" tidak ditemukan.`,
+                "warning",
+                "bi-search"
+            );
+
+        }
+
+    }
+
+
+    /* ========================================================
+       ESCAPE HTML
+    ======================================================== */
+
+    function escapeHtml(value) {
+
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+    }
+
+
+    /* ========================================================
+       SEARCH EVENT
+    ======================================================== */
+
+    searchInput.addEventListener(
+        "input",
+        function () {
+
+            doSearch(false);
+
+        }
+    );
+
+
+    searchInput.addEventListener(
+        "keydown",
+        function (event) {
+
+            if (event.key === "Enter") {
+
+                event.preventDefault();
+
+                doSearch(true);
+
+            }
+
+        }
+    );
+
+
+    /* ========================================================
+       CLEAR SEARCH
+    ======================================================== */
+
+    clearButton.addEventListener(
+        "click",
+        function () {
+
+            searchInput.value = "";
+
+            doSearch(false);
+
+            searchInput.focus();
+
+        }
+    );
+
+
+    /* ========================================================
+       DELETE CONFIRMATION
+    ======================================================== */
+
+    document
+        .querySelectorAll(".buyer-delete-form")
+        .forEach(form => {
+
+            form.addEventListener(
+                "submit",
+                function (event) {
+
+                    event.preventDefault();
+
+                    const buyerName =
+                        form.dataset.name ||
+                        "Pembeli ini";
+
+
+                    const confirmed =
+                        window.confirm(
+                            `Hapus ${buyerName}?\n\nData pembeli yang dihapus tidak dapat dikembalikan.`
+                        );
+
+
+                    if (confirmed) {
+
+                        form.submit();
+
+                    }
+
+                }
+            );
+
+        });
+
+
+    /* ========================================================
+       INITIAL
+    ======================================================== */
+
+    if (rows.length === 0) {
+
+        filteredRows = [];
+
+        emptyState.style.display =
+            "block";
+
+        paginationWrap.style.display =
+            "none";
+
+        pageInfo.textContent =
+            "Belum ada data pembeli";
+
+        countInfo.textContent =
+            "0 data";
+
+    } else {
+
+        renderTable();
+
+    }
+
+});
+</script>

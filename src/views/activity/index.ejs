@@ -1,0 +1,2034 @@
+<%
+/* ============================================================
+   SAFE DATA - LOG AKTIVITAS
+============================================================ */
+const activityRows =
+    (typeof rows !== "undefined" && Array.isArray(rows))
+        ? rows
+        : [];
+
+/* Statistik */
+const totalActivity = activityRows.length;
+
+const loginActivity = activityRows.filter(r =>
+    String(r.action || "").toLowerCase().includes("login")
+).length;
+
+const createActivity = activityRows.filter(r =>
+    ["create", "created", "add", "insert", "tambah"]
+        .some(v => String(r.action || "").toLowerCase().includes(v))
+).length;
+
+const updateActivity = activityRows.filter(r =>
+    ["update", "updated", "edit", "ubah"]
+        .some(v => String(r.action || "").toLowerCase().includes(v))
+).length;
+
+const deleteActivity = activityRows.filter(r =>
+    ["delete", "deleted", "hapus", "remove"]
+        .some(v => String(r.action || "").toLowerCase().includes(v))
+).length;
+%>
+
+
+<style>
+
+/* ============================================================
+   IOS ACTIVITY UI
+============================================================ */
+
+.activity-page {
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "SF Pro Display",
+        "SF Pro Text",
+        "Inter",
+        "Segoe UI",
+        sans-serif;
+
+    color: #1d1d1f;
+}
+
+
+/* ============================================================
+   MAIN CARD
+============================================================ */
+
+.activity-card {
+    background: rgba(255,255,255,.96);
+    border: 1px solid #e8e8ed;
+    border-radius: 22px;
+
+    box-shadow:
+        0 8px 30px rgba(0,0,0,.055),
+        0 2px 8px rgba(0,0,0,.025);
+
+    overflow: hidden;
+}
+
+
+/* ============================================================
+   HEADER
+============================================================ */
+
+.activity-header {
+    padding: 18px 20px;
+
+    border-bottom: 1px solid #ededf2;
+
+    background: linear-gradient(
+        180deg,
+        #ffffff 0%,
+        #fbfbfd 100%
+    );
+}
+
+
+.activity-title-icon {
+    width: 38px;
+    height: 38px;
+
+    border-radius: 12px;
+
+    background: #e9f8ee;
+    color: #22a447;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 18px;
+}
+
+
+.activity-title {
+    font-size: 19px;
+    font-weight: 700;
+
+    letter-spacing: -.35px;
+
+    margin: 0;
+}
+
+
+.activity-subtitle {
+    color: #8e8e93;
+
+    font-size: 12px;
+
+    margin-top: 3px;
+}
+
+
+/* ============================================================
+   STATISTICS
+============================================================ */
+
+.activity-stats {
+    padding: 14px 16px 4px;
+}
+
+
+.activity-stat {
+    border: 1px solid #ededf2;
+
+    background: #fff;
+
+    border-radius: 16px;
+
+    padding: 12px 13px;
+
+    height: 100%;
+
+    transition: .2s ease;
+}
+
+
+.activity-stat:hover {
+    border-color: #d8d8de;
+
+    transform: translateY(-1px);
+}
+
+
+.activity-stat-label {
+    color: #8e8e93;
+
+    font-size: 10px;
+    font-weight: 600;
+
+    text-transform: uppercase;
+
+    letter-spacing: .35px;
+}
+
+
+.activity-stat-value {
+    margin-top: 3px;
+
+    font-size: 19px;
+
+    font-weight: 700;
+
+    letter-spacing: -.4px;
+}
+
+
+.activity-stat-icon {
+    width: 31px;
+    height: 31px;
+
+    border-radius: 10px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 14px;
+}
+
+
+/* ============================================================
+   TOOLBAR / SEARCH
+============================================================ */
+
+.activity-toolbar {
+    padding: 12px 16px;
+
+    display: flex;
+
+    gap: 9px;
+
+    align-items: center;
+
+    border-bottom: 1px solid #ededf2;
+
+    background: #fff;
+}
+
+
+.activity-search {
+    position: relative;
+
+    flex: 1;
+}
+
+
+.activity-search > i {
+    position: absolute;
+
+    left: 13px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    color: #8e8e93;
+
+    font-size: 14px;
+
+    pointer-events: none;
+}
+
+
+.activity-search input {
+    width: 100%;
+
+    height: 38px;
+
+    border: 1px solid #e5e5ea;
+
+    background: #f7f7f9;
+
+    border-radius: 12px;
+
+    padding: 0 38px 0 36px;
+
+    font-size: 13px;
+
+    outline: none;
+
+    color: #1d1d1f;
+
+    transition: .2s ease;
+}
+
+
+.activity-search input:focus {
+    background: #fff;
+
+    border-color: #b8b8bd;
+
+    box-shadow:
+        0 0 0 3px rgba(0,0,0,.04);
+}
+
+
+.activity-search-clear {
+    position: absolute;
+
+    right: 9px;
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    width: 23px;
+    height: 23px;
+
+    border: 0;
+
+    border-radius: 50%;
+
+    background: #d1d1d6;
+
+    color: #fff;
+
+    display: none;
+
+    align-items: center;
+    justify-content: center;
+
+    font-size: 11px;
+}
+
+
+.activity-count {
+    white-space: nowrap;
+
+    font-size: 11px;
+
+    color: #8e8e93;
+
+    font-weight: 600;
+}
+
+
+/* ============================================================
+   TABLE
+============================================================ */
+
+.activity-table-wrap {
+    width: 100%;
+
+    overflow-x: auto;
+
+    padding: 14px 16px;
+}
+
+
+.activity-table {
+    width: 100%;
+
+    margin: 0;
+
+    border-collapse: separate;
+
+    border-spacing: 0;
+
+    min-width: 900px;
+}
+
+
+.activity-table thead th {
+    background: #f8f8fa;
+
+    color: #8e8e93;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: .4px;
+
+    padding: 11px 14px;
+
+    border-bottom: 1px solid #e5e5ea;
+
+    white-space: nowrap;
+}
+
+
+.activity-table thead th:first-child {
+    border-radius: 10px 0 0 0;
+}
+
+
+.activity-table thead th:last-child {
+    border-radius: 0 10px 0 0;
+}
+
+
+.activity-table tbody td {
+    padding: 12px 14px;
+
+    font-size: 12px;
+
+    border-bottom: 1px solid #f0f0f2;
+
+    vertical-align: middle;
+}
+
+
+.activity-table tbody tr {
+    transition: background .15s ease;
+}
+
+
+.activity-table tbody tr:hover {
+    background: #fafafa;
+}
+
+
+.activity-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+
+/* ============================================================
+   TIME
+============================================================ */
+
+.activity-time {
+    font-weight: 600;
+
+    color: #1d1d1f;
+
+    white-space: nowrap;
+}
+
+
+.activity-time-date {
+    font-size: 10px;
+
+    color: #8e8e93;
+
+    margin-top: 2px;
+}
+
+
+/* ============================================================
+   USER
+============================================================ */
+
+.activity-user {
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+}
+
+
+.activity-user-icon {
+    width: 32px;
+    height: 32px;
+
+    flex: 0 0 32px;
+
+    border-radius: 10px;
+
+    background: #eef2ff;
+
+    color: #536dfe;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 13px;
+}
+
+
+.activity-user-name {
+    font-size: 12px;
+
+    font-weight: 700;
+
+    color: #1d1d1f;
+}
+
+
+.activity-user-username {
+    font-size: 10px;
+
+    color: #8e8e93;
+
+    margin-top: 2px;
+}
+
+
+/* ============================================================
+   ACTION BADGE
+============================================================ */
+
+.activity-badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    border-radius: 999px;
+
+    padding: 5px 9px;
+
+    font-size: 10px;
+
+    font-weight: 700;
+
+    white-space: nowrap;
+
+    background: #f1f1f3;
+
+    color: #636366;
+}
+
+
+/* LOGIN */
+
+.activity-badge-login {
+    background: #edf5ff;
+
+    color: #2878d4;
+}
+
+
+/* CREATE */
+
+.activity-badge-create {
+    background: #e9f8ee;
+
+    color: #22a447;
+}
+
+
+/* UPDATE */
+
+.activity-badge-update {
+    background: #fff7df;
+
+    color: #b77900;
+}
+
+
+/* DELETE */
+
+.activity-badge-delete {
+    background: #fff0f0;
+
+    color: #ff3b30;
+}
+
+
+/* ============================================================
+   DESCRIPTION
+============================================================ */
+
+.activity-description {
+    color: #48484a;
+
+    line-height: 1.5;
+
+    max-width: 430px;
+}
+
+
+.activity-description-empty {
+    color: #8e8e93;
+
+    font-style: italic;
+}
+
+
+/* ============================================================
+   IP ADDRESS
+============================================================ */
+
+.activity-ip {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    color: #636366;
+
+    background: #f8f8fa;
+
+    border: 1px solid #e5e5ea;
+
+    border-radius: 9px;
+
+    padding: 5px 8px;
+
+    white-space: nowrap;
+}
+
+
+/* ============================================================
+   EMPTY STATE
+============================================================ */
+
+.activity-empty {
+    padding: 42px 20px;
+
+    text-align: center;
+
+    display: none;
+}
+
+
+.activity-empty-icon {
+    width: 54px;
+    height: 54px;
+
+    border-radius: 17px;
+
+    background: #f2f2f7;
+
+    color: #8e8e93;
+
+    display: inline-flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    font-size: 22px;
+
+    margin-bottom: 12px;
+}
+
+
+.activity-empty-title {
+    font-size: 14px;
+
+    font-weight: 700;
+}
+
+
+.activity-empty-text {
+    font-size: 11px;
+
+    color: #8e8e93;
+
+    margin-top: 3px;
+}
+
+
+/* ============================================================
+   PAGINATION
+============================================================ */
+
+.activity-pagination-wrap {
+    border-top: 1px solid #ededf2;
+
+    padding: 11px 15px;
+
+    background: #fff;
+
+    display: flex;
+
+    justify-content: space-between;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+
+.activity-page-info {
+    color: #8e8e93;
+
+    font-size: 10px;
+
+    font-weight: 600;
+}
+
+
+.activity-pagination {
+    display: flex;
+
+    gap: 4px;
+
+    align-items: center;
+}
+
+
+.activity-page-btn {
+    min-width: 29px;
+
+    height: 29px;
+
+    border: 1px solid #e5e5ea;
+
+    background: #fff;
+
+    border-radius: 9px;
+
+    color: #636366;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    padding: 0 8px;
+}
+
+
+.activity-page-btn:hover {
+    background: #f2f2f7;
+}
+
+
+.activity-page-btn.active {
+    background: #1d1d1f;
+
+    color: #fff;
+
+    border-color: #1d1d1f;
+}
+
+
+.activity-page-btn:disabled {
+    opacity: .4;
+
+    cursor: not-allowed;
+}
+
+
+/* ============================================================
+   ALERT
+============================================================ */
+
+.activity-alert {
+    position: fixed;
+
+    top: 20px;
+
+    right: 20px;
+
+    z-index: 1090;
+
+    min-width: 290px;
+
+    max-width: 380px;
+
+    border: 0;
+
+    border-radius: 15px;
+
+    box-shadow:
+        0 12px 35px rgba(0,0,0,.13);
+
+    font-size: 12px;
+}
+
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (max-width: 768px) {
+
+    .activity-header {
+        padding: 14px;
+    }
+
+    .activity-title {
+        font-size: 17px;
+    }
+
+    .activity-subtitle {
+        font-size: 11px;
+    }
+
+    .activity-toolbar {
+        padding: 10px 12px;
+    }
+
+    .activity-count {
+        display: none;
+    }
+
+    .activity-table-wrap {
+        padding: 10px 12px;
+    }
+
+    .activity-pagination-wrap {
+        padding: 10px 12px;
+    }
+
+    .activity-page-info {
+        font-size: 9px;
+    }
+
+    .activity-pagination {
+        gap: 3px;
+    }
+
+    .activity-page-btn {
+        min-width: 27px;
+
+        height: 27px;
+
+        font-size: 10px;
+    }
+
+    .activity-alert {
+        left: 12px;
+
+        right: 12px;
+
+        top: 12px;
+
+        min-width: auto;
+    }
+
+}
+
+</style>
+
+
+<!-- ============================================================
+     MAIN WRAPPER
+============================================================ -->
+
+<div class="card bg-white border-0 rounded-4 shadow-sm p-2 p-md-3">
+
+    <div class="activity-page">
+
+        <div class="activity-card">
+
+
+            <!-- ====================================================
+                 HEADER
+            ==================================================== -->
+
+            <div class="activity-header">
+
+                <div class="d-flex justify-content-between align-items-center gap-3">
+
+                    <div class="d-flex align-items-center gap-3">
+
+                        <div class="activity-title-icon">
+
+                            <i class="bi bi-activity"></i>
+
+                        </div>
+
+                        <div>
+
+                            <h5 class="mb-0">
+
+                                LOG AKTIVITAS
+
+                            </h5>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ====================================================
+                 STATISTICS
+            ==================================================== -->
+
+            <div class="activity-stats">
+
+                <div class="row g-2">
+
+
+                    <!-- TOTAL -->
+
+                    <div class="col-6 col-md-3">
+
+                        <div class="activity-stat">
+
+                            <div class="d-flex justify-content-between align-items-center">
+
+                                <div>
+
+                                    <div class="activity-stat-label">
+                                        Total Aktivitas
+                                    </div>
+
+                                    <div class="activity-stat-value">
+
+                                        <%= totalActivity.toLocaleString('id-ID') %>
+
+                                    </div>
+
+                                </div>
+
+                                <div
+                                    class="activity-stat-icon"
+                                    style="background:#eef2ff;color:#536dfe">
+
+                                    <i class="bi bi-activity"></i>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- LOGIN -->
+
+                    <div class="col-6 col-md-3">
+
+                        <div class="activity-stat">
+
+                            <div class="d-flex justify-content-between align-items-center">
+
+                                <div>
+
+                                    <div class="activity-stat-label">
+                                        Login
+                                    </div>
+
+                                    <div class="activity-stat-value">
+
+                                        <%= loginActivity.toLocaleString('id-ID') %>
+
+                                    </div>
+
+                                </div>
+
+                                <div
+                                    class="activity-stat-icon"
+                                    style="background:#edf5ff;color:#2878d4">
+
+                                    <i class="bi bi-box-arrow-in-right"></i>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- CREATE -->
+
+                    <div class="col-6 col-md-3">
+
+                        <div class="activity-stat">
+
+                            <div class="d-flex justify-content-between align-items-center">
+
+                                <div>
+
+                                    <div class="activity-stat-label">
+                                        Tambah
+                                    </div>
+
+                                    <div class="activity-stat-value">
+
+                                        <%= createActivity.toLocaleString('id-ID') %>
+
+                                    </div>
+
+                                </div>
+
+                                <div
+                                    class="activity-stat-icon"
+                                    style="background:#e9f8ee;color:#22a447">
+
+                                    <i class="bi bi-plus-circle"></i>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- UPDATE -->
+
+                    <div class="col-6 col-md-3">
+
+                        <div class="activity-stat">
+
+                            <div class="d-flex justify-content-between align-items-center">
+
+                                <div>
+
+                                    <div class="activity-stat-label">
+                                        Perubahan
+                                    </div>
+
+                                    <div class="activity-stat-value">
+
+                                        <%= updateActivity.toLocaleString('id-ID') %>
+
+                                    </div>
+
+                                </div>
+
+                                <div
+                                    class="activity-stat-icon"
+                                    style="background:#fff7df;color:#b77900">
+
+                                    <i class="bi bi-pencil-square"></i>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ====================================================
+                 SEARCH
+            ==================================================== -->
+
+            <div class="activity-toolbar">
+
+                <div class="activity-search">
+
+                    <i class="bi bi-search"></i>
+
+                    <input
+                        type="text"
+                        id="activitySearch"
+                        autocomplete="off"
+                        placeholder="Cari user, aksi, deskripsi, IP...">
+
+                    <button
+                        type="button"
+                        id="clearActivitySearch"
+                        class="activity-search-clear">
+
+                        <i class="bi bi-x"></i>
+
+                    </button>
+
+                </div>
+
+                <div
+                    id="activityCount"
+                    class="activity-count">
+
+                    <%= totalActivity %> data
+
+                </div>
+
+            </div>
+
+
+            <!-- ====================================================
+                 TABLE
+            ==================================================== -->
+
+            <div class="activity-table-wrap">
+
+                <table class="activity-table">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Waktu</th>
+
+                            <th>User</th>
+
+                            <th>Aksi</th>
+
+                            <th>Deskripsi</th>
+
+                            <th>IP Address</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="activityTableBody">
+
+                        <% activityRows.forEach((r, index) => { %>
+
+                            <%
+                                const action =
+                                    String(r.action || "")
+                                        .toLowerCase();
+
+                                let actionClass =
+                                    "activity-badge";
+
+                                let actionIcon =
+                                    "bi-activity";
+
+
+                                if (
+                                    action.includes("login") ||
+                                    action.includes("signin") ||
+                                    action.includes("sign-in")
+                                ) {
+
+                                    actionClass +=
+                                        " activity-badge-login";
+
+                                    actionIcon =
+                                        "bi-box-arrow-in-right";
+
+                                } else if (
+                                    action.includes("create") ||
+                                    action.includes("created") ||
+                                    action.includes("add") ||
+                                    action.includes("insert") ||
+                                    action.includes("tambah")
+                                ) {
+
+                                    actionClass +=
+                                        " activity-badge-create";
+
+                                    actionIcon =
+                                        "bi-plus-circle";
+
+                                } else if (
+                                    action.includes("update") ||
+                                    action.includes("updated") ||
+                                    action.includes("edit") ||
+                                    action.includes("ubah")
+                                ) {
+
+                                    actionClass +=
+                                        " activity-badge-update";
+
+                                    actionIcon =
+                                        "bi-pencil-square";
+
+                                } else if (
+                                    action.includes("delete") ||
+                                    action.includes("deleted") ||
+                                    action.includes("hapus") ||
+                                    action.includes("remove")
+                                ) {
+
+                                    actionClass +=
+                                        " activity-badge-delete";
+
+                                    actionIcon =
+                                        "bi-trash";
+
+                                }
+                            %>
+
+
+                            <tr
+                                class="activity-row"
+                                data-index="<%= index %>"
+                                data-search="<%= String(
+                                    (r.full_name || '') + ' ' +
+                                    (r.username || '') + ' ' +
+                                    (r.action || '') + ' ' +
+                                    (r.description || '') + ' ' +
+                                    (r.ip_address || '')
+                                ).toLowerCase() %>">
+
+
+                                <!-- WAKTU -->
+
+                                <td>
+
+                                    <%
+                                        const activityDate =
+                                            r.created_at
+                                                ? new Date(r.created_at)
+                                                : null;
+                                    %>
+
+                                    <% if (activityDate && !isNaN(activityDate)) { %>
+
+                                        <div class="activity-time">
+
+                                            <%= activityDate.toLocaleTimeString(
+                                                'id-ID',
+                                                {
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                }
+                                            ) %>
+
+                                        </div>
+
+                                        <div class="activity-time-date">
+
+                                            <%= activityDate.toLocaleDateString(
+                                                'id-ID',
+                                                {
+                                                    day: '2-digit',
+                                                    month: 'short',
+                                                    year: 'numeric'
+                                                }
+                                            ) %>
+
+                                        </div>
+
+                                    <% } else { %>
+
+                                        <div class="activity-time">
+                                            -
+                                        </div>
+
+                                    <% } %>
+
+                                </td>
+
+
+                                <!-- USER -->
+
+                                <td>
+
+                                    <div class="activity-user">
+
+                                        <div class="activity-user-icon">
+
+                                            <i class="bi bi-person"></i>
+
+                                        </div>
+
+                                        <div>
+
+                                            <div class="activity-user-name">
+
+                                                <%= r.full_name ||
+                                                    r.username ||
+                                                    '-' %>
+
+                                            </div>
+
+                                            <% if (
+                                                r.full_name &&
+                                                r.username
+                                            ) { %>
+
+                                                <div class="activity-user-username">
+
+                                                    @<%= r.username %>
+
+                                                </div>
+
+                                            <% } %>
+
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
+
+                                <!-- AKSI -->
+
+                                <td>
+
+                                    <span class="<%= actionClass %>">
+
+                                        <i class="bi <%= actionIcon %>"></i>
+
+                                        <%= r.action || '-' %>
+
+                                    </span>
+
+                                </td>
+
+
+                                <!-- DESKRIPSI -->
+
+                                <td>
+
+                                    <% if (r.description) { %>
+
+                                        <div class="activity-description">
+
+                                            <%= r.description %>
+
+                                        </div>
+
+                                    <% } else { %>
+
+                                        <div class="activity-description activity-description-empty">
+
+                                            Tidak ada deskripsi
+
+                                        </div>
+
+                                    <% } %>
+
+                                </td>
+
+
+                                <!-- IP -->
+
+                                <td>
+
+                                    <span class="activity-ip">
+
+                                        <i class="bi bi-globe2"></i>
+
+                                        <%= r.ip_address || '-' %>
+
+                                    </span>
+
+                                </td>
+
+                            </tr>
+
+                        <% }) %>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            <!-- ====================================================
+                 EMPTY STATE
+            ==================================================== -->
+
+            <div
+                id="activityEmpty"
+                class="activity-empty">
+
+                <div class="activity-empty-icon">
+
+                    <i class="bi bi-search"></i>
+
+                </div>
+
+                <div class="activity-empty-title">
+
+                    Data tidak ditemukan
+
+                </div>
+
+                <div class="activity-empty-text">
+
+                    Tidak ada aktivitas yang cocok dengan pencarian.
+
+                </div>
+
+            </div>
+
+
+            <!-- ====================================================
+                 PAGINATION
+            ==================================================== -->
+
+            <div
+                id="activityPaginationWrap"
+                class="activity-pagination-wrap">
+
+                <div
+                    id="activityPageInfo"
+                    class="activity-page-info">
+
+                    Menampilkan 0 data
+
+                </div>
+
+                <div
+                    id="activityPagination"
+                    class="activity-pagination">
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ============================================================
+     ALERT
+============================================================ -->
+
+<div
+    id="activityAlertContainer"
+    class="position-fixed top-0 end-0 p-3"
+    style="z-index:2000">
+</div>
+
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+
+        /* ========================================================
+           CONFIG
+        ======================================================== */
+
+        const rows =
+            Array.from(
+                document.querySelectorAll(
+                    ".activity-row"
+                )
+            );
+
+
+        const searchInput =
+            document.getElementById(
+                "activitySearch"
+            );
+
+
+        const clearButton =
+            document.getElementById(
+                "clearActivitySearch"
+            );
+
+
+        const pagination =
+            document.getElementById(
+                "activityPagination"
+            );
+
+
+        const pageInfo =
+            document.getElementById(
+                "activityPageInfo"
+            );
+
+
+        const countInfo =
+            document.getElementById(
+                "activityCount"
+            );
+
+
+        const emptyState =
+            document.getElementById(
+                "activityEmpty"
+            );
+
+
+        const paginationWrap =
+            document.getElementById(
+                "activityPaginationWrap"
+            );
+
+
+        const pageSize = 10;
+
+
+        let currentPage = 1;
+
+
+        let filteredRows = [
+            ...rows
+        ];
+
+
+        /* ========================================================
+           ALERT
+        ======================================================== */
+
+        function showActivityAlert(
+            message,
+            type = "warning",
+            icon = "bi-exclamation-circle"
+        ) {
+
+            const container =
+                document.getElementById(
+                    "activityAlertContainer"
+                );
+
+
+            if (!container) return;
+
+
+            const alertId =
+                "activityAlert_" +
+                Date.now();
+
+
+            const html = `
+
+                <div
+                    id="${alertId}"
+                    class="alert alert-${type} alert-dismissible fade show activity-alert d-flex align-items-center gap-2"
+                    role="alert">
+
+                    <i class="bi ${icon} fs-5"></i>
+
+                    <div>
+                        ${message}
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn-close ms-auto"
+                        data-bs-dismiss="alert">
+                    </button>
+
+                </div>
+
+            `;
+
+
+            container.insertAdjacentHTML(
+                "beforeend",
+                html
+            );
+
+
+            setTimeout(
+                () => {
+
+                    const alertElement =
+                        document.getElementById(
+                            alertId
+                        );
+
+
+                    if (alertElement) {
+
+                        const alert =
+                            bootstrap.Alert
+                                .getOrCreateInstance(
+                                    alertElement
+                                );
+
+                        alert.close();
+
+                    }
+
+                },
+                3500
+            );
+
+        }
+
+
+        /* ========================================================
+           PAGINATION
+        ======================================================== */
+
+        function renderPagination() {
+
+            pagination.innerHTML = "";
+
+
+            if (
+                filteredRows.length === 0
+            ) {
+
+                paginationWrap.style.display =
+                    "none";
+
+                return;
+
+            }
+
+
+            paginationWrap.style.display =
+                "flex";
+
+
+            const totalPages =
+                Math.ceil(
+                    filteredRows.length /
+                    pageSize
+                );
+
+
+            /* PREVIOUS */
+
+            const prev =
+                document.createElement(
+                    "button"
+                );
+
+
+            prev.type = "button";
+
+            prev.className =
+                "activity-page-btn";
+
+
+            prev.innerHTML =
+                '<i class="bi bi-chevron-left"></i>';
+
+
+            prev.disabled =
+                currentPage === 1;
+
+
+            prev.addEventListener(
+                "click",
+                function () {
+
+                    if (
+                        currentPage > 1
+                    ) {
+
+                        currentPage--;
+
+                        renderTable();
+
+                    }
+
+                }
+            );
+
+
+            pagination.appendChild(prev);
+
+
+            /* PAGE NUMBER */
+
+            let startPage =
+                Math.max(
+                    1,
+                    currentPage - 2
+                );
+
+
+            let endPage =
+                Math.min(
+                    totalPages,
+                    startPage + 4
+                );
+
+
+            if (
+                endPage - startPage < 4
+            ) {
+
+                startPage =
+                    Math.max(
+                        1,
+                        endPage - 4
+                    );
+
+            }
+
+
+            for (
+                let page = startPage;
+                page <= endPage;
+                page++
+            ) {
+
+                const button =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                button.type = "button";
+
+
+                button.className =
+                    "activity-page-btn" +
+                    (
+                        page === currentPage
+                            ? " active"
+                            : ""
+                    );
+
+
+                button.textContent =
+                    page;
+
+
+                button.addEventListener(
+                    "click",
+                    function () {
+
+                        currentPage =
+                            page;
+
+                        renderTable();
+
+                    }
+                );
+
+
+                pagination.appendChild(
+                    button
+                );
+
+            }
+
+
+            /* NEXT */
+
+            const next =
+                document.createElement(
+                    "button"
+                );
+
+
+            next.type = "button";
+
+            next.className =
+                "activity-page-btn";
+
+
+            next.innerHTML =
+                '<i class="bi bi-chevron-right"></i>';
+
+
+            next.disabled =
+                currentPage === totalPages;
+
+
+            next.addEventListener(
+                "click",
+                function () {
+
+                    if (
+                        currentPage <
+                        totalPages
+                    ) {
+
+                        currentPage++;
+
+                        renderTable();
+
+                    }
+
+                }
+            );
+
+
+            pagination.appendChild(next);
+
+        }
+
+
+        /* ========================================================
+           RENDER TABLE
+        ======================================================== */
+
+        function renderTable() {
+
+            rows.forEach(
+                row => {
+
+                    row.style.display =
+                        "none";
+
+                }
+            );
+
+
+            /* EMPTY */
+
+            if (
+                filteredRows.length === 0
+            ) {
+
+                emptyState.style.display =
+                    "block";
+
+
+                paginationWrap.style.display =
+                    "none";
+
+
+                pageInfo.textContent =
+                    "Tidak ada data";
+
+
+                countInfo.textContent =
+                    "0 data";
+
+
+                return;
+
+            }
+
+
+            emptyState.style.display =
+                "none";
+
+
+            const totalPages =
+                Math.ceil(
+                    filteredRows.length /
+                    pageSize
+                );
+
+
+            if (
+                currentPage > totalPages
+            ) {
+
+                currentPage =
+                    totalPages;
+
+            }
+
+
+            const start =
+                (currentPage - 1) *
+                pageSize;
+
+
+            const end =
+                start + pageSize;
+
+
+            const pageRows =
+                filteredRows.slice(
+                    start,
+                    end
+                );
+
+
+            pageRows.forEach(
+                row => {
+
+                    row.style.display =
+                        "";
+
+                }
+            );
+
+
+            const from =
+                start + 1;
+
+
+            const to =
+                Math.min(
+                    end,
+                    filteredRows.length
+                );
+
+
+            pageInfo.textContent =
+                `Menampilkan ${from}-${to} dari ${filteredRows.length} data`;
+
+
+            countInfo.textContent =
+                `${filteredRows.length} data`;
+
+
+            renderPagination();
+
+        }
+
+
+        /* ========================================================
+           ESCAPE HTML
+        ======================================================== */
+
+        function escapeHtml(value) {
+
+            return String(value)
+
+                .replace(
+                    /&/g,
+                    "&amp;"
+                )
+
+                .replace(
+                    /</g,
+                    "&lt;"
+                )
+
+                .replace(
+                    />/g,
+                    "&gt;"
+                )
+
+                .replace(
+                    /"/g,
+                    "&quot;"
+                )
+
+                .replace(
+                    /'/g,
+                    "&#039;"
+                );
+
+        }
+
+
+        /* ========================================================
+           SEARCH
+        ======================================================== */
+
+        function doSearch(
+            showAlert = true
+        ) {
+
+            const keyword =
+                String(
+                    searchInput.value ||
+                    ""
+                )
+                .trim()
+                .toLowerCase();
+
+
+            clearButton.style.display =
+                keyword
+                    ? "flex"
+                    : "none";
+
+
+            filteredRows =
+                rows.filter(
+                    row => {
+
+                        const searchData =
+                            String(
+                                row.dataset.search ||
+                                ""
+                            )
+                            .toLowerCase();
+
+
+                        return searchData.includes(
+                            keyword
+                        );
+
+                    }
+                );
+
+
+            currentPage = 1;
+
+
+            renderTable();
+
+
+            if (
+                showAlert &&
+                keyword &&
+                filteredRows.length === 0
+            ) {
+
+                showActivityAlert(
+                    `Aktivitas dengan kata kunci "<strong>${escapeHtml(keyword)}</strong>" tidak ditemukan.`,
+                    "warning",
+                    "bi-search"
+                );
+
+            }
+
+        }
+
+
+        /* ========================================================
+           SEARCH EVENT
+        ======================================================== */
+
+        searchInput.addEventListener(
+            "input",
+            function () {
+
+                doSearch(false);
+
+            }
+        );
+
+
+        searchInput.addEventListener(
+            "keydown",
+            function (event) {
+
+                if (
+                    event.key === "Enter"
+                ) {
+
+                    event.preventDefault();
+
+                    doSearch(true);
+
+                }
+
+            }
+        );
+
+
+        /* ========================================================
+           CLEAR SEARCH
+        ======================================================== */
+
+        clearButton.addEventListener(
+            "click",
+            function () {
+
+                searchInput.value =
+                    "";
+
+                doSearch(false);
+
+                searchInput.focus();
+
+            }
+        );
+
+
+        /* ========================================================
+           INITIAL
+        ======================================================== */
+
+        if (
+            rows.length === 0
+        ) {
+
+            filteredRows = [];
+
+            emptyState.style.display =
+                "block";
+
+            paginationWrap.style.display =
+                "none";
+
+            pageInfo.textContent =
+                "Belum ada log aktivitas";
+
+            countInfo.textContent =
+                "0 data";
+
+        } else {
+
+            renderTable();
+
+        }
+
+    }
+
+);
+
+</script>

@@ -1,0 +1,483 @@
+<%
+const list = typeof rows !== "undefined" && Array.isArray(rows) ? rows : [];
+const sum = typeof summary !== "undefined" && summary ? summary : { total_expenses: 0, bensin_expenses: 0, alat_expenses: 0, count_transactions: 0 };
+const flt = typeof filters !== "undefined" && filters ? filters : { keyword: "", category: "", date_start: "", date_end: "" };
+const pag = typeof pagination !== "undefined" && pagination ? pagination : { page: 1, limit: 12, total: 0, totalPages: 1 };
+const canEdit = typeof canManage !== "undefined" ? canManage : false;
+
+const catBadge = {
+    armada_bensin: { label: 'BBM & Armada', icon: 'bi-fuel-pump-fill', class: 'bg-warning-subtle text-warning-emphasis border border-warning-subtle' },
+    karung_tali: { label: 'Karung & Tali', icon: 'bi-box-seam', class: 'bg-info-subtle text-info-emphasis border border-info-subtle' },
+    pemeliharaan_alat: { label: 'Servis / Timbangan', icon: 'bi-wrench-adjustable', class: 'bg-danger-subtle text-danger border border-danger-subtle' },
+    konsumsi_lembur: { label: 'Konsumsi Tim', icon: 'bi-cup-hot-fill', class: 'bg-success-subtle text-success border border-success-subtle' },
+    listrik_air: { label: 'Utilitas Listrik/Air', icon: 'bi-lightning-charge-fill', class: 'bg-primary-subtle text-primary border border-primary-subtle' },
+    lainnya: { label: 'Operasional Lainnya', icon: 'bi-tag-fill', class: 'bg-secondary-subtle text-secondary border border-secondary-subtle' }
+};
+%>
+
+<style>
+.expenses-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 1rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="expenses-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:18px;">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;">BIAYA OPERASIONAL & KAS KECIL</h5>
+                        <div class="small mt-1" style="color: #16a34a; font-size: 11px;">Pencatatan pengeluaran harian armada, bensin, konsumsi petugas, karung goni, dan servis timbangan.</div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-success fw-semibold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#modalTambahExpense">
+                        <i class="bi bi-plus-lg me-1"></i> Catat Pengeluaran Baru
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Total Kas Keluar</div>
+                            <div class="stat-value text-danger">Rp <%= Number(sum.total_expenses).toLocaleString('id-ID') %></div>
+                        </div>
+                        <div class="stat-icon bg-danger-subtle text-danger">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Seluruh pengeluaran tercatat</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">BBM & Armada</div>
+                            <div class="stat-value text-warning">Rp <%= Number(sum.bensin_expenses).toLocaleString('id-ID') %></div>
+                        </div>
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-fuel-pump-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Bensin penjemputan sampah</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Alat & Karung</div>
+                            <div class="stat-value text-info">Rp <%= Number(sum.alat_expenses).toLocaleString('id-ID') %></div>
+                        </div>
+                        <div class="stat-icon bg-info-subtle text-info">
+                            <i class="bi bi-box-seam"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Karung, tali & timbangan</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Total Transaksi</div>
+                            <div class="stat-value text-success"><%= sum.count_transactions %> <span class="fs-6 fw-normal text-muted">bukti</span></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-receipt"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Nota kas kecil terbit</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="p-3 bg-light rounded-4 mb-4">
+            <form method="GET" action="/expenses" class="row g-2 align-items-center">
+                <div class="col-12 col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="keyword" class="form-control bg-white border-start-0" placeholder="Cari keterangan, kode, atau PIC..." value="<%= flt.keyword || '' %>">
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <select name="category" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Kategori</option>
+                        <option value="armada_bensin" <%= flt.category === 'armada_bensin' ? 'selected' : '' %>>BBM & Armada</option>
+                        <option value="karung_tali" <%= flt.category === 'karung_tali' ? 'selected' : '' %>>Karung & Tali</option>
+                        <option value="pemeliharaan_alat" <%= flt.category === 'pemeliharaan_alat' ? 'selected' : '' %>>Servis & Alat</option>
+                        <option value="konsumsi_lembur" <%= flt.category === 'konsumsi_lembur' ? 'selected' : '' %>>Konsumsi Petugas</option>
+                        <option value="listrik_air" <%= flt.category === 'listrik_air' ? 'selected' : '' %>>Listrik & Air</option>
+                        <option value="lainnya" <%= flt.category === 'lainnya' ? 'selected' : '' %>>Lainnya</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3">
+                    <input type="date" name="date_start" class="form-control bg-white" value="<%= flt.date_start || '' %>" title="Mulai Tanggal" onchange="this.form.submit()">
+                </div>
+                <div class="col-12 col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-dark w-100 fw-semibold">
+                        <i class="bi bi-funnel me-1"></i> Filter
+                    </button>
+                    <% if (flt.keyword || flt.category || flt.date_start) { %>
+                    <a href="/expenses" class="btn btn-outline-secondary" title="Reset Filter">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </a>
+                    <% } %>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabel Pengeluaran Kas -->
+        <div class="table-card mb-4">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>KODE & TANGGAL</th>
+                            <th>KATEGORI</th>
+                            <th>KETERANGAN PENGELUARAN</th>
+                            <th>NOMINAL (RP)</th>
+                            <th>PENANGGUNG JAWAB</th>
+                            <th class="text-end pe-3">AKSI</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (list.length === 0) { %>
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <div style="font-size: 32px;"><i class="bi bi-inbox text-secondary"></i></div>
+                                <div class="fw-semibold mt-2">Belum ada catatan pengeluaran operasional.</div>
+                                <div class="small">Klik tombol "Catat Pengeluaran Baru" di atas untuk mencatat bukti kas pertama.</div>
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% list.forEach(function(row) { 
+                            const cMeta = catBadge[row.category] || { label: row.category, icon: 'bi-tag', class: 'bg-light text-dark' };
+                        %>
+                        <tr>
+                            <td>
+                                <div class="badge bg-light text-dark border font-monospace mb-1">
+                                    <%= row.expense_code %>
+                                </div>
+                                <div class="text-muted small">
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    <%= new Date(row.expense_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) %>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge <%= cMeta.class %> px-2 py-1 rounded-pill">
+                                    <i class="bi <%= cMeta.icon %> me-1"></i><%= cMeta.label %>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark"><%= row.title %></div>
+                                <% if (row.notes) { %>
+                                <div class="text-muted small mt-1"><%= row.notes %></div>
+                                <% } %>
+                            </td>
+                            <td>
+                                <div class="fw-bold text-danger fs-6">
+                                    Rp <%= Number(row.amount).toLocaleString('id-ID') %>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-person-circle text-secondary"></i>
+                                    <span class="text-dark"><%= row.pic_name || 'Petugas' %></span>
+                                </div>
+                            </td>
+                            <td class="text-end pe-3">
+                                <div class="d-inline-flex gap-1">
+                                    <button type="button" class="btn btn-sm btn-light border text-dark fw-semibold px-2 py-1" 
+                                            onclick="openEditExpenseModal(<%= JSON.stringify(row).replace(/"/g, '&quot;') %>)" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <% if (canEdit) { %>
+                                    <form method="POST" action="/expenses/<%= row.id %>/delete" onsubmit="return confirm('Hapus catatan pengeluaran kas ini?')" class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-light border text-danger fw-semibold px-2 py-1" title="Hapus">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                    <% } %>
+                                </div>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <% if (pag.totalPages > 1) { %>
+            <div class="p-3 border-top d-flex justify-content-between align-items-center">
+                <div class="text-muted small">
+                    Menampilkan <strong><%= list.length %></strong> dari <strong><%= pag.total %></strong> catatan
+                </div>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <% for (let i = 1; i <= pag.totalPages; i++) { %>
+                        <li class="page-item <%= pag.page === i ? 'active' : '' %>">
+                            <a class="page-link" href="/expenses?page=<%= i %>&keyword=<%= flt.keyword %>&category=<%= flt.category %>"><%= i %></a>
+                        </li>
+                        <% } %>
+                    </ul>
+                </nav>
+            </div>
+            <% } %>
+        </div>
+
+    </div>
+</div>
+
+<!-- ================================================================
+     MODAL TAMBAH PENGELUARAN (#modalTambahExpense)
+================================================================= -->
+<div class="modal fade" id="modalTambahExpense" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 pb-0" style="background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color:#fff;">
+                <div>
+                    <span class="badge bg-white text-success fw-bold mb-1">Kas Operasional</span>
+                    <h5 class="modal-title fw-bold">Catat Pengeluaran Baru</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/expenses/add">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Keterangan Pengeluaran <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" placeholder="Contoh: Bensin 5 liter Motor Roda 3 Viar" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-secondary">Kategori</label>
+                            <select name="category" class="form-select" required>
+                                <option value="armada_bensin">BBM & Armada</option>
+                                <option value="karung_tali">Karung & Tali</option>
+                                <option value="pemeliharaan_alat">Servis & Alat</option>
+                                <option value="konsumsi_lembur">Konsumsi Petugas</option>
+                                <option value="listrik_air">Listrik & Air</option>
+                                <option value="lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-secondary">Nominal Biaya (Rp) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted">Rp</span>
+                                <input type="number" name="amount" class="form-control fw-bold text-danger" required min="1000" step="500" placeholder="50000">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-secondary">Tanggal Pengeluaran</label>
+                            <input type="date" name="expense_date" class="form-control" value="<%= new Date().toISOString().slice(0, 10) %>" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-secondary">Penanggung Jawab (PIC)</label>
+                            <input type="text" name="pic_name" class="form-control" placeholder="Nama Petugas">
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-secondary">Catatan Tambahan (Opsional)</label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="Nomor nota, toko pembelian, rute penjemputan..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light p-3">
+                    <button type="button" class="btn btn-secondary fw-semibold px-3 rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success fw-semibold px-4 rounded-3">
+                        <i class="bi bi-check2-circle me-1"></i> Simpan Catatan Kas
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================
+     MODAL EDIT PENGELUARAN (#modalEditExpense)
+================================================================= -->
+<div class="modal fade" id="modalEditExpense" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 pb-0" style="background: #1e293b; color:#fff;">
+                <div>
+                    <span class="badge bg-warning text-dark fw-bold mb-1">Edit Bukti Kas</span>
+                    <h5 class="modal-title fw-bold" id="editExpenseModalTitle">Edit Pengeluaran</h5>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" id="formEditExpense" action="">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Keterangan Pengeluaran</label>
+                        <input type="text" name="title" id="editExpTitle" class="form-control" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-secondary">Kategori</label>
+                            <select name="category" id="editExpCategory" class="form-select" required>
+                                <option value="armada_bensin">BBM & Armada</option>
+                                <option value="karung_tali">Karung & Tali</option>
+                                <option value="pemeliharaan_alat">Servis & Alat</option>
+                                <option value="konsumsi_lembur">Konsumsi Petugas</option>
+                                <option value="listrik_air">Listrik & Air</option>
+                                <option value="lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-secondary">Nominal Biaya (Rp)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted">Rp</span>
+                                <input type="number" name="amount" id="editExpAmount" class="form-control fw-bold text-danger" required min="1000" step="500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-secondary">Tanggal Pengeluaran</label>
+                            <input type="date" name="expense_date" id="editExpDate" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-secondary">Penanggung Jawab (PIC)</label>
+                            <input type="text" name="pic_name" id="editExpPic" class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold text-secondary">Catatan Tambahan</label>
+                        <textarea name="notes" id="editExpNotes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light p-3">
+                    <button type="button" class="btn btn-secondary fw-semibold px-3 rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-success fw-semibold px-4 rounded-3">
+                        <i class="bi bi-check2-circle me-1"></i> Simpan Perubahan
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openEditExpenseModal(data) {
+    document.getElementById("editExpenseModalTitle").textContent = "Edit: " + data.expense_code;
+    document.getElementById("editExpTitle").value = data.title || '';
+    document.getElementById("editExpCategory").value = data.category || 'lainnya';
+    document.getElementById("editExpAmount").value = data.amount || 0;
+    
+    if (data.expense_date) {
+        document.getElementById("editExpDate").value = data.expense_date.slice(0, 10);
+    }
+    document.getElementById("editExpPic").value = data.pic_name || '';
+    document.getElementById("editExpNotes").value = data.notes || '';
+    
+    document.getElementById("formEditExpense").action = "/expenses/" + data.id + "/update";
+
+    new bootstrap.Modal(document.getElementById("modalEditExpense")).show();
+}
+</script>

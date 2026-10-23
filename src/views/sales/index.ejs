@@ -1,0 +1,2513 @@
+<%
+/* ============================================================
+   SAFE DATA
+============================================================ */
+
+const salesRows =
+    (typeof rows !== "undefined" && Array.isArray(rows))
+        ? rows
+        : [];
+
+const safeCollections =
+    (typeof collections !== "undefined" && Array.isArray(collections))
+        ? collections
+        : [];
+
+const safeBuyers =
+    (typeof buyers !== "undefined" && Array.isArray(buyers))
+        ? buyers
+        : [];
+
+const allowCreate =
+    typeof canCreate !== "undefined"
+        ? Boolean(canCreate)
+        : false;
+
+const allowManage =
+    typeof canManage !== "undefined"
+        ? Boolean(canManage)
+        : false;
+
+const safePaymentMethods =
+    (typeof paymentMethods !== "undefined" && paymentMethods)
+        ? paymentMethods
+        : {
+            transfer_bank: "Transfer Bank",
+            cash: "Cash",
+            qris: "QRIS",
+            ewallet: "E-Wallet"
+        };
+
+/* ============================================================
+   HELPERS
+============================================================ */
+
+function fmtNumber(v, decimals = 0) {
+    return Number(v || 0).toLocaleString("id-ID", {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals
+    });
+}
+
+function fmtDateTime(v) {
+    if (!v) return "-";
+
+    try {
+        const d = new Date(v);
+        if (Number.isNaN(d.getTime())) return "-";
+
+        return d.toLocaleString("id-ID", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    } catch (e) {
+        return "-";
+    }
+}
+
+function normalizeStatus(v) {
+    return String(v || "").toLowerCase().trim();
+}
+
+function statusText(v) {
+    const status = normalizeStatus(v);
+
+    return {
+        pending: "Pending",
+        approved: "Approved",
+        completed: "Selesai",
+        paid: "Dibayar",
+        cancelled: "Dibatalkan",
+        rejected: "Ditolak"
+    }[status] || v || "-";
+}
+
+function paymentText(v) {
+    const status = normalizeStatus(v);
+
+    return {
+        unpaid: "Belum Bayar",
+        pending: "Menunggu",
+        processing: "Diproses",
+        paid: "Lunas",
+        cancelled: "Dibatalkan"
+    }[status] || v || "-";
+}
+
+function paymentMethodText(v) {
+    const method = normalizeStatus(v);
+
+    return {
+        transfer_bank: "Transfer Bank",
+        cash: "Cash",
+        qris: "QRIS",
+        ewallet: "E-Wallet"
+    }[method] || v || "-";
+}
+
+function salesStatusClass(v) {
+    switch (normalizeStatus(v)) {
+        case "pending": return "status-requested";
+        case "approved": return "status-scheduled";
+        case "completed":
+        case "paid": return "status-done";
+        case "cancelled": return "status-cancelled";
+        case "rejected": return "status-rejected";
+        default: return "status-default";
+    }
+}
+
+function salesStatusIcon(v) {
+    switch (normalizeStatus(v)) {
+        case "pending": return "bi-hourglass-split";
+        case "approved": return "bi-check2-circle";
+        case "completed": return "bi-check-circle";
+        case "paid": return "bi-cash-stack";
+        case "cancelled": return "bi-slash-circle";
+        case "rejected": return "bi-x-circle";
+        default: return "bi-circle";
+    }
+}
+
+function paymentClass(v) {
+    switch (normalizeStatus(v)) {
+        case "paid": return "status-done";
+        case "unpaid":
+        case "pending":
+        case "processing": return "status-requested";
+        case "cancelled": return "status-cancelled";
+        default: return "status-default";
+    }
+}
+
+function paymentIcon(v) {
+    switch (normalizeStatus(v)) {
+        case "paid": return "bi-check-circle";
+        case "unpaid":
+        case "pending":
+        case "processing": return "bi-clock";
+        case "cancelled": return "bi-slash-circle";
+        default: return "bi-wallet2";
+    }
+}
+
+/* ============================================================
+   SUMMARY
+============================================================ */
+
+const totalSales = salesRows.length;
+
+const pendingSales = salesRows.filter(
+    r => normalizeStatus(r.status) === "pending"
+).length;
+
+const approvedSales = salesRows.filter(
+    r => normalizeStatus(r.status) === "approved"
+).length;
+
+const paidSales = salesRows.filter(
+    r => normalizeStatus(r.payment_status) === "paid"
+).length;
+
+const totalWeight = salesRows.reduce(
+    (sum, r) => sum + Number(r.total_weight || 0),
+    0
+);
+
+const totalAmount = salesRows.reduce(
+    (sum, r) => sum + Number(r.total_amount || 0),
+    0
+);
+%>
+
+<style>
+
+/* ============================================================
+   TRANSAKSI PENJUALAN
+   STYLE DISEJAJARKAN DENGAN HALAMAN COLLECTION
+============================================================ */
+
+.sales-page{
+    color:#212529;
+    font-size:13px;
+}
+
+
+/* ============================================================
+   PAGE HEADER
+============================================================ */
+
+.sales-page .page-icon{
+    width:34px;
+    height:34px;
+    border-radius:10px;
+    background:#e9f8ef;
+    color:#16a34a;
+    display:grid;
+    place-items:center;
+    flex:0 0 34px;
+    font-size:16px;
+}
+
+.sales-page .page-title{
+    font-size:18px;
+    font-weight:700;
+    line-height:1.2;
+    margin:0;
+}
+
+.sales-page .page-subtitle{
+    color:#16a34a;
+    font-size:10px;
+    margin:4px 0 0;
+}
+
+
+/* ============================================================
+   CARD
+============================================================ */
+
+.sales-page .stat-card,
+.sales-page .content-card{
+    border:1px solid #edf0f3 !important;
+    border-radius:16px !important;
+    background:#fff;
+    box-shadow:0 1px 3px rgba(16,24,40,.04);
+}
+
+.sales-page .stat-card{
+    padding:16px;
+    min-height:92px;
+}
+
+
+/* ============================================================
+   STATISTICS
+============================================================ */
+
+.sales-page .stat-label{
+    color:#8b94a3;
+    font-size:11px;
+    margin-bottom:4px;
+}
+
+.sales-page .stat-value{
+    color:#172033;
+    font-size:24px;
+    font-weight:800;
+    line-height:1;
+}
+
+.sales-page .stat-icon{
+    width:40px;
+    height:40px;
+    border-radius:12px;
+    display:grid;
+    place-items:center;
+    font-size:17px;
+}
+
+
+/* ============================================================
+   SECTION HEADER
+============================================================ */
+
+.sales-page .section-card-header{
+    padding:16px 18px;
+    border-bottom:1px solid #edf0f3;
+    background:#fff;
+    border-radius:16px 16px 0 0;
+}
+
+.sales-page .section-title{
+    color:#202939;
+    font-size:13px;
+    font-weight:700;
+}
+
+.sales-page .section-subtitle{
+    color:#929baa;
+    font-size:10px;
+    margin-top:4px;
+}
+
+
+/* ============================================================
+   TABLE
+============================================================ */
+
+.sales-page .table-wrap{
+    width:100%;
+    overflow-x:auto;
+}
+
+.sales-page .table{
+    min-width:1150px;
+    margin-bottom:0;
+}
+
+.sales-page .table thead th{
+    background:#f8f9fa;
+    color:#6c757d;
+    border-bottom:1px solid #e9ecef;
+    font-size:10px;
+    font-weight:700;
+    white-space:nowrap;
+    padding:12px 14px;
+}
+
+.sales-page .table tbody td{
+    padding:13px 14px;
+    border-color:#f0f2f4;
+    font-size:11px;
+    vertical-align:middle;
+}
+
+.sales-page .table tbody tr:hover{
+    background:#fafcfb;
+}
+
+
+/* ============================================================
+   CODE
+============================================================ */
+
+.sales-page .code-badge{
+    display:inline-flex;
+    align-items:center;
+    padding:5px 9px;
+    border-radius:8px;
+    background:#f4f6f8;
+    color:#374151;
+    font-size:10px;
+    font-weight:800;
+    letter-spacing:.3px;
+}
+
+.sales-page .date-text,
+.sales-page .sub-text{
+    color:#8a93a1;
+    font-size:9px;
+    margin-top:4px;
+}
+
+.sales-page .customer-name,
+.sales-page .buyer-name{
+    color:#202939;
+    font-size:11px;
+    font-weight:700;
+}
+
+.sales-page .weight-value,
+.sales-page .money-value{
+    color:#172033;
+    font-size:11px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+
+/* ============================================================
+   STATUS
+============================================================ */
+
+.sales-page .ios-status{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:5px 9px;
+    border-radius:999px;
+    font-size:9px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+.sales-page .status-requested{
+    background:#fff6df;
+    color:#9a6700;
+}
+
+.sales-page .status-scheduled{
+    background:#edf5ff;
+    color:#2878d4;
+}
+
+.sales-page .status-picked{
+    background:#eaf8ef;
+    color:#16803c;
+}
+
+.sales-page .status-weighed{
+    background:#f0eaff;
+    color:#7355c7;
+}
+
+.sales-page .status-done{
+    background:#e9f8ee;
+    color:#16803c;
+}
+
+.sales-page .status-rejected{
+    background:#fff0f0;
+    color:#dc2626;
+}
+
+.sales-page .status-cancelled{
+    background:#f2f4f7;
+    color:#667085;
+}
+
+.sales-page .status-default{
+    background:#f2f4f7;
+    color:#667085;
+}
+
+
+/* ============================================================
+   ACTION BUTTON
+============================================================ */
+
+.sales-page .action-btn{
+    width:31px;
+    height:31px;
+    padding:0;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:9px;
+    font-size:12px;
+}
+
+.sales-page .action-btn:hover{
+    background:#f1f8f3;
+    border-color:#cfe8d7;
+    color:#198754;
+}
+
+
+/* ============================================================
+   NORMAL BUTTON
+============================================================ */
+
+.sales-page .btn{
+    font-size:11px;
+    border-radius:9px;
+}
+
+
+/* ============================================================
+   EMPTY STATE
+============================================================ */
+
+.sales-page .empty-state{
+    padding:50px 20px;
+    text-align:center;
+}
+
+.sales-page .empty-icon{
+    width:58px;
+    height:58px;
+    border-radius:18px;
+    background:#f4f6f8;
+    color:#9ba4b2;
+    display:grid;
+    place-items:center;
+    margin:0 auto 12px;
+    font-size:23px;
+}
+
+.sales-page .empty-title{
+    color:#4c5668;
+    font-size:13px;
+    font-weight:700;
+}
+
+.sales-page .empty-text{
+    color:#9aa2af;
+    font-size:10px;
+    margin-top:4px;
+}
+
+
+/* ============================================================
+   PAGINATION
+============================================================ */
+
+.sales-page .pagination-area{
+    padding:15px 18px;
+    border-top:1px solid #edf0f3;
+}
+
+.sales-page .page-info{
+    color:#929baa;
+    font-size:10px;
+}
+
+.sales-page .page-info strong{
+    color:#4b5565;
+}
+
+
+/* ============================================================
+   MODAL
+============================================================ */
+
+.sales-page .modal-content{
+    border:0;
+    border-radius:16px;
+    box-shadow:0 18px 55px rgba(16,24,40,.18);
+    overflow:hidden;
+}
+
+.sales-page .modal-header{
+    padding:16px 18px;
+    border-bottom:1px solid #edf0f3;
+}
+
+.sales-page .modal-title{
+    color:#202939;
+    font-size:15px;
+    font-weight:700;
+}
+
+.sales-page .modal-body{
+    padding:18px;
+}
+
+.sales-page .modal-footer{
+    padding:14px 18px;
+    border-top:1px solid #edf0f3;
+    background:#fff;
+}
+
+
+/* ============================================================
+   FORM
+============================================================ */
+
+.sales-page .form-label{
+    color:#596273;
+    font-size:11px;
+    font-weight:600;
+    margin-bottom:6px;
+}
+
+.sales-page .form-control,
+.sales-page .form-select{
+    min-height:38px;
+    border-color:#dfe4ea;
+    border-radius:10px;
+    font-size:11px;
+    box-shadow:none;
+}
+
+.sales-page .form-control:focus,
+.sales-page .form-select:focus{
+    border-color:#86b7fe;
+    box-shadow:0 0 0 .15rem rgba(13,110,253,.08);
+}
+
+
+/* ============================================================
+   INPUT GROUP
+   IKON SEJAJAR DENGAN INPUT
+============================================================ */
+
+.sales-page .input-group{
+    align-items:stretch;
+}
+
+.sales-page .input-group-text{
+    min-width:42px;
+    justify-content:center;
+    border-color:#dfe4ea;
+    background:#f8f9fa;
+    color:#6c757d;
+    font-size:12px;
+}
+
+.sales-page .input-group > .input-group-text:first-child{
+    border-radius:10px 0 0 10px;
+}
+
+.sales-page .input-group > .form-control,
+.sales-page .input-group > .form-select{
+    border-radius:0 10px 10px 0;
+}
+
+.sales-page .input-group > .form-control:not(:first-child),
+.sales-page .input-group > .form-select:not(:first-child){
+    border-left:0;
+}
+
+.sales-page .input-group > .input-group-text:last-child{
+    border-radius:0 10px 10px 0;
+}
+
+
+/* ============================================================
+   ICON INPUT
+============================================================ */
+
+.sales-page .input-icon{
+    color:#16a34a;
+    font-size:14px;
+}
+
+
+/* ============================================================
+   ALERT
+============================================================ */
+
+.sales-page .alert-container{
+    position:fixed;
+    right:18px;
+    top:18px;
+    z-index:1080;
+    width:min(380px,calc(100vw - 36px));
+}
+
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media(max-width:767.98px){
+
+    .sales-page .page-title{
+        font-size:16px;
+    }
+
+    .sales-page .stat-card{
+        padding:13px;
+    }
+
+    .sales-page .stat-value{
+        font-size:20px;
+    }
+
+    .sales-page .table{
+        min-width:1150px;
+    }
+
+    .sales-page .modal-dialog{
+        margin:10px;
+    }
+
+}
+
+</style>
+
+
+<!-- ============================================================
+     MAIN WRAPPER
+============================================================ -->
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+
+    <div class="sales-page">
+
+
+        <!-- ========================================================
+             PAGE HEADER
+        ========================================================= -->
+
+        <div class="mb-4">
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+
+                <div class="d-flex align-items-center gap-2">
+
+                    <div class="page-icon">
+                        <i class="bi bi-cart-check"></i>
+                    </div>
+
+                    <div>
+
+                        <h5 class="mb-0">
+                            TRANSAKSI PENJUALAN
+                        </h5>
+
+                    </div>
+
+                </div>
+
+
+                <div class="d-flex gap-2">
+
+                    <button
+                        type="button"
+                        class="btn btn-light border"
+                        data-bs-toggle="modal"
+                        data-bs-target="#exportSalesModal">
+                        <i class="bi bi-file-earmark-arrow-down me-1 text-primary"></i>
+                        Export Data
+                    </button>
+
+                    <% if (allowCreate) { %>
+
+                        <button
+                            type="button"
+                            class="btn btn-success"
+                            data-bs-toggle="modal"
+                            data-bs-target="#createSalesModal">
+
+                            <i class="bi bi-plus-lg me-1"></i>
+                            Buat Transaksi
+
+                        </button>
+
+                    <% } %>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================================
+             STATISTICS
+        ========================================================= -->
+
+        <div class="mb-4">
+
+            <div class="row g-2">
+
+
+                <!-- TOTAL TRANSAKSI -->
+
+                <div class="col-6 col-xl">
+
+                    <div class="stat-card h-100">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <div class="stat-label">
+                                    Total Transaksi
+                                </div>
+
+                                <div class="stat-value">
+                                    <%= fmtNumber(totalSales) %>
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="stat-icon"
+                                style="background:#eef2ff;color:#536dfe">
+
+                                <i class="bi bi-cart-check"></i>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- PENDING -->
+
+                <div class="col-6 col-xl">
+
+                    <div class="stat-card h-100">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <div class="stat-label">
+                                    Pending
+                                </div>
+
+                                <div class="stat-value">
+                                    <%= fmtNumber(pendingSales) %>
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="stat-icon"
+                                style="background:#fff6df;color:#a66b00">
+
+                                <i class="bi bi-hourglass-split"></i>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- APPROVED -->
+
+                <div class="col-6 col-xl">
+
+                    <div class="stat-card h-100">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <div class="stat-label">
+                                    Approved
+                                </div>
+
+                                <div class="stat-value">
+                                    <%= fmtNumber(approvedSales) %>
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="stat-icon"
+                                style="background:#edf5ff;color:#2878d4">
+
+                                <i class="bi bi-check2-circle"></i>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- SUDAH BAYAR -->
+
+                <div class="col-6 col-xl">
+
+                    <div class="stat-card h-100">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <div class="stat-label">
+                                    Sudah Bayar
+                                </div>
+
+                                <div class="stat-value">
+                                    <%= fmtNumber(paidSales) %>
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="stat-icon"
+                                style="background:#e9f8ee;color:#22a447">
+
+                                <i class="bi bi-cash-stack"></i>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- TOTAL BERAT -->
+
+                <div class="col-6 col-xl">
+
+                    <div class="stat-card h-100">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <div class="stat-label">
+                                    Total Berat
+                                </div>
+
+                                <div class="stat-value">
+
+                                    <%= fmtNumber(totalWeight, 3) %>
+
+                                    <span style="font-size:11px;font-weight:700;">
+                                        kg
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="stat-icon"
+                                style="background:#f0eaff;color:#7355c7">
+
+                                <i class="bi bi-speedometer2"></i>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================================
+             TOTAL NILAI
+        ========================================================= -->
+
+        <div class="content-card card mb-4">
+
+            <div class="section-card-header">
+
+                <div class="section-title">
+
+                    <i class="bi bi-cash-stack me-1 text-secondary"></i>
+
+                    Total Nilai Penjualan
+
+                </div>
+
+                <div class="section-subtitle">
+
+                    Akumulasi nilai seluruh transaksi yang ditampilkan.
+
+                </div>
+
+            </div>
+
+            <div class="p-3 p-md-4">
+
+                <div
+                    style="
+                        font-size:24px;
+                        font-weight:800;
+                        color:#172033;
+                    ">
+
+                    Rp <%= fmtNumber(totalAmount) %>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================================
+             DATA TABLE
+        ========================================================= -->
+
+        <div class="content-card card mb-4">
+
+            <div class="section-card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+
+                <div>
+
+                    <div class="section-title">
+
+                        <i class="bi bi-receipt me-1 text-secondary"></i>
+
+                        Data Transaksi Penjualan
+
+                    </div>
+
+                    <div class="section-subtitle">
+
+                        Daftar transaksi berdasarkan collection, nasabah, dan buyer.
+
+                    </div>
+
+                </div>
+
+
+                <div class="section-subtitle">
+
+                    <%= salesRows.length %> data
+
+                </div>
+
+            </div>
+
+
+            <div class="table-wrap">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead>
+
+                        <tr>
+
+                            <th>
+                                <i class="bi bi-upc me-1"></i>
+                                Kode
+                            </th>
+
+                            <th>
+                                <i class="bi bi-truck me-1"></i>
+                                Pickup
+                            </th>
+
+                            <th>
+                                <i class="bi bi-person me-1"></i>
+                                Nasabah
+                            </th>
+
+                            <th>
+                                <i class="bi bi-person-badge me-1"></i>
+                                Pembeli
+                            </th>
+
+                            <th>
+                                <i class="bi bi-speedometer2 me-1"></i>
+                                Berat
+                            </th>
+
+                            <th>
+                                <i class="bi bi-cash-stack me-1"></i>
+                                Total
+                            </th>
+
+                            <th>
+                                <i class="bi bi-toggle2-on me-1"></i>
+                                Status
+                            </th>
+
+                            <th>
+                                <i class="bi bi-wallet2 me-1"></i>
+                                Pembayaran
+                            </th>
+
+                            <th class="text-end">
+                                <i class="bi bi-three-dots-vertical me-1"></i>
+                                Aksi
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="salesTableBody">
+
+                        <% if (salesRows.length) { %>
+
+                            <% salesRows.forEach((r, index) => { %>
+
+                                <tr
+                                    class="sales-row"
+                                    data-index="<%= index %>"
+                                >
+
+
+                                    <!-- ==================================================
+                                         KODE
+                                    ================================================== -->
+
+                                    <td>
+
+                                        <div class="code-badge">
+
+                                            <%= r.code || "-" %>
+
+                                        </div>
+
+                                        <div class="date-text">
+
+                                            <i class="bi bi-calendar3 me-1"></i>
+
+                                            <%= fmtDateTime(r.created_at) %>
+
+                                        </div>
+
+                                    </td>
+
+
+                                    <!-- ==================================================
+                                         PICKUP
+                                    ================================================== -->
+
+                                    <td>
+
+                                        <div class="customer-name">
+
+                                            <%= r.collection_code || "-" %>
+
+                                        </div>
+
+                                        <div class="sub-text">
+
+                                            <i class="bi bi-truck me-1"></i>
+
+                                            Pickup selesai
+
+                                        </div>
+
+                                    </td>
+
+
+                                    <!-- ==================================================
+                                         NASABAH
+                                    ================================================== -->
+
+                                    <td>
+
+                                        <div class="customer-name">
+
+                                            <%= r.nasabah_name || "-" %>
+
+                                        </div>
+
+                                        <% if (r.nasabah_bank && r.nasabah_account_number) { %>
+                                            <div class="sub-text mt-1 text-success fw-semibold">
+                                                <i class="bi bi-credit-card-2-front me-1"></i>
+                                                <%= r.nasabah_bank %>: <%= r.nasabah_account_number %>
+                                            </div>
+                                        <% } else { %>
+                                            <div class="sub-text text-muted">
+                                                <i class="bi bi-person me-1"></i>Nasabah
+                                            </div>
+                                        <% } %>
+
+                                    </td>
+
+
+                                    <!-- ==================================================
+                                         PEMBELI
+                                    ================================================== -->
+
+                                    <td>
+
+                                        <div class="buyer-name">
+
+                                            <%= r.buyer_name || "-" %>
+
+                                        </div>
+
+                                    </td>
+
+
+                                    <!-- ==================================================
+                                         BERAT
+                                    ================================================== -->
+
+                                    <td>
+
+                                        <span class="weight-value">
+
+                                            <%= fmtNumber(
+                                                r.total_weight,
+                                                3
+                                            ) %>
+
+                                            kg
+
+                                        </span>
+
+                                    </td>
+
+
+                                    <!-- ==================================================
+                                         TOTAL
+                                    ================================================== -->
+
+                                    <td>
+
+                                        <span class="money-value">
+
+                                            Rp
+                                            <%= fmtNumber(
+                                                r.total_amount
+                                            ) %>
+
+                                        </span>
+
+                                    </td>
+
+
+                                    <!-- ==================================================
+                                         STATUS
+                                    ================================================== -->
+
+                                    <td>
+
+                                        <span
+                                            class="ios-status <%= salesStatusClass(r.status) %>"
+                                        >
+
+                                            <i
+                                                class="bi <%= salesStatusIcon(r.status) %>"
+                                            ></i>
+
+                                            <%= statusText(r.status) %>
+
+                                        </span>
+
+                                    </td>
+
+
+                                    <!-- ==================================================
+                                         PEMBAYARAN
+                                    ================================================== -->
+
+                                    <td>
+
+                                        <span
+                                            class="ios-status <%= paymentClass(r.payment_status) %>"
+                                        >
+                                            <i
+                                                class="bi <%= paymentIcon(r.payment_status) %>"
+                                            ></i>
+                                            <%= paymentText(r.payment_status) %>
+                                        </span>
+
+                                        <% if (normalizeStatus(r.payment_status) === "paid") { %>
+                                            <div class="sub-text">
+                                                <i class="bi bi-wallet2 me-1"></i>
+                                                <%= paymentMethodText(r.payment_method) %>
+                                                <% if (r.bank_name) { %>
+                                                    <span class="badge bg-light text-dark border ms-1 fw-semibold"><%= r.bank_name.toUpperCase() %></span>
+                                                <% } %>
+                                            </div>
+
+                                            <% if (r.paid_at) { %>
+                                                <div class="sub-text">
+                                                    <i class="bi bi-calendar-check me-1"></i>
+                                                    <%= fmtDateTime(r.paid_at) %>
+                                                </div>
+                                            <% } %>
+
+                                            <div class="mt-1">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-outline-success py-0 px-2 btn-view-payment-proof"
+                                                    style="font-size:11px;"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#paymentProofModal"
+                                                    data-proof="<%= r.payment_proof || '' %>"
+                                                    data-code="<%= r.code || '-' %>"
+                                                    data-nasabah="<%= r.nasabah_name || '-' %>"
+                                                    data-bank="<%= r.bank_name || '-' %>"
+                                                    data-amount="<%= Number(r.total_amount || 0) %>"
+                                                    data-paidat="<%= fmtDateTime(r.paid_at) %>"
+                                                    data-note="<%= r.payment_note || '-' %>"
+                                                >
+                                                    <i class="bi bi-receipt me-1"></i>
+                                                    <%= r.payment_proof ? 'Lihat Bukti Transfer' : 'Detail Pembayaran' %>
+                                                </button>
+                                            </div>
+                                        <% } %>
+
+                                    </td>
+
+                                    <!-- ==================================================
+                                        AKSI
+                                    ================================================== -->
+
+                                    <td class="text-end">
+
+                                        <div class="d-flex justify-content-end gap-1">
+
+                                            <% 
+                                                const currentStatus = normalizeStatus(r.status);
+                                                const currentPaymentStatus = normalizeStatus(r.payment_status);
+                                                const isPaid = currentPaymentStatus === "paid" || currentStatus === "paid";
+                                                const isCancelled = currentStatus === "cancelled";
+                                            %>
+
+
+                                            <!-- ==================================================
+                                                APPROVE
+                                            ================================================== -->
+
+                                            <% if (
+                                                allowManage &&
+                                                currentStatus === "pending"
+                                            ) { %>
+
+                                                <form
+                                                    class="d-inline"
+                                                    method="post"
+                                                    action="/sales/<%= r.id %>/approve"
+                                                >
+
+                                                    <button
+                                                        type="submit"
+                                                        class="btn btn-sm btn-light border action-btn"
+                                                        title="Approve"
+                                                    >
+                                                        <i class="bi bi-check-lg text-success"></i>
+                                                    </button>
+
+                                                </form>
+
+                                            <% } %>
+
+
+                                            <!-- ==================================================
+                                                BAYAR
+                                            ================================================== -->
+
+                                            <% if (
+                                                allowManage &&
+                                                !isPaid &&
+                                                !isCancelled
+                                            ) { %>
+
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-light border action-btn btn-open-payment"
+                                                    title="Bayar"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#paymentModal"
+
+                                                    data-id="<%= r.id %>"
+                                                    data-code="<%= r.code || '' %>"
+                                                    data-nasabah="<%= r.nasabah_name || '' %>"
+                                                    data-amount="<%= Number(r.total_amount || 0) %>"
+                                                    data-user-bank="<%= r.nasabah_bank || '' %>"
+                                                    data-user-account-number="<%= r.nasabah_account_number || '' %>"
+                                                    data-user-account-holder="<%= r.nasabah_account_holder || '' %>"
+                                                >
+                                                    <i class="bi bi-cash-stack text-success"></i>
+                                                </button>
+
+                                            <% } %>
+
+
+                                            <!-- ==================================================
+                                                SUDAH LUNAS → LIHAT BUKTI PEMBAYARAN
+                                            ================================================== -->
+
+                                            <% if (isPaid) { %>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-sm btn-light border action-btn btn-view-payment-proof"
+                                                    title="<%= r.payment_proof ? 'Lihat Bukti Pembayaran' : 'Lihat Detail Pembayaran' %>"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#paymentProofModal"
+                                                    data-proof="<%= r.payment_proof || '' %>"
+                                                    data-code="<%= r.code || '-' %>"
+                                                    data-nasabah="<%= r.nasabah_name || '-' %>"
+                                                    data-bank="<%= r.bank_name || '-' %>"
+                                                    data-amount="<%= Number(r.total_amount || 0) %>"
+                                                    data-paidat="<%= fmtDateTime(r.paid_at) %>"
+                                                    data-note="<%= r.payment_note || '-' %>"
+                                                >
+                                                    <i class="bi bi-receipt <%= r.payment_proof ? 'text-primary' : 'text-success' %>"></i>
+                                                </button>
+                                            <% } %>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+
+                            <% }) %>
+
+                        <% } %>
+
+                    </tbody>
+
+                </table>
+
+
+                <!-- ========================================================
+                     EMPTY STATE
+                ========================================================= -->
+
+                <% if (!salesRows.length) { %>
+
+                    <div class="empty-state">
+
+                        <div class="empty-icon">
+
+                            <i class="bi bi-receipt"></i>
+
+                        </div>
+
+                        <div class="empty-title">
+
+                            Belum ada transaksi penjualan
+
+                        </div>
+
+                        <div class="empty-text">
+
+                            Data transaksi penjualan akan muncul di sini.
+
+                        </div>
+
+                    </div>
+
+                <% } %>
+
+            </div>
+
+
+            <!-- ========================================================
+                 FOOTER TABLE
+            ========================================================= -->
+
+            <div class="pagination-area d-flex flex-wrap justify-content-between align-items-center gap-3">
+
+                <div class="page-info">
+
+                    Menampilkan
+
+                    <strong>
+                        <%= salesRows.length %>
+                    </strong>
+
+                    transaksi
+
+                </div>
+
+                <div class="page-info">
+
+                    Total:
+
+                    <strong>
+                        Rp <%= fmtNumber(totalAmount) %>
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ============================================================
+     ALERT CONTAINER
+============================================================ -->
+
+<div
+    id="salesAlertContainer"
+    class="sales-page alert-container">
+</div>
+
+
+<!-- ============================================================
+     MODAL
+     BUAT TRANSAKSI PENJUALAN
+     ICON -> INPUT
+============================================================ -->
+
+<% if (allowCreate) { %>
+
+<div
+    class="modal fade"
+    id="createSalesModal"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+        <form
+            class="modal-content border-0 shadow"
+            method="post"
+            action="/sales/create"
+        >
+
+
+            <!-- ==================================================
+                 HEADER
+            ================================================== -->
+
+            <div class="modal-header">
+
+                <div>
+
+                    <h5 class="modal-title fw-semibold">
+
+                        <i class="bi bi-cart-plus text-success me-2"></i>
+
+                        Buat Transaksi Penjualan
+
+                    </h5>
+
+                    <div class="small text-secondary mt-1">
+
+                        Buat transaksi berdasarkan pickup yang sudah selesai.
+
+                    </div>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <!-- ==================================================
+                 BODY
+            ================================================== -->
+
+            <div class="modal-body">
+
+
+                <!-- ==================================================
+                     PICKUP SELESAI
+                ================================================== -->
+
+                <div class="mb-3">
+
+                    <label class="form-label fw-semibold">
+
+                        Pickup Selesai
+
+                    </label>
+
+                    <div class="input-group">
+
+                        <span class="input-group-text">
+
+                            <i class="bi bi-truck input-icon"></i>
+
+                        </span>
+
+                        <select
+                            class="form-select"
+                            name="collection_id"
+                            required
+                        >
+
+                            <option value="">
+                                Pilih pickup
+                            </option>
+
+                            <% safeCollections.forEach(c => { %>
+
+                                <option value="<%= c.id %>">
+
+                                    <%= c.code %>
+                                    —
+                                    <%= c.full_name %>
+                                    ·
+                                    <%= fmtNumber(
+                                        c.total_weight,
+                                        3
+                                    ) %>
+                                    kg
+                                    ·
+                                    Rp
+                                    <%= fmtNumber(
+                                        c.total_amount
+                                    ) %>
+
+                                </option>
+
+                            <% }) %>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ==================================================
+                     PEMBELI
+                ================================================== -->
+
+                <div class="mb-3">
+
+                    <label class="form-label fw-semibold">
+
+                        Pembeli
+
+                    </label>
+
+                    <div class="input-group">
+
+                        <span class="input-group-text">
+
+                            <i class="bi bi-person-badge input-icon"></i>
+
+                        </span>
+
+                        <select
+                            class="form-select"
+                            name="buyer_id"
+                        >
+
+                            <option value="">
+                                Pilih pembeli
+                            </option>
+
+                            <% safeBuyers.forEach(b => { %>
+
+                                <option value="<%= b.id %>">
+
+                                    <%= b.name %>
+
+                                    <%= b.company
+                                        ? " — " + b.company
+                                        : ""
+                                    %>
+
+                                </option>
+
+                            <% }) %>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ==================================================
+                     CATATAN
+                ================================================== -->
+
+                <div>
+
+                    <label class="form-label fw-semibold">
+
+                        Catatan
+
+                    </label>
+
+                    <div class="input-group">
+
+                        <span class="input-group-text align-items-start pt-2">
+
+                            <i class="bi bi-sticky input-icon"></i>
+
+                        </span>
+
+                        <textarea
+                            class="form-control"
+                            name="notes"
+                            rows="3"
+                            placeholder="Catatan transaksi..."
+                        ></textarea>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ==================================================
+                 FOOTER
+            ================================================== -->
+
+            <div class="modal-footer">
+
+                <button
+                    type="button"
+                    class="btn btn-light border"
+                    data-bs-dismiss="modal"
+                >
+
+                    <i class="bi bi-x-lg me-1"></i>
+
+                    Batal
+
+                </button>
+
+
+                <button
+                    type="submit"
+                    class="btn btn-success"
+                >
+
+                    <i class="bi bi-check-lg me-1"></i>
+
+                    Simpan Transaksi
+
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<% } %>
+
+
+<!-- ============================================================
+     MODAL PEMBAYARAN
+============================================================ -->
+
+<% if (allowManage) { %>
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form
+            class="modal-content border-0 shadow"
+            id="paymentForm"
+            method="post"
+            enctype="multipart/form-data"
+        >
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title">
+                        <i class="bi bi-cash-stack text-success me-2"></i>
+                        Pembayaran Transaksi
+                    </h5>
+                    <div class="small text-secondary mt-1">
+                        Pilih metode pembayaran dan kirim bukti jika tersedia.
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="p-3 mb-3 rounded-3 border bg-light">
+                    <div class="small text-secondary mb-1">Kode Transaksi</div>
+                    <div class="fw-bold" id="paymentTransactionCode">-</div>
+
+                    <div class="small text-secondary mt-2">Nasabah</div>
+                    <div class="fw-semibold" id="paymentNasabahName">-</div>
+
+                    <div class="small text-secondary mt-2">Total Dibayar</div>
+                    <div class="fw-bold text-success" id="paymentTotalAmount">Rp 0</div>
+                </div>
+
+                <!-- INFO REKENING BANK NASABAH TERDAFTAR -->
+                <div class="p-3 mb-3 rounded-3 border border-success-subtle bg-success-subtle bg-opacity-25 shadow-sm" id="userBankInfoCard">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="small fw-bold text-success">
+                            <i class="bi bi-credit-card-2-front me-1"></i> Rekening Tujuan Nasabah
+                        </div>
+                        <span class="badge bg-success text-white" style="font-size:10px;">Terdaftar di Profil</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="rounded-3 bg-white border border-success-subtle p-2 text-center" style="min-width:65px;">
+                            <i class="bi bi-bank fs-4 text-success"></i>
+                            <div class="fw-bold small mt-1 text-dark" id="userBankNameText">-</div>
+                        </div>
+                        <div>
+                            <div class="fs-6 fw-bold text-dark font-monospace" id="userBankAccountNumberText">-</div>
+                            <div class="small text-muted">a.n. <span class="fw-bold text-dark" id="userBankAccountHolderText">-</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning py-2 px-3 mb-3 small d-flex align-items-center gap-2" id="userBankMissingAlert" style="display:none;">
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+                    <div>Nasabah belum mendaftarkan nomor rekening di profil akunnya. Silakan konfirmasi rekening secara langsung.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Metode Pembayaran</label>
+
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-wallet2 input-icon"></i>
+                        </span>
+
+                        <select
+                            class="form-select"
+                            name="payment_method"
+                            id="paymentMethod"
+                            required
+                        >
+                            <option value="">Pilih metode pembayaran</option>
+
+                            <% Object.entries(safePaymentMethods).forEach(([value, label]) => { %>
+                                <option value="<%= value %>">
+                                    <%= label %>
+                                </option>
+                            <% }) %>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-3" id="bankSelectGroup">
+                    <label class="form-label fw-semibold">Pilih Bank</label>
+
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="bi bi-bank input-icon"></i>
+                        </span>
+
+                        <select
+                            class="form-select"
+                            name="bank_name"
+                            id="paymentBankName"
+                        >
+                            <option value="">-- Pilih Bank Transfer --</option>
+                            <option value="BCA">BCA (Bank Central Asia)</option>
+                            <option value="Mandiri">Bank Mandiri</option>
+                            <option value="BRI">BRI (Bank Rakyat Indonesia)</option>
+                            <option value="BNI">BNI (Bank Negara Indonesia)</option>
+                            <option value="BSI">BSI (Bank Syariah Indonesia)</option>
+                            <option value="CIMB Niaga">CIMB Niaga</option>
+                            <option value="Permata">Bank Permata</option>
+                            <option value="Danamon">Bank Danamon</option>
+                            <option value="Bank Jatim">Bank Jatim</option>
+                            <option value="Bank DKI">Bank DKI</option>
+                            <option value="Lainnya">Bank Lainnya</option>
+                        </select>
+                    </div>
+                    <div class="form-text">Pilih bank transfer untuk pembayaran kepada nasabah.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Bukti Pembayaran</label>
+
+                    <input
+                        type="file"
+                        class="form-control"
+                        name="payment_proof"
+                        id="paymentProof"
+                        accept=".jpg,.jpeg,.png,.webp,.pdf"
+                    >
+
+                    <div class="form-text">
+                        JPG, JPEG, PNG, WEBP, atau PDF. Maksimal 5 MB.
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label fw-semibold">Catatan Pembayaran</label>
+
+                    <textarea
+                        class="form-control"
+                        name="payment_note"
+                        id="paymentNote"
+                        rows="3"
+                        maxlength="1000"
+                        placeholder="Catatan pembayaran..."
+                    ></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button
+                    type="button"
+                    class="btn btn-light border"
+                    data-bs-dismiss="modal"
+                >
+                    <i class="bi bi-x-lg me-1"></i>
+                    Batal
+                </button>
+
+                <button
+                    type="submit"
+                    class="btn btn-success"
+                    id="paymentSubmitButton"
+                >
+                    <i class="bi bi-check-lg me-1"></i>
+                    Bayar Sekarang
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<% } %>
+
+<!-- ==================================================
+     MODAL BUKTI PEMBAYARAN
+================================================== -->
+
+<div
+    class="modal fade"
+    id="paymentProofModal"
+    tabindex="-1"
+    aria-labelledby="paymentProofModalLabel"
+    aria-hidden="true"
+>
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+        <div class="modal-content border-0 shadow">
+
+            <!-- HEADER -->
+            <div class="modal-header">
+
+                <div>
+                    <h5
+                        class="modal-title fw-bold"
+                        id="paymentProofModalLabel"
+                    >
+                        <i class="bi bi-receipt me-2 text-primary"></i>
+                        Bukti Pembayaran
+                    </h5>
+
+                    <small class="text-muted">
+                        Detail bukti pembayaran transaksi
+                    </small>
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <!-- BODY -->
+            <div class="modal-body">
+
+                <!-- INFORMASI TRANSAKSI -->
+
+                <div class="row g-2 mb-3">
+
+                    <div class="col-md-4">
+                        <div class="border rounded p-2 bg-light">
+                            <small class="text-muted d-block" style="font-size:11px;">Kode Transaksi</small>
+                            <strong id="proofTransactionCode" class="text-dark">-</strong>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="border rounded p-2 bg-light">
+                            <small class="text-muted d-block" style="font-size:11px;">Nasabah</small>
+                            <strong id="proofNasabahName" class="text-dark">-</strong>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="border rounded p-2 bg-light">
+                            <small class="text-muted d-block" style="font-size:11px;">Bank Transfer</small>
+                            <span class="badge bg-success" id="proofBankName" style="font-size:12px;">-</span>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="border rounded p-2 bg-light">
+                            <small class="text-muted d-block" style="font-size:11px;">Total Dibayar</small>
+                            <strong id="proofAmount" class="text-success fs-6">-</strong>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="border rounded p-2 bg-light">
+                            <small class="text-muted d-block" style="font-size:11px;">Waktu Pembayaran</small>
+                            <strong id="proofPaidAt" class="text-dark">-</strong>
+                        </div>
+                    </div>
+
+                    <div class="col-12" id="proofNoteContainer">
+                        <div class="border rounded p-2 bg-light">
+                            <small class="text-muted d-block" style="font-size:11px;">Catatan Pembayaran</small>
+                            <span id="proofNote" class="text-secondary">-</span>
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <!-- PREVIEW FOTO -->
+
+                <div
+                    class="border rounded p-2 text-center bg-light"
+                    style="min-height:300px;"
+                >
+
+                    <img
+                        id="paymentProofImage"
+                        src=""
+                        alt="Bukti Pembayaran"
+                        class="img-fluid rounded"
+                        style="
+                            max-height:550px;
+                            width:auto;
+                            object-fit:contain;
+                            display:none;
+                            margin:auto;
+                        "
+                    >
+
+                    <!-- Loading -->
+
+                    <div
+                        id="paymentProofLoading"
+                        class="py-5 text-muted"
+                    >
+                        <div
+                            class="spinner-border spinner-border-sm me-2"
+                            role="status"
+                        ></div>
+
+                        Memuat bukti pembayaran...
+                    </div>
+
+                    <!-- Error -->
+
+                    <div
+                        id="paymentProofError"
+                        class="py-5 text-danger"
+                        style="display:none;"
+                    >
+
+                        <i class="bi bi-exclamation-circle fs-3 d-block mb-2"></i>
+
+                        Bukti pembayaran tidak dapat ditampilkan.
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- FOOTER -->
+
+            <div class="modal-footer d-flex justify-content-between">
+
+                <a
+                    id="proofDownloadLink"
+                    href="#"
+                    target="_blank"
+                    class="btn btn-outline-primary"
+                    style="display:none;"
+                >
+                    <i class="bi bi-box-arrow-up-right me-1"></i>
+                    Buka Ukuran Penuh
+                </a>
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                >
+                    Tutup
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- ========================================================
+     MODAL EXPORT DATA TRANSAKSI PENJUALAN
+========================================================= -->
+<div
+    class="modal fade"
+    id="exportSalesModal"
+    tabindex="-1"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 shadow">
+
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="bi bi-file-earmark-arrow-down text-success me-2"></i>
+                        Export Transaksi Penjualan
+                    </h5>
+                    <div class="small text-muted">
+                        Pilih rentang tanggal untuk preview PDF atau download Excel.
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close">
+                </button>
+            </div>
+
+            <form id="salesExportForm" method="get" action="/sales/export/preview-pdf" target="_blank">
+
+                <div class="modal-body">
+
+                    <!-- RENTANG TANGGAL -->
+                    <div class="row g-3 mb-3">
+
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">
+                                Dari Tanggal
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-calendar-date text-success"></i>
+                                </span>
+                                <input
+                                    type="date"
+                                    class="form-control"
+                                    name="start_date"
+                                    id="salesExportStartDate"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">
+                                Sampai Tanggal
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-calendar-date-fill text-success"></i>
+                                </span>
+                                <input
+                                    type="date"
+                                    class="form-control"
+                                    name="end_date"
+                                    id="salesExportEndDate"
+                                >
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- STATUS -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
+                            Status Transaksi
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="bi bi-funnel text-success"></i>
+                            </span>
+                            <select class="form-select" name="status">
+                                <option value="">Semua Status</option>
+                                <option value="paid">Lunas (Paid)</option>
+                                <option value="approved">Approved</option>
+                                <option value="pending">Pending</option>
+                                <option value="cancelled">Dibatalkan</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border rounded-3 p-2 mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-info-circle text-primary fs-5"></i>
+                        <span class="small text-muted">
+                            Kosongkan tanggal untuk mengekspor seluruh transaksi penjualan.
+                        </span>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer d-flex flex-column-reverse flex-sm-row justify-content-between gap-2 p-3">
+                    <button
+                        type="button"
+                        class="btn btn-light border w-100 w-sm-auto rounded-3"
+                        data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                    <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-sm-auto justify-content-end">
+                        <button
+                            type="submit"
+                            class="btn btn-outline-danger w-100 w-sm-auto rounded-3 text-nowrap"
+                            id="btnSalesPreviewPdf"
+                            onclick="setSalesExportAction('pdf')">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>
+                            Preview PDF
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="btn btn-success w-100 w-sm-auto rounded-3 text-nowrap"
+                            id="btnSalesExportExcel"
+                            onclick="setSalesExportAction('excel')">
+                            <i class="bi bi-file-earmark-excel me-1"></i>
+                            Export Excel (.xlsx)
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+function setSalesExportAction(mode) {
+    const form = document.getElementById("salesExportForm");
+    if (!form) return;
+    if (mode === "pdf") {
+        form.action = "/sales/export/preview-pdf";
+        form.target = "_blank";
+    } else {
+        form.action = "/sales/export/excel";
+        form.target = "_self";
+    }
+}
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // 1. Tooltip Bootstrap
+    if (typeof bootstrap !== "undefined") {
+        document.querySelectorAll('[title]').forEach(function (el) {
+            try { new bootstrap.Tooltip(el); } catch (e) {}
+        });
+    }
+
+    // 2. Prevent Double Submit di Create Modal
+    document.querySelectorAll("#createSalesModal form").forEach(function (form) {
+        form.addEventListener("submit", function () {
+            const btn = form.querySelector('button[type="submit"]');
+            if (!btn) return;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyimpan...';
+            setTimeout(function () {
+                if (document.body.contains(btn)) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Simpan Transaksi';
+                }
+            }, 6000);
+        });
+    });
+
+    // 3. Modal Pembayaran (Admin / Pengelola)
+    const paymentModalEl = document.getElementById("paymentModal");
+    const paymentForm = document.getElementById("paymentForm");
+    const paymentCode = document.getElementById("paymentTransactionCode");
+    const paymentNasabah = document.getElementById("paymentNasabahName");
+    const paymentAmount = document.getElementById("paymentTotalAmount");
+    const paymentMethod = document.getElementById("paymentMethod");
+    const paymentBank = document.getElementById("paymentBankName");
+    const bankSelectGroup = document.getElementById("bankSelectGroup");
+    const paymentProof = document.getElementById("paymentProof");
+    const paymentNote = document.getElementById("paymentNote");
+    const paymentSubmitButton = document.getElementById("paymentSubmitButton");
+
+    function formatRupiah(val) {
+        return "Rp " + Number(val || 0).toLocaleString("id-ID");
+    }
+
+    if (paymentMethod && bankSelectGroup) {
+        paymentMethod.addEventListener("change", function () {
+            if (this.value === "transfer_bank" || !this.value) {
+                bankSelectGroup.style.display = "block";
+            } else {
+                bankSelectGroup.style.display = "none";
+                if (paymentBank) paymentBank.value = "";
+            }
+        });
+    }
+
+    document.addEventListener("click", function (e) {
+        const btn = e.target.closest(".btn-open-payment");
+        if (!btn) return;
+
+        const id = btn.dataset.id || "";
+        const code = btn.dataset.code || "-";
+        const nasabah = btn.dataset.nasabah || "-";
+        const amount = btn.dataset.amount || 0;
+        const userBank = (btn.dataset.userBank || "").trim();
+        const userAccountNumber = (btn.dataset.userAccountNumber || "").trim();
+        const userAccountHolder = (btn.dataset.userAccountHolder || "").trim();
+
+        if (paymentForm) {
+            paymentForm.action = "/sales/" + encodeURIComponent(id) + "/pay";
+        }
+        if (paymentCode) paymentCode.textContent = code;
+        if (paymentNasabah) paymentNasabah.textContent = nasabah;
+        if (paymentAmount) paymentAmount.textContent = formatRupiah(amount);
+
+        // Bank info card & alerts
+        const bankCard = document.getElementById("userBankInfoCard");
+        const bankAlert = document.getElementById("userBankMissingAlert");
+        const bankNameText = document.getElementById("userBankNameText");
+        const bankAccText = document.getElementById("userBankAccountNumberText");
+        const bankHolderText = document.getElementById("userBankAccountHolderText");
+
+        if (paymentMethod) paymentMethod.value = "transfer_bank";
+        if (bankSelectGroup) bankSelectGroup.style.display = "block";
+        if (paymentProof) paymentProof.value = "";
+
+        if (userBank && userAccountNumber) {
+            if (bankCard) bankCard.style.display = "block";
+            if (bankAlert) bankAlert.style.display = "none";
+            if (bankNameText) bankNameText.textContent = userBank.toUpperCase();
+            if (bankAccText) bankAccText.textContent = userAccountNumber;
+            if (bankHolderText) bankHolderText.textContent = userAccountHolder || nasabah;
+
+            // Auto-select bank in dropdown if available
+            if (paymentBank) {
+                let found = false;
+                for (let i = 0; i < paymentBank.options.length; i++) {
+                    if (paymentBank.options[i].value.toLowerCase() === userBank.toLowerCase()) {
+                        paymentBank.selectedIndex = i;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    paymentBank.value = "Lainnya";
+                }
+            }
+
+            if (paymentNote) {
+                paymentNote.value = `Transfer ke ${userBank.toUpperCase()} ${userAccountNumber} a.n. ${userAccountHolder || nasabah}`;
+            }
+        } else {
+            if (bankCard) bankCard.style.display = "none";
+            if (bankAlert) bankAlert.style.display = "flex";
+            if (paymentBank) paymentBank.value = "BCA";
+            if (paymentNote) paymentNote.value = "";
+        }
+
+        if (paymentSubmitButton) {
+            paymentSubmitButton.disabled = false;
+            paymentSubmitButton.innerHTML = '<i class="bi bi-check-lg me-1"></i>Bayar Sekarang';
+        }
+
+        if (paymentModalEl && typeof bootstrap !== "undefined") {
+            bootstrap.Modal.getOrCreateInstance(paymentModalEl).show();
+        }
+    });
+
+    if (paymentForm) {
+        paymentForm.addEventListener("submit", function () {
+            if (paymentSubmitButton) {
+                paymentSubmitButton.disabled = true;
+                paymentSubmitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Memproses Pembayaran...';
+            }
+        });
+    }
+
+    // 4. Modal Bukti Transfer (Nasabah & Admin)
+    const proofModalEl = document.getElementById("paymentProofModal");
+    const proofImage = document.getElementById("paymentProofImage");
+    const proofLoading = document.getElementById("paymentProofLoading");
+    const proofError = document.getElementById("paymentProofError");
+    const proofCode = document.getElementById("proofTransactionCode");
+    const proofNasabah = document.getElementById("proofNasabahName");
+    const proofBank = document.getElementById("proofBankName");
+    const proofAmount = document.getElementById("proofAmount");
+    const proofPaidAt = document.getElementById("proofPaidAt");
+    const proofNote = document.getElementById("proofNote");
+    const proofNoteContainer = document.getElementById("proofNoteContainer");
+    const proofDownloadLink = document.getElementById("proofDownloadLink");
+
+    document.addEventListener("click", function (e) {
+        const btn = e.target.closest(".btn-view-payment-proof");
+        if (!btn) return;
+
+        const proof = (btn.dataset.proof || btn.getAttribute("data-proof") || "").trim();
+        const code = btn.dataset.code || btn.getAttribute("data-code") || "-";
+        const nasabah = btn.dataset.nasabah || btn.getAttribute("data-nasabah") || "-";
+        const bank = btn.dataset.bank || btn.getAttribute("data-bank") || "-";
+        const amount = btn.dataset.amount || btn.getAttribute("data-amount") || 0;
+        const paidat = btn.dataset.paidat || btn.getAttribute("data-paidat") || "-";
+        const note = btn.dataset.note || btn.getAttribute("data-note") || "-";
+
+        // Reset state
+        if (proofImage) {
+            proofImage.style.display = "none";
+            proofImage.src = "";
+        }
+        if (proofLoading) proofLoading.style.display = "block";
+        if (proofError) {
+            proofError.style.display = "none";
+            proofError.className = "py-4 text-center";
+            proofError.innerHTML = "";
+        }
+
+        // Isi field info
+        if (proofCode) proofCode.textContent = code;
+        if (proofNasabah) proofNasabah.textContent = nasabah;
+        if (proofBank) proofBank.textContent = bank && bank !== "-" ? bank.toUpperCase() : "TRANSFER BANK";
+        if (proofAmount) proofAmount.textContent = formatRupiah(amount);
+        if (proofPaidAt) proofPaidAt.textContent = paidat;
+        if (proofNote) proofNote.textContent = (note && note !== "-") ? note : "Tidak ada catatan.";
+        if (proofNoteContainer) proofNoteContainer.style.display = (note && note !== "-") ? "block" : "none";
+
+        if (proofDownloadLink) {
+            if (proof) {
+                let fullPath = proof.startsWith("http") || proof.startsWith("/") ? proof : ("/" + proof);
+                proofDownloadLink.href = fullPath;
+                proofDownloadLink.style.display = "inline-flex";
+            } else {
+                proofDownloadLink.style.display = "none";
+            }
+        }
+
+        if (!proof) {
+            if (proofLoading) proofLoading.style.display = "none";
+            if (proofError) {
+                proofError.innerHTML = `
+                    <div class="py-4 text-center">
+                        <i class="bi bi-info-circle fs-1 text-primary d-block mb-2"></i>
+                        <h6 class="fw-bold mb-1 text-dark">Detail Pembayaran Terkonfirmasi</h6>
+                        <p class="small text-muted mb-0">Status transaksi telah lunas. Pengelola belum mengunggah salinan foto/struk bukti transfer fisik untuk transaksi ini.</p>
+                    </div>
+                `;
+                proofError.style.display = "block";
+            }
+        } else {
+            const lower = proof.toLowerCase();
+            const isPdf = lower.endsWith(".pdf");
+
+            if (isPdf) {
+                if (proofLoading) proofLoading.style.display = "none";
+                if (proofError) {
+                    proofError.innerHTML = `
+                        <div class="py-4 text-center">
+                            <i class="bi bi-file-earmark-pdf fs-1 text-danger d-block mb-2"></i>
+                            <h6 class="fw-bold mb-2">Dokumen Bukti Transfer (PDF)</h6>
+                            <a href="${proof}" target="_blank" class="btn btn-sm btn-primary">
+                                <i class="bi bi-box-arrow-up-right me-1"></i> Buka File PDF
+                            </a>
+                        </div>
+                    `;
+                    proofError.style.display = "block";
+                }
+            } else {
+                if (proofImage) {
+                    proofImage.onload = function () {
+                        if (proofLoading) proofLoading.style.display = "none";
+                        if (proofError) proofError.style.display = "none";
+                        proofImage.style.display = "block";
+                    };
+                    proofImage.onerror = function () {
+                        if (proofLoading) proofLoading.style.display = "none";
+                        proofImage.style.display = "none";
+                        if (proofError) {
+                            proofError.innerHTML = `
+                                <div class="py-4 text-center text-muted">
+                                    <i class="bi bi-exclamation-triangle fs-2 text-warning d-block mb-2"></i>
+                                    Berkas foto bukti tidak ditemukan di server.
+                                </div>
+                            `;
+                            proofError.style.display = "block";
+                        }
+                    };
+                    proofImage.src = proof.startsWith("http") || proof.startsWith("/") ? proof : ("/" + proof);
+                }
+            }
+        }
+
+        // Tampilkan modal
+        if (proofModalEl && typeof bootstrap !== "undefined") {
+            bootstrap.Modal.getOrCreateInstance(proofModalEl).show();
+        }
+    });
+
+    if (proofModalEl) {
+        proofModalEl.addEventListener("hidden.bs.modal", function () {
+            if (proofImage) {
+                proofImage.src = "";
+                proofImage.style.display = "none";
+            }
+            if (proofLoading) proofLoading.style.display = "block";
+            if (proofError) proofError.style.display = "none";
+            if (proofDownloadLink) proofDownloadLink.style.display = "none";
+        });
+    }
+
+    // 5. Handle Export Buttons
+    const salesExportForm = document.getElementById("salesExportForm");
+    const btnSubmitPdf = document.getElementById("btnSalesSubmitPdf");
+    const btnSubmitExcel = document.getElementById("btnSalesSubmitExcel");
+
+    if (btnSubmitPdf && salesExportForm) {
+        btnSubmitPdf.addEventListener("click", function() {
+            salesExportForm.action = "/sales/export/preview-pdf";
+            salesExportForm.target = "_blank";
+            salesExportForm.submit();
+        });
+    }
+
+    if (btnSubmitExcel && salesExportForm) {
+        btnSubmitExcel.addEventListener("click", function() {
+            salesExportForm.action = "/sales/export/excel";
+            salesExportForm.target = "_self";
+            salesExportForm.submit();
+        });
+    }
+});
+</script>

@@ -1,0 +1,3563 @@
+<%
+/* =========================================================
+   SAFE VIEW DATA
+========================================================= */
+
+const viewUser =
+    (typeof user !== "undefined" && user)
+        ? user
+        : null;
+
+const viewPermissions =
+    (typeof permissions !== "undefined" && Array.isArray(permissions))
+        ? permissions
+        : [];
+
+const pageUrl =
+    (typeof currentUrl !== "undefined" && currentUrl)
+        ? currentUrl
+        : (typeof currentPath !== "undefined" && currentPath ? currentPath : "");
+
+const successMessage =
+    (typeof success_msg !== "undefined" && success_msg)
+        ? success_msg
+        : "";
+
+const errorMessage =
+    (typeof error_msg !== "undefined" && error_msg)
+        ? error_msg
+        : "";
+
+
+/* =========================================================
+   HELPER
+========================================================= */
+
+const hasPermission = (code) => {
+
+    if (viewUser && viewUser.role === "superadmin") {
+        return true;
+    }
+
+    return viewPermissions.includes(code);
+};
+
+
+const isActive = (path) => {
+
+    if (!pageUrl) {
+        return false;
+    }
+
+    return (
+        pageUrl === path ||
+        pageUrl.startsWith(path + "/")
+    );
+};
+
+
+const userName =
+    viewUser && viewUser.full_name
+        ? viewUser.full_name
+        : "Pengguna";
+
+
+const userRole =
+    viewUser && viewUser.role
+        ? String(viewUser.role).replaceAll("_", " ")
+        : "User";
+
+
+const userInitial =
+    userName.charAt(0).toUpperCase();
+
+%>
+
+<!DOCTYPE html>
+
+<html lang="id">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
+    >
+
+    <meta
+        name="theme-color"
+        content="#16a34a"
+    >
+
+    <meta
+        name="mobile-web-app-capable"
+        content="yes"
+    >
+
+    <meta
+        name="apple-mobile-web-app-capable"
+        content="yes"
+    >
+
+    <meta
+        name="apple-mobile-web-app-status-bar-style"
+        content="default"
+    >
+
+    <meta
+        name="apple-mobile-web-app-title"
+        content="PilahKita"
+    >
+
+    <meta
+        name="format-detection"
+        content="telephone=no"
+    >
+
+    <title>
+        PilahKita
+    </title>
+
+
+    <!-- =====================================================
+         BOOTSTRAP
+    ====================================================== -->
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- =====================================================
+         BOOTSTRAP ICONS
+    ====================================================== -->
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+        rel="stylesheet"
+    >
+
+
+    <!-- =====================================================
+         CUSTOM CSS
+    ====================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/css/style.css"
+    >
+    <link rel="icon" type="image/png" href="/images/pilahkita.png">
+
+    <style>
+
+        /* =====================================================
+           GLOBAL
+        ====================================================== */
+
+        html,
+        body {
+
+            margin: 0;
+            padding: 0;
+
+            min-height: 100%;
+
+        }
+
+
+        body {
+
+            background: #f5f7fb;
+
+            color: #172033;
+
+            font-family:
+                -apple-system,
+                BlinkMacSystemFont,
+                "SF Pro Display",
+                "SF Pro Text",
+                "Segoe UI",
+                Roboto,
+                Helvetica,
+                Arial,
+                sans-serif;
+
+            -webkit-font-smoothing: antialiased;
+
+            text-rendering: optimizeLegibility;
+
+        }
+
+
+        a {
+
+            text-decoration: none;
+
+        }
+
+
+        button,
+        input,
+        select,
+        textarea {
+
+            font-family: inherit;
+
+        }
+
+
+        /* =====================================================
+           APP SHELL
+        ====================================================== */
+
+        .app-shell {
+
+            min-height: 100vh;
+
+            background: #f5f7fb;
+
+        }
+
+
+        /* =====================================================
+           SIDEBAR
+        ====================================================== */
+
+        .sidebar {
+
+            position: fixed;
+
+            top: 0;
+            left: 0;
+            bottom: 0;
+
+            width: 260px;
+
+            z-index: 1045;
+
+            padding: 18px 14px;
+
+            overflow-y: auto;
+
+            background:
+                rgba(255,255,255,.94);
+
+            backdrop-filter:
+                blur(22px);
+
+            -webkit-backdrop-filter:
+                blur(22px);
+
+            border-right:
+                1px solid #e8ebf1;
+
+            transition:
+                transform .25s ease;
+
+        }
+
+
+        /* =====================================================
+           BRAND
+        ====================================================== */
+
+        .brand {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 11px;
+
+            padding:
+                7px 10px 22px;
+
+        }
+
+
+        .brand-logo {
+
+            width: 43px;
+            height: 43px;
+
+            display: grid;
+
+            place-items: center;
+
+            flex: 0 0 auto;
+
+            border-radius: 14px;
+
+            background:
+                linear-gradient(
+                    145deg,
+                    #22c55e,
+                    #0f9f47
+                );
+
+            color: #fff;
+
+            font-size: 21px;
+
+            box-shadow:
+                0 8px 20px
+                rgba(22,163,74,.23);
+
+        }
+
+
+        .brand-title {
+
+            font-size: 15px;
+
+            line-height: 1.15;
+
+            font-weight: 800;
+
+            color: #172033;
+
+        }
+
+
+        .brand-sub {
+
+            margin-top: 3px;
+
+            color: #8b94a4;
+
+            font-size: 10px;
+
+            font-weight: 500;
+
+        }
+
+
+        /* =====================================================
+           USER PANEL
+        ====================================================== */
+
+        .sidebar-user {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 10px;
+
+            padding: 12px;
+
+            margin-bottom: 9px;
+
+            background: #fafbfc;
+
+            border:
+                1px solid #e8ebf1;
+
+            border-radius: 16px;
+
+        }
+
+
+        .avatar {
+
+            width: 39px;
+            height: 39px;
+
+            display: grid;
+
+            place-items: center;
+
+            flex: 0 0 auto;
+
+            border-radius: 13px;
+
+            background: #e8f7ed;
+
+            color: #13833c;
+
+            font-size: 14px;
+
+            font-weight: 800;
+
+        }
+
+
+        .user-name {
+
+            overflow: hidden;
+
+            color: #30394a;
+
+            font-size: 12px;
+
+            font-weight: 750;
+
+            text-overflow: ellipsis;
+
+            white-space: nowrap;
+
+        }
+
+
+        .user-role {
+
+            margin-top: 2px;
+
+            color: #8b94a4;
+
+            font-size: 10px;
+
+            text-transform: capitalize;
+
+        }
+
+
+        /* =====================================================
+           SIDEBAR SECTION
+        ====================================================== */
+
+        .nav-section {
+
+            padding:
+                14px 11px 7px;
+
+            color: #a0a8b7;
+
+            font-size: 9px;
+
+            font-weight: 800;
+
+            letter-spacing: .09em;
+
+        }
+
+
+        /* =====================================================
+           SIDEBAR LINK
+        ====================================================== */
+
+        .side-link {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 11px;
+
+            margin: 3px 0;
+
+            padding:
+                11px 12px;
+
+            border-radius: 13px;
+
+            color: #596274;
+
+            font-size: 12px;
+
+            font-weight: 650;
+
+            transition:
+                all .18s ease;
+
+        }
+
+
+        .side-link i {
+
+            width: 21px;
+
+            flex: 0 0 21px;
+
+            text-align: center;
+
+            font-size: 16px;
+
+        }
+
+
+        .side-link:hover {
+
+            background: #f0f8f2;
+
+            color: #11853c;
+
+            transform:
+                translateX(1px);
+
+        }
+
+
+        .side-link.active {
+
+            background:
+                #e9f8ee;
+
+            color: #11853c;
+
+            font-weight: 800;
+
+        }
+
+
+        .side-link.active i {
+
+            color: #16a34a;
+
+        }
+
+
+        /* =====================================================
+           SIDEBAR FOOTER
+        ====================================================== */
+
+        .sidebar-footer {
+
+            margin-top: 20px;
+
+            padding:
+                12px;
+
+            border-top:
+                1px solid #eef0f4;
+
+            color: #a0a8b7;
+
+            font-size: 9px;
+
+            text-align: center;
+
+        }
+
+
+        /* =====================================================
+           MAIN
+        ====================================================== */
+
+        .main {
+
+            min-height: 100vh;
+
+            margin-left: 260px;
+
+        }
+
+
+        /* =====================================================
+           TOPBAR
+        ====================================================== */
+
+        .topbar {
+
+            position: sticky;
+
+            top: 0;
+
+            z-index: 1000;
+
+            min-height: 72px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 15px;
+
+            padding:
+                10px 30px;
+
+            background:
+                rgba(245,247,251,.84);
+
+            backdrop-filter:
+                blur(18px);
+
+            -webkit-backdrop-filter:
+                blur(18px);
+
+            border-bottom:
+                1px solid rgba(232,235,241,.85);
+
+        }
+
+
+        .page-title {
+
+            margin: 0;
+
+            color: #172033;
+
+            font-size: 20px;
+
+            font-weight: 800;
+
+            letter-spacing: -.03em;
+
+        }
+
+
+        .page-subtitle {
+
+            margin-top: 3px;
+
+            color: #8b94a4;
+
+            font-size: 11px;
+
+        }
+
+
+        .top-actions {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+        }
+
+
+        .role-pill {
+
+            padding:
+                7px 11px;
+
+            border-radius: 999px;
+
+            background: #e9f8ee;
+
+            border:
+                1px solid #d8efdf;
+
+            color: #16813d;
+
+            font-size: 10px;
+
+            font-weight: 750;
+
+        }
+
+
+        /* =====================================================
+           NOTIFICATION BUTTON
+        ====================================================== */
+
+        .notification-wrapper {
+
+            position: relative;
+
+        }
+
+
+        .notification-button {
+
+            position: relative;
+
+            width: 42px;
+            height: 42px;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 13px;
+
+            border:
+                1px solid #e3e7ed;
+
+            background: #ffffff;
+
+            color: #596274;
+
+            cursor: pointer;
+
+            transition:
+                all .18s ease;
+
+        }
+
+
+        .notification-button:hover {
+
+            background: #f8fafc;
+
+            color: #16a34a;
+
+            border-color: #d7eadc;
+
+        }
+
+
+        .notification-button i {
+
+            font-size: 18px;
+
+        }
+
+
+        .notification-badge {
+
+            position: absolute;
+
+            top: -4px;
+
+            right: -4px;
+
+            min-width: 19px;
+            height: 19px;
+
+            padding:
+                0 5px;
+
+            display: none;
+
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 999px;
+
+            background: #ef4444;
+
+            color: #fff;
+
+            border:
+                2px solid #f5f7fb;
+
+            font-size: 8px;
+
+            font-weight: 800;
+
+            line-height: 1;
+
+        }
+
+
+        .notification-badge.show {
+
+            display: flex;
+
+        }
+
+
+        /* =====================================================
+           NOTIFICATION DROPDOWN
+        ====================================================== */
+
+        .notification-dropdown {
+
+            position: absolute;
+
+            top: 52px;
+
+            right: 0;
+
+            width: 370px;
+
+            max-width:
+                calc(100vw - 25px);
+
+            overflow: hidden;
+
+            background:
+                rgba(255,255,255,.98);
+
+            border:
+                1px solid #e5e9ef;
+
+            border-radius: 20px;
+
+            box-shadow:
+                0 22px 60px
+                rgba(15,23,42,.16);
+
+            display: none;
+
+            z-index: 2000;
+
+        }
+
+
+        .notification-dropdown.show {
+
+            display: block;
+
+            animation:
+                notificationOpen .16s ease;
+
+        }
+
+
+        @keyframes notificationOpen {
+
+            from {
+
+                opacity: 0;
+
+                transform:
+                    translateY(-5px)
+                    scale(.98);
+
+            }
+
+            to {
+
+                opacity: 1;
+
+                transform:
+                    translateY(0)
+                    scale(1);
+
+            }
+
+        }
+
+
+        .notification-header {
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            gap: 10px;
+
+            padding:
+                16px 17px;
+
+            border-bottom:
+                1px solid #edf0f4;
+
+        }
+
+
+        .notification-header-title {
+
+            font-size: 14px;
+
+            font-weight: 800;
+
+            color: #172033;
+
+        }
+
+
+        .notification-header-sub {
+
+            margin-top: 2px;
+
+            color: #9aa2af;
+
+            font-size: 9px;
+
+        }
+
+
+        .notification-read-all {
+
+            border: 0;
+
+            background: transparent;
+
+            color: #16a34a;
+
+            font-size: 10px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+
+            white-space: nowrap;
+
+        }
+
+
+        .notification-read-all:hover {
+
+            text-decoration: underline;
+
+        }
+
+
+        /* =====================================================
+           NOTIFICATION LIST
+        ====================================================== */
+
+        .notification-list {
+
+            max-height: 430px;
+
+            overflow-y: auto;
+
+        }
+
+
+        .notification-item {
+
+            display: flex;
+
+            align-items: flex-start;
+
+            gap: 11px;
+
+            padding:
+                13px 16px;
+
+            border-bottom:
+                1px solid #f0f2f5;
+
+            cursor: pointer;
+
+            transition:
+                background .15s ease;
+
+        }
+
+
+        .notification-item:hover {
+
+            background: #f8fafc;
+
+        }
+
+
+        .notification-item.unread {
+
+            background:
+                #f0fbf3;
+
+        }
+
+
+        .notification-item.unread:hover {
+
+            background:
+                #eaf8ee;
+
+        }
+
+
+        .notification-icon {
+
+            width: 38px;
+            height: 38px;
+
+            min-width: 38px;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 12px;
+
+            background: #e9f8ee;
+
+            color: #16a34a;
+
+            font-size: 15px;
+
+        }
+
+
+        .notification-icon.danger {
+
+            background: #fff0f0;
+
+            color: #dc3545;
+
+        }
+
+
+        .notification-icon.warning {
+
+            background: #fff8e7;
+
+            color: #d99000;
+
+        }
+
+
+        .notification-icon.info {
+
+            background: #eef6ff;
+
+            color: #1976d2;
+
+        }
+
+
+        .notification-body {
+
+            min-width: 0;
+
+            flex: 1;
+
+        }
+
+
+        .notification-title {
+
+            color: #30394a;
+
+            font-size: 11px;
+
+            font-weight: 800;
+
+            line-height: 1.35;
+
+        }
+
+
+        .notification-message {
+
+            margin-top: 3px;
+
+            color: #747e8f;
+
+            font-size: 10px;
+
+            line-height: 1.45;
+
+        }
+
+
+        .notification-time {
+
+            margin-top: 5px;
+
+            color: #a0a8b7;
+
+            font-size: 9px;
+
+        }
+
+
+        .notification-dot {
+
+            width: 7px;
+            height: 7px;
+
+            min-width: 7px;
+
+            margin-top: 5px;
+
+            border-radius: 50%;
+
+            background: #16a34a;
+
+        }
+
+
+        /* =====================================================
+           NOTIFICATION EMPTY
+        ====================================================== */
+
+        .notification-empty {
+
+            padding:
+                45px 20px;
+
+            text-align: center;
+
+            color: #9aa2af;
+
+        }
+
+
+        .notification-empty-icon {
+
+            width: 50px;
+            height: 50px;
+
+            margin:
+                0 auto 10px;
+
+            display: flex;
+
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 16px;
+
+            background: #f3f5f7;
+
+            color: #a6afbc;
+
+            font-size: 22px;
+
+        }
+
+
+        .notification-empty-title {
+
+            color: #596274;
+
+            font-size: 12px;
+
+            font-weight: 750;
+
+        }
+
+
+        .notification-empty-text {
+
+            margin-top: 3px;
+
+            font-size: 9px;
+
+        }
+
+
+        /* =====================================================
+           MOBILE MENU
+        ====================================================== */
+
+        .mobile-menu {
+
+            display: none;
+
+            width: 40px;
+            height: 40px;
+
+            align-items: center;
+
+            justify-content: center;
+
+            border-radius: 13px;
+
+            border:
+                1px solid #e3e7ed;
+
+            background: #fff;
+
+        }
+
+
+        /* =====================================================
+           CONTENT
+        ====================================================== */
+
+        .content {
+
+            width: 100%;
+
+            max-width: 1500px;
+
+            margin: 0 auto;
+
+            padding:
+                26px 30px 90px;
+
+        }
+
+
+        /* =====================================================
+           FLASH
+        ====================================================== */
+
+        .ios-alert {
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 9px;
+
+            padding:
+                13px 15px;
+
+            margin-bottom: 20px;
+
+            border-radius: 14px;
+
+            border: 1px solid transparent;
+
+            font-size: 12px;
+
+        }
+
+
+        .ios-alert-success {
+
+            background: #effaf2;
+
+            border-color: #d8efdf;
+
+            color: #16743a;
+
+        }
+
+
+        .ios-alert-danger {
+
+            background: #fff1f1;
+
+            border-color: #ffd9d9;
+
+            color: #c53636;
+
+        }
+
+
+        /* =====================================================
+           BOTTOM NAV
+        ====================================================== */
+
+        .bottom-nav {
+
+            display: none;
+
+        }
+
+
+        /* =====================================================
+           SIDEBAR OVERLAY
+        ====================================================== */
+
+        .sidebar-overlay {
+
+            display: none;
+
+            position: fixed;
+
+            inset: 0;
+
+            z-index: 1040;
+
+            background:
+                rgba(15,23,42,.28);
+
+            backdrop-filter:
+                blur(2px);
+
+        }
+
+
+        /* =====================================================
+           TABLET
+        ====================================================== */
+
+        /* =====================================================
+           TABLET & MOBILE APP SHELL
+        ====================================================== */
+
+        @media (max-width: 991.98px) {
+
+            /* Over-scroll & Width protection */
+            html,
+            body,
+            .app-shell,
+            .main,
+            .content {
+                max-width: 100vw;
+                overflow-x: hidden;
+            }
+
+            body.sidebar-open {
+                overflow: hidden !important;
+                touch-action: none !important;
+            }
+
+            /* Live Chat Mobile Mode: Lock outer body and hide generic topbar & bottom nav */
+            body.in-active-chat,
+            body.is-chat-typing {
+                overflow: hidden !important;
+                position: fixed !important;
+                width: 100% !important;
+                height: 100% !important;
+                height: 100dvh !important;
+            }
+
+            body.in-active-chat .topbar,
+            body.is-chat-typing .topbar {
+                display: none !important;
+                visibility: hidden !important;
+                height: 0 !important;
+                min-height: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                border: none !important;
+            }
+
+            body.in-active-chat .main,
+            body.is-chat-typing .main,
+            body.in-active-chat .content,
+            body.is-chat-typing .content {
+                padding: 0 !important;
+                margin: 0 !important;
+                width: 100% !important;
+                max-width: 100vw !important;
+                height: 100% !important;
+                height: 100dvh !important;
+                overflow: hidden !important;
+            }
+
+            /* Native Offcanvas Drawer */
+            .sidebar {
+                width: 290px;
+                max-width: 85vw;
+                transform: translateX(-105%);
+                transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+                box-shadow: 15px 0 45px rgba(15, 23, 42, 0.18);
+                border-radius: 0 24px 24px 0;
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay {
+                position: fixed;
+                inset: 0;
+                z-index: 1040;
+                background: rgba(15, 23, 42, 0.45);
+                backdrop-filter: blur(4px);
+                -webkit-backdrop-filter: blur(4px);
+                display: none;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+
+            .sidebar-overlay.show {
+                display: block;
+                opacity: 1;
+            }
+
+            .main {
+                margin-left: 0;
+            }
+
+            /* Sticky Mobile App Bar */
+            .topbar {
+                position: sticky;
+                top: 0;
+                z-index: 1025;
+                min-height: 58px;
+                height: 58px;
+                padding: 0 14px;
+                background: rgba(255, 255, 255, 0.94);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border-bottom: 1px solid #e8ebf1;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .mobile-menu {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                width: 38px;
+                height: 38px;
+                border-radius: 10px;
+                border: 1px solid #e2e8f0;
+                background: #f8fafc;
+                color: #1e293b;
+            }
+
+            .mobile-menu:hover,
+            .mobile-menu:active {
+                background: #e2e8f0;
+            }
+
+            .content {
+                padding: 14px 12px calc(80px + env(safe-area-inset-bottom, 0px)) 12px !important;
+            }
+
+            /* Docked Native Tab Bar */
+            .bottom-nav {
+                position: fixed;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 1035;
+                height: calc(62px + env(safe-area-inset-bottom, 0px));
+                padding: 4px 8px max(6px, env(safe-area-inset-bottom, 0px)) 8px;
+                background: rgba(255, 255, 255, 0.96);
+                backdrop-filter: blur(25px);
+                -webkit-backdrop-filter: blur(25px);
+                border-top: 1px solid rgba(226, 232, 240, 0.9);
+                box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.08);
+                display: flex;
+                align-items: center;
+                justify-content: space-around;
+                border-radius: 0;
+            }
+
+            .bottom-nav .bottom-tab,
+            .bottom-nav a,
+            .bottom-nav button {
+                flex: 1;
+                min-width: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 2px;
+                color: #64748b;
+                font-size: 10px;
+                font-weight: 600;
+                text-decoration: none;
+                background: none;
+                border: none;
+                padding: 6px 2px;
+                border-radius: 12px;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                user-select: none;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            .bottom-nav .bottom-tab i,
+            .bottom-nav a i,
+            .bottom-nav button i {
+                font-size: 20px;
+                margin-bottom: 1px;
+                transition: transform 0.2s ease;
+            }
+
+            .bottom-nav .bottom-tab.active,
+            .bottom-nav a.active {
+                color: #16a34a;
+                font-weight: 700;
+            }
+
+            .bottom-nav .bottom-tab.active i,
+            .bottom-nav a.active i {
+                transform: scale(1.15);
+            }
+
+            .bottom-nav .bottom-tab:active,
+            .bottom-nav a:active,
+            .bottom-nav button:active {
+                transform: scale(0.92);
+            }
+
+            /* Responsive tables */
+            .table-responsive {
+                -webkit-overflow-scrolling: touch;
+                overflow-x: auto !important;
+                border-radius: 14px;
+                margin-bottom: 0.85rem;
+                scrollbar-width: thin;
+            }
+
+            .table-responsive::-webkit-scrollbar {
+                height: 5px;
+            }
+            .table-responsive::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 10px;
+            }
+
+            .table th,
+            .table td {
+                white-space: nowrap;
+            }
+
+            .table td.col-wrap,
+            .table td.text-wrap {
+                white-space: normal !important;
+                min-width: 130px;
+            }
+
+        }
+
+        /* =====================================================
+           SMARTPHONE MOBILE ( < 576px )
+        ====================================================== */
+
+        @media (max-width: 575.98px) {
+
+            /* Kill iOS Safari auto-zoom on input focus */
+            input,
+            select,
+            textarea {
+                font-size: 16px !important;
+            }
+
+            .page-title {
+                font-size: 16px;
+                font-weight: 700;
+            }
+
+            .page-subtitle {
+                display: none;
+            }
+
+            .top-actions .role-pill {
+                display: none;
+            }
+
+            .content {
+                padding: 12px 10px calc(76px + env(safe-area-inset-bottom, 0px)) 10px !important;
+            }
+
+            /* Mobile cards */
+            .card {
+                border-radius: 16px !important;
+                margin-bottom: 0.75rem !important;
+            }
+
+            .card.p-4,
+            .card.p-md-4,
+            .card.p-md-5 {
+                padding: 1rem !important;
+            }
+
+            .table th,
+            .table td {
+                padding: 0.6rem 0.5rem !important;
+                font-size: 0.8rem !important;
+            }
+
+            /* Notification Dropdown Mobile Sheet */
+            .notification-dropdown {
+                position: fixed;
+                top: 60px;
+                left: 10px;
+                right: 10px;
+                width: auto;
+                max-width: none;
+                border-radius: 20px;
+                box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+            }
+
+            .notification-list {
+                max-height: calc(100vh - 160px);
+            }
+
+            /* Native Bottom Sheet for Modals on Mobile */
+            .modal-dialog {
+                margin: 0 !important;
+                position: fixed !important;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                max-width: 100% !important;
+                z-index: 1060;
+            }
+
+            .modal-content {
+                border-radius: 24px 24px 0 0 !important;
+                max-height: 90vh !important;
+                overflow-y: auto !important;
+                border: none !important;
+                box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2) !important;
+                animation: mobileModalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+
+            @keyframes mobileModalSlideUp {
+                from { transform: translateY(100%); }
+                to { transform: translateY(0); }
+            }
+
+            /* Form filter wrapping */
+            .d-flex.flex-wrap.gap-2 > *,
+            .filter-form > * {
+                width: 100%;
+            }
+
+        }
+
+
+        /* =====================================================
+           PRINT
+        ====================================================== */
+
+        @media print {
+
+            .sidebar,
+            .topbar,
+            .bottom-nav,
+            .sidebar-overlay {
+
+                display: none !important;
+
+            }
+
+
+            .main {
+
+                margin-left: 0 !important;
+
+            }
+
+
+            .content {
+
+                padding: 0 !important;
+
+            }
+
+
+            body {
+
+                background: #fff !important;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="app-shell">
+
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+
+    <aside
+        class="sidebar"
+        id="appSidebar"
+    >
+
+        <div class="brand d-flex align-items-center justify-content-between">
+
+            <div class="d-flex align-items-center gap-2">
+                <div class="brand-logo">
+                    <i class="bi bi-recycle"></i>
+                </div>
+
+                <div>
+                    <div class="brand-title">
+                        PilahKita
+                    </div>
+
+                    <div class="brand-sub">
+                        Terintegrasi · AST
+                    </div>
+                </div>
+            </div>
+
+            <button
+                type="button"
+                class="btn btn-sm btn-light rounded-circle d-lg-none"
+                id="sidebarCloseBtn"
+                aria-label="Tutup Menu"
+                style="width:32px; height:32px; display:inline-flex; align-items:center; justify-content:center; border:1px solid #e2e8f0;"
+            >
+                <i class="bi bi-x-lg" style="font-size:12px;"></i>
+            </button>
+
+        </div>
+
+
+        <a href="/profile" class="sidebar-user text-decoration-none" title="Buka Profil Pengguna">
+
+            <div class="avatar">
+                <%= userInitial %>
+            </div>
+
+            <div class="flex-grow-1 min-w-0">
+
+                <div class="user-name">
+                    <%= userName %>
+                </div>
+
+                <div class="user-role">
+                    <%= userRole %>
+                </div>
+
+            </div>
+
+            <i class="bi bi-chevron-right text-muted ms-auto" style="font-size: 11px;"></i>
+
+        </a>
+
+
+        <!-- UTAMA -->
+        <div class="nav-section">UTAMA</div>
+        <% if (hasPermission("dashboard.read")) { %>
+        <a href="/dashboard" class="side-link <%= isActive('/dashboard') ? 'active' : '' %>"><i class="bi bi-grid-1x2-fill"></i><span>Dashboard</span></a>
+        <% } %>
+
+        <!-- OPERASIONAL -->
+        <div class="nav-section">OPERASIONAL</div>
+        <% if (hasPermission("waste.read")) { %><a href="/waste" class="side-link <%= isActive('/waste') ? 'active' : '' %>"><i class="bi bi-recycle"></i><span>Jenis Sampah</span></a><% } %>
+        <a href="/prices" class="side-link <%= isActive('/prices') ? 'active' : '' %>"><i class="bi bi-tags-fill"></i><span>Katalog Harga & Tips</span></a>
+        <% if (hasPermission("collection.read")) { %><a href="/collection" class="side-link <%= isActive('/collection') ? 'active' : '' %>"><i class="bi bi-truck"></i><span>Pengumpulan</span></a><% } %>
+        <% if (hasPermission("drop_points.read") || viewUser?.role === 'superadmin' || viewUser?.role === 'admin_pengelola' || viewUser?.role === 'petugas_pengumpulan' || viewUser?.role === 'nasabah') { %><a href="/drop-points" class="side-link <%= isActive('/drop-points') ? 'active' : '' %>"><i class="bi bi-geo-alt-fill"></i><span>Pos Drop Point</span></a><% } %>
+        <% if (hasPermission("schedules.read") || viewUser?.role === 'superadmin' || viewUser?.role === 'admin_pengelola' || viewUser?.role === 'petugas_pengumpulan' || viewUser?.role === 'nasabah') { %><a href="/schedules" class="side-link <%= isActive('/schedules') ? 'active' : '' %>"><i class="bi bi-calendar2-week"></i><span>Jadwal & Rute</span></a><% } %>
+        <% if (hasPermission("sales.read")) { %><a href="/sales" class="side-link <%= isActive('/sales') ? 'active' : '' %>"><i class="bi bi-cart-check"></i><span>Transaksi Penjualan</span></a><% } %>
+        <% if (hasPermission("processing.read") || viewUser?.role === 'superadmin' || viewUser?.role === 'admin_pengelola' || viewUser?.role === 'petugas_pengumpulan') { %><a href="/processing" class="side-link <%= isActive('/processing') ? 'active' : '' %>"><i class="bi bi-gear-wide-connected"></i><span>Pengolahan Sampah</span></a><% } %>
+        <% if (hasPermission("inventory.read") || viewUser?.role === 'superadmin' || viewUser?.role === 'admin_pengelola' || viewUser?.role === 'petugas_pengumpulan') { %><a href="/inventory" class="side-link <%= isActive('/inventory') ? 'active' : '' %>"><i class="bi bi-boxes"></i><span>Gudang & Stok</span></a><% } %>
+
+        <!-- MASTER DATA -->
+        <div class="nav-section">MASTER DATA</div>
+        <% if (hasPermission("companies.read")) { %><a href="/companies" class="side-link <%= isActive('/companies') ? 'active' : '' %>"><i class="bi bi-building"></i><span>Perusahaan</span></a><% } %>
+        <% if (hasPermission("buyers.read")) { %><a href="/buyers" class="side-link <%= isActive('/buyers') ? 'active' : '' %>"><i class="bi bi-person-badge"></i><span>Pembeli</span></a><% } %>
+
+        <!-- KEUANGAN & REWARD -->
+        <div class="nav-section">KEUANGAN & REWARD</div>
+        <% if (hasPermission("wallet.read")) { %><a href="/wallet" class="side-link <%= isActive('/wallet') ? 'active' : '' %>"><i class="bi bi-wallet2"></i><span>Saldo & Wallet</span></a><% } %>
+        <% if (hasPermission("withdrawal.read")) { %><a href="/withdrawals" class="side-link <%= isActive('/withdrawals') ? 'active' : '' %>"><i class="bi bi-cash-stack"></i><span>Penarikan Saldo</span></a><% } %>
+        <% if (viewUser?.role === 'superadmin' || viewUser?.role === 'admin_pengelola' || viewUser?.role === 'petugas_pengumpulan') { %>
+        <a href="/expenses" class="side-link <%= isActive('/expenses') ? 'active' : '' %>"><i class="bi bi-receipt"></i><span>Biaya & Kas Operasional</span></a>
+        <% } %>
+        <a href="/rewards" class="side-link <%= isActive('/rewards') ? 'active' : '' %>"><i class="bi bi-stars"></i><span>Tukar Poin & Hadiah</span></a>
+        <a href="/members" class="side-link <%= isActive('/members') ? 'active' : '' %>"><i class="bi bi-person-vcard-fill"></i><span>Kartu Anggota Digital</span></a>
+        <a href="/calculator" class="side-link <%= isActive('/calculator') ? 'active' : '' %>"><i class="bi bi-calculator-fill"></i><span>Kalkulator & Dampak</span></a>
+        <a href="/leaderboard" class="side-link <%= isActive('/leaderboard') ? 'active' : '' %>"><i class="bi bi-trophy-fill"></i><span>Peringkat Warga</span></a>
+
+        <!-- KOMUNIKASI & EDUKASI -->
+        <div class="nav-section">KOMUNIKASI & EDUKASI</div>
+        <a href="/complaints" class="side-link <%= isActive('/complaints') ? 'active' : '' %>">
+            <i class="bi bi-megaphone-fill"></i>
+            <span>Lapor Sampah Liar</span>
+        </a>
+        <a href="/chat" class="side-link <%= isActive('/chat') ? 'active' : '' %>">
+            <i class="bi bi-chat-dots-fill"></i>
+            <span>Live Chat</span>
+            <span class="badge bg-danger rounded-pill ms-auto" id="chatNavBadge" style="display:none; font-size:10px;">0</span>
+        </a>
+        <a href="/education" class="side-link <%= isActive('/education') ? 'active' : '' %>"><i class="bi bi-book-half"></i><span>Panduan Edukasi 3R</span></a>
+
+        <!-- LAPORAN -->
+        <% if (hasPermission("reports.read")) { %>
+        <div class="nav-section">LAPORAN & MONITORING</div>
+        <a href="/reports" class="side-link <%= isActive('/reports') ? 'active' : '' %>"><i class="bi bi-bar-chart-line"></i><span>Laporan</span></a>
+        <% } %>
+        <% if (hasPermission("documents.read")) { %><a href="/documents" class="side-link <%= isActive('/documents') ? 'active' : '' %>"><i class="bi bi-file-earmark-text"></i><span>Dokumen & Bukti</span></a><% } %>
+        <% if (hasPermission("activity.read")) { %><a href="/activity" class="side-link <%= isActive('/activity') ? 'active' : '' %>"><i class="bi bi-activity"></i><span>Log Aktivitas</span></a><% } %>
+
+        <!-- ADMINISTRASI -->
+        <% if (hasPermission("users.read") || hasPermission("roles.read") || viewUser?.role === 'superadmin' || viewUser?.role === 'admin_pengelola') { %>
+        <div class="nav-section">ADMINISTRASI</div>
+        <% if (hasPermission("users.read")) { %><a href="/admin/users" class="side-link <%= isActive('/admin/users') ? 'active' : '' %>"><i class="bi bi-people-fill"></i><span>Pengguna</span></a><% } %>
+        <% if (hasPermission("roles.read")) { %><a href="/admin/rbac" class="side-link <%= isActive('/admin/rbac') ? 'active' : '' %>"><i class="bi bi-shield-lock-fill"></i><span>Role & Permission</span></a><% } %>
+        <% if (viewUser?.role === 'superadmin' || viewUser?.role === 'admin_pengelola') { %>
+        <a href="/settings" class="side-link <%= isActive('/settings') ? 'active' : '' %>"><i class="bi bi-gear-wide-connected"></i><span>Pengaturan Profil</span></a>
+        <% } %>
+        <% } %>
+
+        <% if (hasPermission("notifications.read")) { %>
+        <a href="/notifications/page" class="side-link <%= isActive('/notifications') ? 'active' : '' %>"><i class="bi bi-bell-fill"></i><span>Notifikasi</span></a>
+        <% } %>
+
+        <!-- AKUN -->
+
+        <div class="nav-section">
+            AKUN
+        </div>
+
+        <a
+            href="/profile"
+            class="side-link <%= isActive('/profile') ? 'active' : '' %>"
+        >
+            <i class="bi bi-person-circle"></i>
+            <span>
+                Profil Saya
+            </span>
+        </a>
+
+        <a
+            href="/logout"
+            class="side-link"
+        >
+
+            <i class="bi bi-box-arrow-right"></i>
+
+            <span>
+                Keluar
+            </span>
+
+        </a>
+
+
+        <div class="sidebar-footer">
+
+            Aplikasi Sampah Terintegrasi
+
+            <br>
+
+            <span>
+                Sistem Pengelolaan Sampah
+            </span>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         OVERLAY
+    ====================================================== -->
+
+    <div
+        class="sidebar-overlay"
+        id="sidebarOverlay"
+    ></div>
+
+
+    <!-- =====================================================
+         MAIN
+    ====================================================== -->
+
+    <main class="main">
+
+
+        <!-- =================================================
+             TOPBAR
+        ================================================== -->
+
+        <header class="topbar">
+
+
+            <div class="d-flex align-items-center gap-2">
+
+                <button
+                    type="button"
+                    class="btn btn-light mobile-menu"
+                    id="sidebarToggle"
+                    aria-label="Buka menu"
+                >
+                    <i class="bi bi-list fs-5"></i>
+                </button>
+
+                <a href="/dashboard" class="mobile-brand d-inline-flex align-items-center gap-2 text-decoration-none d-lg-none">
+                    <div style="width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg, #16a34a, #15803d); color:#fff; display:grid; place-items:center; font-size:15px; box-shadow:0 2px 6px rgba(22,163,74,0.3);">
+                        <i class="bi bi-recycle"></i>
+                    </div>
+                    <span class="fw-bold fs-6 text-dark" style="letter-spacing:-0.3px;">Pilah<span class="text-success">Kita</span></span>
+                </a>
+
+            </div>
+
+
+            <!-- =================================================
+                 TOP ACTIONS
+            ================================================== -->
+
+            <div class="top-actions">
+
+                <!-- LIVE CHAT BUTTON -->
+                <a href="/chat" class="notification-button text-dark text-decoration-none me-1" title="Live Chat" style="display: inline-flex; align-items: center; justify-content: center; position: relative;">
+                    <i class="bi bi-chat-dots fs-5"></i>
+                    <span class="notification-badge" id="chatTopbarBadge" style="display: none;">0</span>
+                </a>
+
+                <!-- =================================================
+                     NOTIFICATION
+                ================================================== -->
+
+                <div
+                    class="notification-wrapper"
+                    id="notificationWrapper"
+                >
+
+                    <button
+                        type="button"
+                        class="notification-button"
+                        id="notificationButton"
+                        aria-label="Notifikasi"
+                        aria-expanded="false"
+                    >
+
+                        <i class="bi bi-bell"></i>
+
+                        <span
+                            class="notification-badge"
+                            id="notificationBadge"
+                        >
+                            0
+                        </span>
+
+                    </button>
+
+
+                    <!-- =================================================
+                         NOTIFICATION DROPDOWN
+                    ================================================== -->
+
+                    <div
+                        class="notification-dropdown"
+                        id="notificationDropdown"
+                    >
+
+                        <div class="notification-header">
+
+                            <div>
+
+                                <div class="notification-header-title">
+                                    Notifikasi
+                                </div>
+
+                                <div
+                                    class="notification-header-sub"
+                                    id="notificationHeaderSub"
+                                >
+                                    Memuat notifikasi...
+                                </div>
+
+                            </div>
+
+
+                            <button
+                                type="button"
+                                class="notification-read-all"
+                                id="notificationReadAll"
+                            >
+
+                                Tandai semua dibaca
+
+                            </button>
+
+                        </div>
+
+
+                        <div
+                            class="notification-list"
+                            id="notificationList"
+                        >
+
+                            <div class="notification-empty">
+
+                                <div class="notification-empty-icon">
+
+                                    <i class="bi bi-bell"></i>
+
+                                </div>
+
+                                <div class="notification-empty-title">
+
+                                    Memuat notifikasi
+
+                                </div>
+
+                                <div class="notification-empty-text">
+
+                                    Mohon tunggu...
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ROLE (DESKTOP) -->
+                <a href="/profile" class="role-pill d-none d-md-inline-flex text-decoration-none" title="Lihat Profil Saya">
+                    <i class="bi bi-person-check me-1"></i>
+                    <%= userRole %>
+                </a>
+
+                <!-- USER AVATAR CHIP (MOBILE) -->
+                <div class="d-inline-flex align-items-center justify-content-center d-md-none" style="width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, #16a34a, #15803d); color:#fff; font-weight:700; font-size:12px; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.12);" onclick="document.getElementById('sidebarToggle').click()" title="<%= userName %> (<%= userRole %>)">
+                    <%= userInitial %>
+                </div>
+
+                <!-- LOGOUT (DESKTOP) -->
+                <a
+                    href="/logout"
+                    class="btn btn-light btn-sm d-none d-md-inline-flex align-items-center"
+                    style="
+                        border-radius:12px;
+                        border:1px solid #e3e7ed;
+                        font-size:11px;
+                        font-weight:700;
+                    "
+                >
+                    <i class="bi bi-box-arrow-right me-1"></i>
+                    Keluar
+                </a>
+
+            </div>
+
+        </header>
+
+
+        <!-- =================================================
+             CONTENT
+        ================================================== -->
+
+        <section class="content <%= isActive('/chat') ? 'content-chat-flush' : '' %>">
+
+
+            <% if (successMessage) { %>
+
+                <div
+                    class="ios-alert ios-alert-success auto-dismiss"
+                >
+
+                    <i class="bi bi-check-circle-fill"></i>
+
+                    <span>
+                        <%= successMessage %>
+                    </span>
+
+                </div>
+
+            <% } %>
+
+
+            <% if (errorMessage) { %>
+
+                <div
+                    class="ios-alert ios-alert-danger auto-dismiss"
+                >
+
+                    <i class="bi bi-exclamation-circle-fill"></i>
+
+                    <span>
+                        <%= errorMessage %>
+                    </span>
+
+                </div>
+
+            <% } %>
+
+
+            <%- body %>
+
+
+        </section>
+
+
+        <!-- FOOTER -->
+
+        <% if (!isActive('/chat')) { %>
+        <footer
+            class="text-center pb-4 px-3"
+            style="
+                color:#9aa2af;
+                font-size:10px;
+            "
+        >
+
+            Aplikasi Sampah Terintegrasi
+
+            <span class="mx-1">·</span>
+
+            Pengelolaan
+
+            <span class="mx-1">·</span>
+
+            Pemilahan
+
+            <span class="mx-1">·</span>
+
+            Pengumpulan
+
+            <span class="mx-1">·</span>
+
+            Daur Ulang
+
+        </footer>
+        <% } %>
+
+
+    </main>
+
+
+    <!-- =====================================================
+         MOBILE BOTTOM NAV
+    ====================================================== -->
+
+    <nav class="bottom-nav" id="appBottomNav">
+
+        <a
+            href="/dashboard"
+            class="bottom-tab <%= isActive('/dashboard') ? 'active' : '' %>"
+        >
+            <i class="bi bi-grid-1x2-fill"></i>
+            <span>Home</span>
+        </a>
+
+        <% if (hasPermission("collection.read")) { %>
+        <a href="/collection" class="bottom-tab <%= isActive('/collection') ? 'active' : '' %>">
+            <i class="bi bi-truck"></i>
+            <span>Pickup</span>
+        </a>
+        <% } %>
+
+        <a href="/chat" class="bottom-tab <%= isActive('/chat') ? 'active' : '' %> position-relative">
+            <i class="bi bi-chat-dots-fill"></i>
+            <span>Chat</span>
+            <span class="badge bg-danger rounded-pill position-absolute" id="chatBottomBadge" style="display:none; top:3px; right:12px; font-size:9px; padding:2px 5px;">0</span>
+        </a>
+
+        <% if (hasPermission("wallet.read")) { %>
+        <a href="/wallet" class="bottom-tab <%= isActive('/wallet') ? 'active' : '' %>">
+            <i class="bi bi-wallet2"></i>
+            <span>Dompet</span>
+        </a>
+        <% } else if (hasPermission("sales.read")) { %>
+        <a href="/sales" class="bottom-tab <%= isActive('/sales') ? 'active' : '' %>">
+            <i class="bi bi-cart-check"></i>
+            <span>Kasir</span>
+        </a>
+        <% } else if (hasPermission("waste.read")) { %>
+        <a href="/waste" class="bottom-tab <%= isActive('/waste') ? 'active' : '' %>">
+            <i class="bi bi-recycle"></i>
+            <span>Sampah</span>
+        </a>
+        <% } %>
+
+        <button type="button" class="bottom-tab border-0 bg-transparent" id="bottomNavMenuBtn" aria-label="Buka Semua Menu">
+            <i class="bi bi-grid-fill"></i>
+            <span>Menu</span>
+        </button>
+
+    </nav>
+
+</div>
+
+
+<!-- =========================================================
+     BOOTSTRAP JS
+========================================================== -->
+
+<script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+></script>
+
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+
+        /* =====================================================
+           SIDEBAR
+        ====================================================== */
+
+        const sidebar =
+            document.getElementById("appSidebar");
+
+        const sidebarToggle =
+            document.getElementById("sidebarToggle");
+
+        const sidebarOverlay =
+            document.getElementById("sidebarOverlay");
+
+
+        function openSidebar() {
+
+            if (!sidebar) {
+                return;
+            }
+
+            sidebar.classList.add("show");
+
+            if (sidebarOverlay) {
+                sidebarOverlay.classList.add("show");
+            }
+
+            document.body.classList.add("sidebar-open");
+
+        }
+
+
+        function closeSidebar() {
+
+            if (!sidebar) {
+                return;
+            }
+
+            sidebar.classList.remove("show");
+
+            if (sidebarOverlay) {
+                sidebarOverlay.classList.remove("show");
+            }
+
+            document.body.classList.remove("sidebar-open");
+
+        }
+
+
+        if (sidebarToggle) {
+
+            sidebarToggle.addEventListener(
+                "click",
+                function () {
+
+                    if (
+                        sidebar &&
+                        sidebar.classList.contains("show")
+                    ) {
+
+                        closeSidebar();
+
+                    } else {
+
+                        openSidebar();
+
+                    }
+
+                }
+            );
+
+        }
+
+        const sidebarCloseBtn = document.getElementById("sidebarCloseBtn");
+        if (sidebarCloseBtn) {
+            sidebarCloseBtn.addEventListener("click", closeSidebar);
+        }
+
+        const bottomNavMenuBtn = document.getElementById("bottomNavMenuBtn");
+        if (bottomNavMenuBtn) {
+            bottomNavMenuBtn.addEventListener("click", function(e) {
+                e.preventDefault();
+                if (sidebar && sidebar.classList.contains("show")) {
+                    closeSidebar();
+                } else {
+                    openSidebar();
+                }
+            });
+        }
+
+
+        if (sidebarOverlay) {
+
+            sidebarOverlay.addEventListener(
+                "click",
+                closeSidebar
+            );
+
+        }
+
+
+        document
+            .querySelectorAll(".sidebar .side-link")
+            .forEach(function (link) {
+
+                link.addEventListener(
+                    "click",
+                    function () {
+
+                        if (
+                            window.innerWidth <= 991
+                        ) {
+
+                            closeSidebar();
+
+                        }
+
+                    }
+                );
+
+            });
+
+
+        document.addEventListener(
+            "keydown",
+            function (event) {
+
+                if (event.key === "Escape") {
+
+                    closeSidebar();
+
+                }
+
+            }
+        );
+
+
+        /* =====================================================
+           NOTIFICATION CHIME SOUND (WEB AUDIO API)
+        ====================================================== */
+
+        function playChimeSound() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+                if (ctx.state === "suspended") {
+                    ctx.resume();
+                }
+
+                // Chime melodis dual-tone "C-E-G-C (centringgg!)"
+                const notes = [
+                    { freq: 523.25, time: 0.00, dur: 0.35, gain: 0.18 }, // C5
+                    { freq: 659.25, time: 0.08, dur: 0.40, gain: 0.22 }, // E5
+                    { freq: 783.99, time: 0.16, dur: 0.45, gain: 0.25 }, // G5
+                    { freq: 1046.50, time: 0.24, dur: 0.65, gain: 0.30 }  // C6 (tinggg)
+                ];
+
+                const now = ctx.currentTime;
+                notes.forEach(n => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+
+                    osc.type = "sine";
+                    osc.frequency.setValueAtTime(n.freq, now + n.time);
+
+                    gain.gain.setValueAtTime(0, now + n.time);
+                    gain.gain.linearRampToValueAtTime(n.gain, now + n.time + 0.02);
+                    gain.gain.exponentialRampToValueAtTime(0.0001, now + n.time + n.dur);
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+
+                    osc.start(now + n.time);
+                    osc.stop(now + n.time + n.dur);
+                });
+            } catch (e) {
+                console.log("AudioContext chime disabled or blocked by browser policy:", e);
+            }
+        }
+        window.playChimeSound = playChimeSound;
+
+        /* =====================================================
+           FLASH AUTO DISMISS & CHIME
+        ====================================================== */
+
+        const flashAlerts = document.querySelectorAll(".auto-dismiss");
+        if (flashAlerts.length > 0) {
+            // Bunyikan chime centring saat flash pesan tampil
+            setTimeout(playChimeSound, 150);
+        }
+
+        flashAlerts.forEach(function (element) {
+            setTimeout(
+                function () {
+                    element.style.transition = "opacity .3s ease";
+                    element.style.opacity = "0";
+                    setTimeout(
+                        function () {
+                            element.remove();
+                        },
+                        300
+                    );
+                },
+                4500
+            );
+        });
+
+
+        /* =====================================================
+           NOTIFICATION
+        ====================================================== */
+
+        const notificationButton =
+            document.getElementById(
+                "notificationButton"
+            );
+
+        const notificationDropdown =
+            document.getElementById(
+                "notificationDropdown"
+            );
+
+        const notificationWrapper =
+            document.getElementById(
+                "notificationWrapper"
+            );
+
+        const notificationBadge =
+            document.getElementById(
+                "notificationBadge"
+            );
+
+        const notificationList =
+            document.getElementById(
+                "notificationList"
+            );
+
+        const notificationHeaderSub =
+            document.getElementById(
+                "notificationHeaderSub"
+            );
+
+        const notificationReadAll =
+            document.getElementById(
+                "notificationReadAll"
+            );
+
+
+        let notificationData = [];
+
+
+        /* =====================================================
+           FORMAT WAKTU
+        ====================================================== */
+
+        function formatNotificationTime(dateValue) {
+
+            if (!dateValue) {
+                return "";
+            }
+
+            const date =
+                new Date(
+                    String(dateValue).replace(" ", "T")
+                );
+
+            if (Number.isNaN(date.getTime())) {
+                return "";
+            }
+
+            const now =
+                new Date();
+
+            const diff =
+                Math.floor(
+                    (now.getTime() - date.getTime())
+                    / 1000
+                );
+
+
+            if (diff < 60) {
+                return "Baru saja";
+            }
+
+
+            if (diff < 3600) {
+
+                return (
+                    Math.floor(diff / 60) +
+                    " menit lalu"
+                );
+
+            }
+
+
+            if (diff < 86400) {
+
+                return (
+                    Math.floor(diff / 3600) +
+                    " jam lalu"
+                );
+
+            }
+
+
+            if (diff < 604800) {
+
+                return (
+                    Math.floor(diff / 86400) +
+                    " hari lalu"
+                );
+
+            }
+
+
+            return date.toLocaleDateString(
+                "id-ID",
+                {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric"
+                }
+            );
+
+        }
+
+
+        /* =====================================================
+           ICON NOTIFICATION
+        ====================================================== */
+
+        function getNotificationIcon(item) {
+
+            if (item.icon) {
+                return item.icon;
+            }
+
+
+            const type =
+                String(item.type || "info")
+                    .toLowerCase();
+
+
+            if (
+                type.includes("success") ||
+                type.includes("collection") ||
+                type.includes("waste")
+            ) {
+
+                return "bi bi-recycle";
+
+            }
+
+
+            if (
+                type.includes("danger") ||
+                type.includes("error")
+            ) {
+
+                return "bi bi-exclamation-triangle-fill";
+
+            }
+
+
+            if (
+                type.includes("warning")
+            ) {
+
+                return "bi bi-exclamation-circle-fill";
+
+            }
+
+
+            if (
+                type.includes("sales") ||
+                type.includes("sale") ||
+                type.includes("wallet")
+            ) {
+
+                return "bi bi-wallet2";
+
+            }
+
+
+            return "bi bi-bell-fill";
+
+        }
+
+
+        /* =====================================================
+           ICON CLASS
+        ====================================================== */
+
+        function getIconClass(type) {
+
+            const value =
+                String(type || "info")
+                    .toLowerCase();
+
+
+            if (
+                value.includes("danger") ||
+                value.includes("error")
+            ) {
+
+                return "danger";
+
+            }
+
+
+            if (
+                value.includes("warning")
+            ) {
+
+                return "warning";
+
+            }
+
+
+            if (
+                value.includes("info")
+            ) {
+
+                return "info";
+
+            }
+
+
+            return "";
+
+        }
+
+
+        /* =====================================================
+           ESCAPE HTML
+        ====================================================== */
+
+        function escapeHtml(value) {
+
+            return String(value ?? "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+
+        }
+
+
+        /* =====================================================
+           RENDER NOTIFICATIONS
+        ====================================================== */
+
+        function renderNotifications() {
+
+            if (!notificationList) {
+                return;
+            }
+
+
+            if (!Array.isArray(notificationData)) {
+
+                notificationData = [];
+
+            }
+
+
+            const unreadCount =
+                notificationData.filter(
+                    item =>
+                        Number(item.is_read) === 0
+                ).length;
+
+
+            updateBadge(unreadCount);
+
+
+            if (notificationHeaderSub) {
+
+                notificationHeaderSub.textContent =
+                    unreadCount > 0
+                        ? `${unreadCount} notifikasi belum dibaca`
+                        : "Semua notifikasi sudah dibaca";
+
+            }
+
+
+            if (!notificationData.length) {
+
+                notificationList.innerHTML = `
+
+                    <div class="notification-empty">
+
+                        <div class="notification-empty-icon">
+
+                            <i class="bi bi-bell-slash"></i>
+
+                        </div>
+
+                        <div class="notification-empty-title">
+
+                            Belum ada notifikasi
+
+                        </div>
+
+                        <div class="notification-empty-text">
+
+                            Notifikasi aktivitas akan muncul di sini.
+
+                        </div>
+
+                    </div>
+
+                `;
+
+                return;
+
+            }
+
+
+            notificationList.innerHTML =
+                notificationData
+                    .map(function (item) {
+
+                        const isUnread =
+                            Number(item.is_read) === 0;
+
+
+                        const icon =
+                            getNotificationIcon(item);
+
+
+                        const iconClass =
+                            getIconClass(item.type);
+
+
+                        const title =
+                            escapeHtml(
+                                item.title ||
+                                "Notifikasi"
+                            );
+
+
+                        const message =
+                            escapeHtml(
+                                item.message ||
+                                ""
+                            );
+
+
+                        const time =
+                            formatNotificationTime(
+                                item.created_at
+                            );
+
+
+                        return `
+
+                            <div
+                                class="notification-item ${isUnread ? "unread" : ""}"
+                                data-notification-id="${Number(item.id)}"
+                            >
+
+                                <div class="notification-icon ${iconClass}">
+
+                                    <i class="${escapeHtml(icon)}"></i>
+
+                                </div>
+
+
+                                <div class="notification-body">
+
+                                    <div class="notification-title">
+
+                                        ${title}
+
+                                    </div>
+
+
+                                    <div class="notification-message">
+
+                                        ${message}
+
+                                    </div>
+
+
+                                    <div class="notification-time">
+
+                                        <i class="bi bi-clock me-1"></i>
+
+                                        ${escapeHtml(time)}
+
+                                    </div>
+
+                                </div>
+
+
+                                ${
+                                    isUnread
+                                        ? `<div class="notification-dot"></div>`
+                                        : ""
+                                }
+
+                            </div>
+
+                        `;
+
+                    })
+                    .join("");
+
+        }
+
+
+        /* =====================================================
+           BADGE
+        ====================================================== */
+
+        function updateBadge(count) {
+
+            if (!notificationBadge) {
+                return;
+            }
+
+
+            const total =
+                Number(count || 0);
+
+
+            if (total <= 0) {
+
+                notificationBadge.classList.remove(
+                    "show"
+                );
+
+                notificationBadge.textContent =
+                    "0";
+
+                return;
+
+            }
+
+
+            notificationBadge.classList.add(
+                "show"
+            );
+
+
+            notificationBadge.textContent =
+                total > 99
+                    ? "99+"
+                    : String(total);
+
+        }
+
+
+        /* =====================================================
+           LOAD NOTIFICATIONS
+        ====================================================== */
+
+        async function loadNotifications() {
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/notifications",
+                        {
+                            method: "GET",
+                            headers: {
+                                "Accept":
+                                    "application/json"
+                            },
+                            cache: "no-store"
+                        }
+                    );
+
+
+                if (!response.ok) {
+
+                    return;
+
+                }
+
+
+                const result =
+                    await response.json();
+
+
+                if (
+                    !result ||
+                    result.success !== true
+                ) {
+
+                    return;
+
+                }
+
+
+                const previousUnread = notificationData.filter(i => Number(i.is_read) === 0).length;
+                const newUnread = Array.isArray(result.notifications) 
+                    ? result.notifications.filter(i => Number(i.is_read) === 0).length 
+                    : 0;
+
+                if (notificationData.length > 0 && newUnread > previousUnread) {
+                    playChimeSound();
+                }
+
+                notificationData =
+                    Array.isArray(
+                        result.notifications
+                    )
+                        ? result.notifications
+                        : [];
+
+
+                renderNotifications();
+
+            } catch (error) {
+
+                console.error(
+                    "Gagal memuat notifikasi:",
+                    error
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           MARK ONE READ
+        ====================================================== */
+
+        async function markNotificationRead(id) {
+
+            if (!id) {
+                return;
+            }
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        `/notifications/${id}/read`,
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            }
+                        }
+                    );
+
+
+                if (!response.ok) {
+                    return;
+                }
+
+
+                const item =
+                    notificationData.find(
+                        notification =>
+                            Number(notification.id) ===
+                            Number(id)
+                    );
+
+
+                if (item) {
+
+                    item.is_read = 1;
+
+                }
+
+
+                renderNotifications();
+
+            } catch (error) {
+
+                console.error(
+                    "Gagal membaca notifikasi:",
+                    error
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           MARK ALL READ
+        ====================================================== */
+
+        async function markAllNotificationsRead() {
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/notifications/read-all",
+                        {
+                            method: "POST",
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            }
+                        }
+                    );
+
+
+                if (!response.ok) {
+                    return;
+                }
+
+
+                notificationData.forEach(
+                    function (item) {
+
+                        item.is_read = 1;
+
+                    }
+                );
+
+
+                renderNotifications();
+
+            } catch (error) {
+
+                console.error(
+                    "Gagal menandai semua notifikasi:",
+                    error
+                );
+
+            }
+
+        }
+
+
+        /* =====================================================
+           CLICK NOTIFICATION
+        ====================================================== */
+
+        if (notificationList) {
+
+            notificationList.addEventListener(
+                "click",
+                async function (event) {
+
+                    const item =
+                        event.target.closest(
+                            ".notification-item"
+                        );
+
+
+                    if (!item) {
+                        return;
+                    }
+
+                    if (item.classList.contains("unread")) {
+                        playChimeSound();
+                    }
+
+                    const id =
+                        Number(
+                            item.dataset.notificationId
+                        );
+
+
+                    await markNotificationRead(id);
+
+                }
+            );
+
+        }
+
+
+        /* =====================================================
+           OPEN / CLOSE DROPDOWN
+        ====================================================== */
+
+        if (notificationButton) {
+
+            notificationButton.addEventListener(
+                "click",
+                async function (event) {
+
+                    event.stopPropagation();
+
+
+                    const isOpen =
+                        notificationDropdown &&
+                        notificationDropdown.classList.contains(
+                            "show"
+                        );
+
+
+                    if (notificationDropdown) {
+
+                        notificationDropdown.classList.toggle(
+                            "show"
+                        );
+
+                    }
+
+
+                    notificationButton.setAttribute(
+                        "aria-expanded",
+                        isOpen ? "false" : "true"
+                    );
+
+
+                    if (!isOpen) {
+
+                        await loadNotifications();
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        document.addEventListener(
+            "click",
+            function (event) {
+
+                if (
+                    notificationWrapper &&
+                    !notificationWrapper.contains(
+                        event.target
+                    )
+                ) {
+
+                    if (notificationDropdown) {
+
+                        notificationDropdown.classList.remove(
+                            "show"
+                        );
+
+                    }
+
+
+                    if (notificationButton) {
+
+                        notificationButton.setAttribute(
+                            "aria-expanded",
+                            "false"
+                        );
+
+                    }
+
+                }
+
+            }
+        );
+
+
+        /* =====================================================
+           READ ALL BUTTON
+        ====================================================== */
+
+        if (notificationReadAll) {
+
+            notificationReadAll.addEventListener(
+                "click",
+                function (event) {
+
+                    event.preventDefault();
+
+                    event.stopPropagation();
+
+                    markAllNotificationsRead();
+
+                }
+            );
+
+        }
+
+
+        /* =====================================================
+           LIVE CHAT UNREAD BADGE SINKRONISASI
+        ====================================================== */
+        async function loadChatUnreadCount() {
+            try {
+                const response = await fetch('/chat/api/unread-count');
+                const data = await response.json();
+                if (data && data.success) {
+                    const total = Number(data.total_unread || 0);
+                    const navBadge = document.getElementById('chatNavBadge');
+                    const topbarBadge = document.getElementById('chatTopbarBadge');
+                    const bottomBadge = document.getElementById('chatBottomBadge');
+
+                    if (navBadge) {
+                        navBadge.innerText = total > 99 ? '99+' : total;
+                        navBadge.style.display = total > 0 ? 'inline-block' : 'none';
+                    }
+                    if (topbarBadge) {
+                        topbarBadge.innerText = total > 99 ? '99+' : total;
+                        topbarBadge.style.display = total > 0 ? 'inline-block' : 'none';
+                    }
+                    if (bottomBadge) {
+                        bottomBadge.innerText = total > 99 ? '99+' : total;
+                        bottomBadge.style.display = total > 0 ? 'inline-block' : 'none';
+                    }
+                }
+            } catch (err) {
+                // Silently ignore
+            }
+        }
+
+        /* =====================================================
+           INITIAL LOAD & REALTIME SSE AUTO-SYNC
+        ====================================================== */
+
+        loadNotifications();
+        loadChatUnreadCount();
+
+        /* =====================================================
+           PILAHKITA UNIFIED REALTIME SSE CLIENT (AUTO-SYNC)
+        ====================================================== */
+        function initGlobalRealtime() {
+            if (typeof EventSource === "undefined") return;
+
+            let evtSource = null;
+            try {
+                evtSource = new EventSource("/api/realtime/stream");
+            } catch (e) {
+                return;
+            }
+
+            evtSource.addEventListener("connected", function () {
+                // Connection established
+            });
+
+            evtSource.addEventListener("chat_message", function (e) {
+                try {
+                    const msg = JSON.parse(e.data);
+                    window.dispatchEvent(new CustomEvent("pilahkita:chat", { detail: msg }));
+                    loadChatUnreadCount();
+
+                    // Jika tidak sedang di halaman /chat dan bukan pesan sendiri, tampilkan toast
+                    const myUserId = <%= (typeof viewUser !== "undefined" && viewUser) ? viewUser.id : 0 %>;
+                    if (!window.location.pathname.startsWith("/chat") && msg.sender_id !== myUserId) {
+                        const isPublic = (!msg.receiver_id || msg.receiver_id === 0);
+                        const title = isPublic ? `💬 Diskusi Umum: ${msg.sender_name || 'Pengguna'}` : `💬 Pesan Baru: ${msg.sender_name || 'Pengguna'}`;
+                        showRealtimeToast({
+                            icon: "bi-chat-dots-fill",
+                            iconBg: "#e0f2fe",
+                            iconColor: "#0284c7",
+                            title: title,
+                            message: msg.message || "Mengirim lampiran file",
+                            actionUrl: "/chat"
+                        });
+                    }
+                } catch (_) {}
+            });
+
+            evtSource.addEventListener("chat_clear", function (e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    window.dispatchEvent(new CustomEvent("pilahkita:chat_clear", { detail: data }));
+                    loadChatUnreadCount();
+                } catch (_) {}
+            });
+
+            evtSource.addEventListener("chat_delete", function (e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    window.dispatchEvent(new CustomEvent("pilahkita:chat_delete", { detail: data }));
+                } catch (_) {}
+            });
+
+            evtSource.addEventListener("data_change", function (e) {
+                try {
+                    const data = JSON.parse(e.data);
+                    window.dispatchEvent(new CustomEvent("pilahkita:datachanged", { detail: data }));
+
+                    // Segarkan notifikasi & badge unread chat seketika
+                    loadNotifications();
+                    loadChatUnreadCount();
+
+                    // Pemetaan ikon & rute entitas data
+                    let icon = "bi-arrow-repeat";
+                    let iconBg = "#ecfdf5";
+                    let iconColor = "#16a34a";
+                    let targetUrl = "";
+
+                    if (data.entity === "collection") {
+                        icon = "bi-truck";
+                        iconBg = "#f0fdf4";
+                        iconColor = "#15803d";
+                        targetUrl = "/collection";
+                    } else if (data.entity === "wallet") {
+                        icon = "bi-wallet2";
+                        iconBg = "#ecfdf5";
+                        iconColor = "#059669";
+                        targetUrl = "/wallet";
+                    } else if (data.entity === "sales") {
+                        icon = "bi-bag-check-fill";
+                        iconBg = "#fef3c7";
+                        iconColor = "#d97706";
+                        targetUrl = "/sales";
+                    } else if (data.entity === "prices") {
+                        icon = "bi-tags-fill";
+                        iconBg = "#eff6ff";
+                        iconColor = "#2563eb";
+                        targetUrl = "/prices";
+                    } else if (data.entity === "complaints") {
+                        icon = "bi-exclamation-octagon-fill";
+                        iconBg = "#fee2e2";
+                        iconColor = "#dc2626";
+                        targetUrl = "/complaints";
+                    } else if (data.entity === "documents") {
+                        icon = "bi-file-earmark-text-fill";
+                        iconBg = "#f5f3ff";
+                        iconColor = "#7c3aed";
+                        targetUrl = "/documents";
+                    } else if (data.entity === "drop_points") {
+                        icon = "bi-geo-alt-fill";
+                        iconBg = "#f0fdf4";
+                        iconColor = "#16a34a";
+                        targetUrl = "/drop-points";
+                    }
+
+                    // Tampilkan floating toast modern
+                    showRealtimeToast({
+                        icon: icon,
+                        iconBg: iconBg,
+                        iconColor: iconColor,
+                        title: data.title || "Pembaruan Realtime",
+                        message: data.message || "Data baru saja diperbarui oleh sistem.",
+                        actionUrl: targetUrl
+                    });
+
+                    // AUTO-SYNC: Jika pengguna sedang aktif di halaman entitas tersebut
+                    // sinkronkan data otomatis tanpa harus menekan refresh browser manual
+                    if (targetUrl && window.location.pathname.startsWith(targetUrl)) {
+                        clearTimeout(window._pilahkitaAutoReloadTimer);
+                        window._pilahkitaAutoReloadTimer = setTimeout(() => {
+                            const activeModal = document.querySelector(".modal.show");
+                            const isTyping = document.activeElement && (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA");
+                            if (!activeModal && !isTyping) {
+                                window.location.reload();
+                            }
+                        }, 1200);
+                    }
+                } catch (_) {}
+            });
+        }
+
+        // Floating Toast Renderer
+        function showRealtimeToast(options) {
+            const container = document.getElementById("realtimeToastContainer");
+            if (!container) return;
+
+            const toastEl = document.createElement("div");
+            toastEl.className = "toast align-items-center shadow-lg border-0 mb-2";
+            toastEl.setAttribute("role", "alert");
+            toastEl.setAttribute("aria-live", "assertive");
+            toastEl.setAttribute("aria-atomic", "true");
+            toastEl.style.borderRadius = "16px";
+            toastEl.style.background = "rgba(255, 255, 255, 0.98)";
+            toastEl.style.backdropFilter = "blur(12px)";
+            toastEl.style.border = "1px solid rgba(187, 247, 208, 0.8)";
+            toastEl.style.pointerEvents = "auto";
+            toastEl.style.boxShadow = "0 14px 35px -8px rgba(0, 0, 0, 0.15)";
+
+            toastEl.innerHTML = `
+                <div class="d-flex p-3 align-items-start gap-3">
+                    <div style="width: 40px; height: 40px; border-radius: 12px; background: ${options.iconBg || '#ecfdf5'}; color: ${options.iconColor || '#16a34a'}; display: grid; place-items: center; font-size: 18px; flex-shrink: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                        <i class="bi ${options.icon || 'bi-bell-fill'}"></i>
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="d-flex align-items-center justify-content-between mb-0.5">
+                            <span class="fw-bold text-dark text-truncate" style="font-size: 13.5px;">${options.title}</span>
+                            <span class="badge rounded-pill bg-success-subtle text-success px-2 py-0.5 ms-1" style="font-size: 10px; font-weight: 600;">Realtime</span>
+                        </div>
+                        <div class="text-secondary small text-truncate" style="font-size: 12px; max-width: 250px; line-height: 1.35;">
+                            ${options.message}
+                        </div>
+                        ${options.actionUrl ? `
+                            <a href="${options.actionUrl}" class="btn btn-sm btn-link text-success p-0 fw-semibold mt-1 d-inline-flex align-items-center gap-1" style="font-size: 11.5px; text-decoration: none;">
+                                <span>Lihat Data</span> <i class="bi bi-arrow-right"></i>
+                            </a>
+                        ` : ''}
+                    </div>
+                    <button type="button" class="btn-close ms-auto p-1" data-bs-dismiss="toast" aria-label="Tutup" style="font-size: 10px;"></button>
+                </div>
+            `;
+
+            container.appendChild(toastEl);
+            const bsToast = new bootstrap.Toast(toastEl, { delay: 6000 });
+            bsToast.show();
+
+            toastEl.addEventListener("hidden.bs.toast", () => {
+                toastEl.remove();
+            });
+        }
+
+        initGlobalRealtime();
+
+
+        /* =====================================================
+           AUTO REFRESH
+           
+           Setiap 15 detik
+        ====================================================== */
+
+        setInterval(
+            function () {
+
+                loadNotifications();
+                loadChatUnreadCount();
+
+            },
+            15000
+        );
+
+
+
+        /* =====================================================
+           RESET BODY DESKTOP
+        ====================================================== */
+
+        window.addEventListener(
+            "resize",
+            function () {
+
+                if (
+                    window.innerWidth > 991
+                ) {
+
+                    closeSidebar();
+
+                }
+
+            }
+        );
+
+    }
+
+);
+
+/* =========================================================
+   INACTIVITY AUTO-LOGOUT & SESSION TIMEOUT ENGINE
+========================================================= */
+(function initInactivityHandler() {
+    // 15 menit total idle, tampilkan warning 60 detik sebelum logout
+    const TOTAL_IDLE_MS = 15 * 60 * 1000;
+    const WARNING_BEFORE_MS = 60 * 1000;
+    const WARNING_THRESHOLD_MS = TOTAL_IDLE_MS - WARNING_BEFORE_MS;
+
+    let lastInteraction = Date.now();
+    let isWarningShown = false;
+    let idleModalInstance = null;
+
+    function getModal() {
+        const modalEl = document.getElementById('idleTimeoutModal');
+        if (!modalEl) return null;
+        if (!idleModalInstance && window.bootstrap && window.bootstrap.Modal) {
+            idleModalInstance = new bootstrap.Modal(modalEl, {
+                backdrop: 'static',
+                keyboard: false
+            });
+        }
+        return { el: modalEl, instance: idleModalInstance };
+    }
+
+    async function pingServerSession() {
+        try {
+            await fetch('/auth/ping', {
+                method: 'POST',
+                headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+            });
+        } catch (err) {
+            // Silently ignore network hiccup
+        }
+    }
+
+    function recordActivity() {
+        if (isWarningShown) return;
+        const now = Date.now();
+        if (now - lastInteraction > 2000) {
+            lastInteraction = now;
+        }
+    }
+
+    function showIdleWarning() {
+        if (isWarningShown) return;
+        isWarningShown = true;
+
+        const modalObj = getModal();
+        if (modalObj && modalObj.instance) {
+            modalObj.instance.show();
+        } else if (modalObj && modalObj.el) {
+            modalObj.el.classList.add('show');
+            modalObj.el.style.display = 'block';
+        }
+
+        updateCountdown();
+    }
+
+    function extendSession() {
+        lastInteraction = Date.now();
+        isWarningShown = false;
+
+        const modalObj = getModal();
+        if (modalObj && modalObj.instance) {
+            modalObj.instance.hide();
+        } else if (modalObj && modalObj.el) {
+            modalObj.el.classList.remove('show');
+            modalObj.el.style.display = 'none';
+        }
+
+        pingServerSession();
+    }
+
+    function updateCountdown() {
+        const remainingMs = Math.max(0, TOTAL_IDLE_MS - (Date.now() - lastInteraction));
+        const remainingSec = Math.ceil(remainingMs / 1000);
+
+        const countEl = document.getElementById('idleCountdownDisplay');
+        if (countEl) {
+            countEl.textContent = remainingSec;
+        }
+
+        if (remainingMs <= 0) {
+            window.location.href = '/logout?reason=idle';
+        }
+    }
+
+    ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach(evt => {
+        window.addEventListener(evt, recordActivity, { passive: true });
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const stayBtn = document.getElementById('stayLoggedInBtn');
+        if (stayBtn) {
+            stayBtn.addEventListener('click', extendSession);
+        }
+    });
+
+    setInterval(() => {
+        const elapsed = Date.now() - lastInteraction;
+
+        if (elapsed >= TOTAL_IDLE_MS) {
+            window.location.href = '/logout?reason=idle';
+        } else if (elapsed >= WARNING_THRESHOLD_MS) {
+            showIdleWarning();
+            updateCountdown();
+        }
+    }, 1000);
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            const elapsed = Date.now() - lastInteraction;
+            if (elapsed >= TOTAL_IDLE_MS) {
+                window.location.href = '/logout?reason=idle';
+            } else if (elapsed >= WARNING_THRESHOLD_MS) {
+                showIdleWarning();
+                updateCountdown();
+            }
+        }
+    });
+
+    window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+            window.location.reload();
+        }
+    });
+})();
+
+</script>
+
+<!-- =========================================================
+     IDLE INACTIVITY TIMEOUT WARNING MODAL
+========================================================== -->
+<div class="modal fade" id="idleTimeoutModal" tabindex="-1" aria-labelledby="idleTimeoutModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 24px; overflow: hidden; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px);">
+            <div class="modal-header border-0 pb-0 pt-4 px-4 justify-content-center">
+                <div class="text-center">
+                    <div style="width: 60px; height: 60px; margin: 0 auto 12px; border-radius: 18px; background: linear-gradient(135deg, #fef3c7, #fde68a); display: grid; place-items: center; box-shadow: 0 8px 20px rgba(245, 158, 11, 0.2);">
+                        <i class="bi bi-hourglass-split fs-2 text-warning"></i>
+                    </div>
+                    <h5 class="modal-title fw-bolder text-dark" id="idleTimeoutModalLabel" style="font-size: 18px; letter-spacing: -0.3px;">Sesi Akan Segera Berakhir</h5>
+                </div>
+            </div>
+            <div class="modal-body px-4 text-center py-3">
+                <p class="text-muted mb-3" style="font-size: 13px; line-height: 1.5;">
+                    Anda tidak melakukan aktivitas selama beberapa waktu. Demi keamanan data akun Anda, sesi akan otomatis keluar dalam:
+                </p>
+                <div class="py-2 mb-2">
+                    <span class="badge bg-warning-subtle text-warning-emphasis px-3 py-2 rounded-pill fw-bold" style="font-size: 20px; border: 1px solid #fde68a;">
+                        <i class="bi bi-clock-history me-1"></i> <span id="idleCountdownDisplay">60</span> detik
+                    </span>
+                </div>
+                <p class="text-secondary small mb-0" style="font-size: 11.5px;">
+                    Klik <strong>Tetap Masuk</strong> untuk terus menggunakan aplikasi tanpa harus login ulang.
+                </p>
+            </div>
+            <div class="modal-footer border-0 pt-0 pb-4 px-4 flex-column gap-2">
+                <button type="button" class="btn btn-success w-100 py-2 fw-bold d-flex align-items-center justify-content-center gap-2" id="stayLoggedInBtn" style="border-radius: 14px; font-size: 13.5px; background: #16a34a; border-color: #16a34a; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);">
+                    <i class="bi bi-check-circle-fill"></i>
+                    Tetap Masuk
+                </button>
+                <a href="/logout" class="btn btn-light w-100 py-2 fw-semibold text-muted d-flex align-items-center justify-content-center gap-2" style="border-radius: 14px; font-size: 13px; border: 1px solid #e2e8f0; background: #f8fafc;">
+                    <i class="bi bi-box-arrow-right"></i>
+                    Keluar Sekarang
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Realtime Toast Center -->
+<div id="realtimeToastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 99999; pointer-events: none;"></div>
+
+</body>
+
+</html>

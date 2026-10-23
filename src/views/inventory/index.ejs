@@ -1,0 +1,380 @@
+<%
+const list = typeof inventory !== "undefined" && Array.isArray(inventory) ? inventory : [];
+const logsList = typeof logs !== "undefined" && Array.isArray(logs) ? logs : [];
+const sum = typeof summary !== "undefined" && summary ? summary : { total_weight: 0, total_value: 0, ready_types: 0, total_types: 0 };
+const flt = typeof filters !== "undefined" && filters ? filters : { keyword: "", category: "" };
+const canEdit = typeof canManage !== "undefined" ? canManage : false;
+%>
+
+<style>
+.inventory-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 1rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="inventory-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e0f2fe; color:#0284c7; display:grid; place-items:center; font-size:18px;">
+                        <i class="bi bi-boxes"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;">GUDANG & INVENTORI STOK</h5>
+                        <div class="small mt-1" style="color: #0284c7; font-size: 11px;">Pemantauan ketersediaan stok sampah siap jual dan log mutasi gudang.</div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <% if (canEdit) { %>
+                    <button type="button" class="btn btn-primary fw-semibold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#stockOpnameModal">
+                        <i class="bi bi-sliders2-vertical me-1"></i> Stock Opname / Penyesuaian
+                    </button>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Stok Gudang</div>
+                            <div class="stat-value text-dark"><%= Number(sum.total_weight).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %> <span class="fs-6 fw-normal text-muted">kg</span></div>
+                        </div>
+                        <div class="stat-icon bg-info-subtle text-info">
+                            <i class="bi bi-box-seam-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Seluruh material terpilah</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Estimasi Nilai</div>
+                            <div class="stat-value text-success">Rp <%= Number(sum.total_value).toLocaleString('id-ID') %></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-cash-coin"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Berdasarkan harga per unit</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Siap Jual</div>
+                            <div class="stat-value text-primary"><%= sum.ready_types %> <span class="fs-6 fw-normal text-muted">jenis</span></div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-cart-check-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Stok > 10 kg</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Jenis Terdaftar</div>
+                            <div class="stat-value text-muted"><%= sum.total_types %></div>
+                        </div>
+                        <div class="stat-icon bg-secondary-subtle text-secondary">
+                            <i class="bi bi-tags-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Organik, plastik, logam</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="p-3 bg-light rounded-4 mb-4">
+            <form method="GET" action="/inventory" class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="keyword" class="form-control bg-white border-start-0" placeholder="Cari nama atau kode sampah..." value="<%= flt.keyword || '' %>">
+                    </div>
+                </div>
+                <div class="col-8 col-md-4">
+                    <select name="category" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Kategori</option>
+                        <option value="organik" <%= flt.category === 'organik' ? 'selected' : '' %>>Organik</option>
+                        <option value="daur_ulang" <%= flt.category === 'daur_ulang' ? 'selected' : '' %>>Daur Ulang</option>
+                        <option value="anorganik" <%= flt.category === 'anorganik' ? 'selected' : '' %>>Anorganik</option>
+                        <option value="b3" <%= flt.category === 'b3' ? 'selected' : '' %>>Limbah B3</option>
+                    </select>
+                </div>
+                <div class="col-4 col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3"><i class="bi bi-funnel me-1"></i> Filter</button>
+                    <a href="/inventory" class="btn btn-outline-secondary rounded-3" title="Reset"><i class="bi bi-arrow-counterclockwise"></i></a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabel Stok Real-time -->
+        <div class="table-card mb-4">
+            <div class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-list-check text-primary me-2"></i>Status Ketersediaan Stok Fisik</h6>
+                <span class="text-muted small">Update otomatis dari pickup, penjualan, dan olahan</span>
+            </div>
+            <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
+                <table class="table table-hover align-middle mb-0" style="min-width: 750px;">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Kode & Nama Sampah</th>
+                            <th>Kategori</th>
+                            <th>Stok Tersedia</th>
+                            <th>Harga Satuan</th>
+                            <th>Total Valuasi</th>
+                            <th>Status Stok</th>
+                            <th class="pe-4 text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (list.length === 0) { %>
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-box-arrow-in-down fs-1 d-block mb-2"></i>
+                                Tidak ada data jenis sampah yang sesuai filter.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% list.forEach(item => { %>
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold text-dark"><%= item.name %></div>
+                                <span class="badge bg-light text-muted border" style="font-size: 10px;"><%= item.code %></span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border"><%= item.category.toUpperCase() %></span>
+                            </td>
+                            <td>
+                                <span class="fs-6 fw-bold text-dark"><%= Number(item.netStock).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %></span>
+                                <span class="small text-muted"><%= item.unit || 'kg' %></span>
+                            </td>
+                            <td class="small">
+                                Rp <%= Number(item.price_per_unit).toLocaleString('id-ID') %> / <%= item.unit || 'kg' %>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-success">Rp <%= Number(item.estimatedValue).toLocaleString('id-ID') %></span>
+                            </td>
+                            <td>
+                                <span class="badge <%= item.stockBadge %> px-2 py-1"><%= item.stockLabel %></span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <% if (canEdit) { %>
+                                <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="openOpnameModal(<%= item.id %>, '<%= item.name %>')">
+                                    <i class="bi bi-pencil-square me-1"></i> Sesuaikan
+                                </button>
+                                <% } %>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Riwayat Mutasi Stok Terakhir -->
+        <div class="table-card">
+            <div class="p-3 border-bottom bg-white">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-clock-history text-muted me-2"></i>Log Mutasi Stok Terakhir</h6>
+            </div>
+            <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
+                <table class="table table-sm table-hover align-middle mb-0" style="min-width: 650px;">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Waktu</th>
+                            <th>Jenis Sampah</th>
+                            <th>Mutasi</th>
+                            <th>Jumlah (kg)</th>
+                            <th>Sumber / Keterangan</th>
+                            <th class="pe-4">Pencatat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (logsList.length === 0) { %>
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted small">Belum ada log mutasi stok gudang.</td>
+                        </tr>
+                        <% } else { %>
+                        <% logsList.forEach(log => { 
+                            let mBadge = log.type === 'in' ? 'bg-success' : (log.type === 'out' ? 'bg-danger' : 'bg-primary');
+                            let mSign = log.type === 'in' ? '+ ' : (log.type === 'out' ? '- ' : '± ');
+                        %>
+                        <tr>
+                            <td class="ps-4 small text-muted"><%= formatDateTime(log.created_at) %></td>
+                            <td class="fw-semibold text-dark"><%= log.waste_name %></td>
+                            <td>
+                                <span class="badge <%= mBadge %>"><%= log.type.toUpperCase() %></span>
+                            </td>
+                            <td class="fw-bold <%= log.type === 'in' ? 'text-success' : (log.type === 'out' ? 'text-danger' : 'text-primary') %>">
+                                <%= mSign %><%= Number(log.quantity).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %> kg
+                            </td>
+                            <td class="small text-muted"><%= log.notes || '-' %></td>
+                            <td class="pe-4 small text-muted"><%= log.recorder_name || 'Sistem' %></td>
+                        </tr>
+                        <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL STOCK OPNAME / PENYESUAIAN -->
+<div class="modal fade" id="stockOpnameModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-sliders2-vertical text-primary me-2"></i>Stock Opname Gudang</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/inventory/adjust">
+                <div class="modal-body py-3">
+                    <p class="text-muted small mb-3">Catat penerimaan manual, susut pengeringan, atau selisih timbangan fisik gudang.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Pilih Jenis Sampah</label>
+                        <select id="opnameWasteId" name="waste_type_id" class="form-select rounded-3" required>
+                            <option value="">-- Pilih Jenis Sampah --</option>
+                            <% list.forEach(item => { %>
+                            <option value="<%= item.id %>"><%= item.name %> (Stok saat ini: <%= Number(item.netStock).toFixed(1) %> <%= item.unit %>)</option>
+                            <% }); %>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Jenis Penyesuaian</label>
+                        <select name="type" class="form-select rounded-3" required>
+                            <option value="in">Stok Masuk Tambahan (+ Masuk Gudang)</option>
+                            <option value="out">Stok Keluar / Susut Timbangan (- Pengurangan)</option>
+                            <option value="adjustment">Penyesuaian Opname Fisik (Koreksi)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Jumlah Berat (kg)</label>
+                        <input type="number" step="0.1" name="quantity" class="form-control rounded-3" placeholder="Contoh: 15.5" required>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Alasan Penyesuaian</label>
+                        <textarea name="notes" rows="2" class="form-control rounded-3" placeholder="Contoh: Hasil cek fisik timbangan mingguan / susut pengeringan..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-3" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">Simpan Penyesuaian</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openOpnameModal(wasteId, wasteName) {
+    const select = document.getElementById('opnameWasteId');
+    if (select) {
+        select.value = wasteId;
+    }
+    new bootstrap.Modal(document.getElementById('stockOpnameModal')).show();
+}
+</script>

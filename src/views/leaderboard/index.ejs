@@ -1,0 +1,459 @@
+<%
+const list = typeof leaderboard !== "undefined" && Array.isArray(leaderboard) ? leaderboard : [];
+const sum = typeof summary !== "undefined" && summary ? summary : { total_participants: 0, total_kg_all: 0, total_co2_all: 0, top_winner_name: '-', top_winner_kg: 0 };
+const flt = typeof filters !== "undefined" && filters ? filters : { keyword: "", tier: "" };
+%>
+
+<style>
+.leaderboard-container {
+    color: #1f2937;
+    font-size: 13px;
+}
+.stat-widget {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    transition: transform .2s, box-shadow .2s;
+}
+.stat-widget:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+.stat-widget .stat-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+}
+.stat-widget .stat-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.stat-widget .stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    line-height: 1.2;
+}
+@media (max-width: 767.98px) {
+    .stat-widget {
+        padding: 12px !important;
+        border-radius: 14px !important;
+    }
+    .stat-widget .stat-value {
+        font-size: 1rem !important;
+        word-break: break-all;
+    }
+    .stat-widget .stat-title {
+        font-size: 9px !important;
+        margin-bottom: 3px;
+    }
+    .stat-widget .stat-icon {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+    .stat-widget .small.text-muted.mt-2 {
+        display: none !important;
+    }
+}
+.table-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.table-card th {
+    background: #f9fafb;
+    color: #4b5563;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.table-card td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    vertical-align: middle;
+}
+.podium-box {
+    border-radius: 16px;
+    padding: 18px;
+    transition: transform 0.2s;
+    height: 100%;
+}
+.podium-box:hover {
+    transform: translateY(-3px);
+}
+.podium-gold {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border: 1px solid #fde68a;
+}
+.podium-silver {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+}
+.podium-bronze {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid #bbf7d0;
+}
+.rank-badge-circle {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+}
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="leaderboard-container">
+        <!-- Header -->
+        <div class="mb-4">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:36px; height:36px; border-radius:10px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:18px;">
+                        <i class="bi bi-trophy-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0 fw-bold" style="color: #202939;">PERINGKAT WARGA & LENCANA LINGKUNGAN</h5>
+                        <div class="small mt-1" style="color: #16a34a; font-size: 11px;">Apresiasi warga dan lingkungan RT/RW paling aktif memilah sampah untuk kelestarian bumi.</div>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-outline-success fw-semibold shadow-sm px-3" data-bs-toggle="modal" data-bs-target="#modalLencanaInfo">
+                        <i class="bi bi-patch-question me-1"></i> Daftar Lencana
+                    </button>
+                    <a href="/collection" class="btn btn-success fw-semibold shadow-sm px-3">
+                        <i class="bi bi-plus-lg me-1"></i> Setor Sampah
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrik Statistik (2x2 di Mobile) -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Juara 1 Teraktif</div>
+                            <div class="stat-value text-warning text-truncate" style="max-width: 130px;"><%= sum.top_winner_name %></div>
+                        </div>
+                        <div class="stat-icon bg-warning-subtle text-warning">
+                            <i class="bi bi-trophy-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2"><%= sum.top_winner_kg %> kg disetorkan</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Warga Memilah</div>
+                            <div class="stat-value text-primary"><%= sum.total_participants %></div>
+                        </div>
+                        <div class="stat-icon bg-primary-subtle text-primary">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Partisipan aktif terdaftar</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Sampah Terkumpul</div>
+                            <div class="stat-value text-success"><%= Number(sum.total_kg_all).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %> <span class="fs-6 fw-normal text-muted">kg</span></div>
+                        </div>
+                        <div class="stat-icon bg-success-subtle text-success">
+                            <i class="bi bi-recycle"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Total pilahan warga</div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-3">
+                <div class="stat-widget">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="stat-title">Reduksi Karbon</div>
+                            <div class="stat-value text-info"><%= Number(sum.total_co2_all).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %> <span class="fs-6 fw-normal text-muted">kg</span></div>
+                        </div>
+                        <div class="stat-icon bg-info-subtle text-info">
+                            <i class="bi bi-cloud-check-fill"></i>
+                        </div>
+                    </div>
+                    <div class="small text-muted mt-2">Emisi CO₂e terselamatkan</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TOP 3 PODIUM HERO BANNER (JIKA ADA MINIMAL 1 WARGA) -->
+        <% if (list.length > 0) { %>
+        <div class="row g-3 mb-4">
+            <!-- Rank 1 Emas -->
+            <div class="col-12 col-md-4">
+                <div class="podium-box podium-gold shadow-sm">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="badge bg-warning text-dark fw-bold px-3 py-1 rounded-pill">
+                            <i class="bi bi-trophy-fill me-1"></i> JUARA #1
+                        </span>
+                        <i class="bi bi-stars text-warning fs-4"></i>
+                    </div>
+                    <h6 class="fw-bold text-dark mb-1 text-truncate"><%= list[0].full_name %></h6>
+                    <div class="small text-muted mb-2"><i class="bi bi-geo-alt me-1"></i><%= list[0].address || 'Domisili Lingkungan' %></div>
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top border-warning border-opacity-50">
+                        <div>
+                            <div class="fs-5 fw-bold text-dark"><%= Number(list[0].total_kg).toLocaleString('id-ID') %> kg</div>
+                            <div class="small text-muted" style="font-size: 11px;">Total Terpilah</div>
+                        </div>
+                        <span class="badge <%= list[0].badge.badgeClass %> px-2 py-1">
+                            <i class="bi <%= list[0].badge.icon %> me-1"></i><%= list[0].badge.name %>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rank 2 Perak (Jika ada) -->
+            <div class="col-12 col-md-4">
+                <div class="podium-box podium-silver shadow-sm">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="badge bg-secondary text-white fw-bold px-3 py-1 rounded-pill">
+                            <i class="bi bi-award-fill me-1"></i> JUARA #2
+                        </span>
+                        <i class="bi bi-award text-secondary fs-4"></i>
+                    </div>
+                    <% if (list.length > 1) { %>
+                    <h6 class="fw-bold text-dark mb-1 text-truncate"><%= list[1].full_name %></h6>
+                    <div class="small text-muted mb-2"><i class="bi bi-geo-alt me-1"></i><%= list[1].address || 'Domisili Lingkungan' %></div>
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                        <div>
+                            <div class="fs-5 fw-bold text-dark"><%= Number(list[1].total_kg).toLocaleString('id-ID') %> kg</div>
+                            <div class="small text-muted" style="font-size: 11px;">Total Terpilah</div>
+                        </div>
+                        <span class="badge <%= list[1].badge.badgeClass %> px-2 py-1">
+                            <i class="bi <%= list[1].badge.icon %> me-1"></i><%= list[1].badge.name %>
+                        </span>
+                    </div>
+                    <% } else { %>
+                    <div class="text-muted py-3 small fst-italic">Menunggu setoran nasabah berikutnya...</div>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Rank 3 Perunggu (Jika ada) -->
+            <div class="col-12 col-md-4">
+                <div class="podium-box podium-bronze shadow-sm">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="badge bg-success text-white fw-bold px-3 py-1 rounded-pill">
+                            <i class="bi bi-patch-check-fill me-1"></i> JUARA #3
+                        </span>
+                        <i class="bi bi-shield-check text-success fs-4"></i>
+                    </div>
+                    <% if (list.length > 2) { %>
+                    <h6 class="fw-bold text-dark mb-1 text-truncate"><%= list[2].full_name %></h6>
+                    <div class="small text-muted mb-2"><i class="bi bi-geo-alt me-1"></i><%= list[2].address || 'Domisili Lingkungan' %></div>
+                    <div class="d-flex justify-content-between align-items-center pt-2 border-top border-success border-opacity-50">
+                        <div>
+                            <div class="fs-5 fw-bold text-dark"><%= Number(list[2].total_kg).toLocaleString('id-ID') %> kg</div>
+                            <div class="small text-muted" style="font-size: 11px;">Total Terpilah</div>
+                        </div>
+                        <span class="badge <%= list[2].badge.badgeClass %> px-2 py-1">
+                            <i class="bi <%= list[2].badge.icon %> me-1"></i><%= list[2].badge.name %>
+                        </span>
+                    </div>
+                    <% } else { %>
+                    <div class="text-muted py-3 small fst-italic">Menunggu setoran nasabah berikutnya...</div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+        <% } %>
+
+        <!-- Filter Bar -->
+        <div class="p-3 bg-light rounded-4 mb-4">
+            <form method="GET" action="/leaderboard" class="row g-2 align-items-center">
+                <div class="col-12 col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="keyword" class="form-control bg-white border-start-0" placeholder="Cari nama nasabah, username, atau alamat RW..." value="<%= flt.keyword || '' %>">
+                    </div>
+                </div>
+                <div class="col-6 col-md-4">
+                    <select name="tier" class="form-select bg-white" onchange="this.form.submit()">
+                        <option value="">Semua Tingkat Lencana</option>
+                        <option value="gold" <%= flt.tier === 'gold' ? 'selected' : '' %>>🥇 Pendekar Daur Ulang (> 100 kg)</option>
+                        <option value="silver" <%= flt.tier === 'silver' ? 'selected' : '' %>>🥈 Pahlawan Lingkungan (> 50 kg)</option>
+                        <option value="bronze" <%= flt.tier === 'bronze' ? 'selected' : '' %>>🥉 Pejuang Pemilah (> 20 kg)</option>
+                        <option value="green" <%= flt.tier === 'green' ? 'selected' : '' %>>🌿 Sahabat Hijau (> 5 kg)</option>
+                        <option value="starter" <%= flt.tier === 'starter' ? 'selected' : '' %>>🌱 Pemula Peduli</option>
+                    </select>
+                </div>
+                <div class="col-6 col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary w-100 rounded-3"><i class="bi bi-funnel me-1"></i> Filter</button>
+                    <a href="/leaderboard" class="btn btn-outline-secondary rounded-3" title="Reset"><i class="bi bi-arrow-counterclockwise"></i></a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Tabel Peringkat Lengkap -->
+        <div class="table-card">
+            <div class="table-responsive" style="-webkit-overflow-scrolling: touch;">
+                <table class="table table-hover align-middle mb-0" style="min-width: 800px;">
+                    <thead>
+                        <tr>
+                            <th class="ps-4 text-center" style="width: 70px;">Rank</th>
+                            <th>Nama Nasabah</th>
+                            <th>Domisili / Wilayah</th>
+                            <th>Total Setoran (Kg)</th>
+                            <th>Frekuensi Setor</th>
+                            <th>Reduksi CO₂</th>
+                            <th>Lencana Penghargaan</th>
+                            <th class="pe-4 text-end">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (list.length === 0) { %>
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-trophy fs-1 d-block mb-2 text-muted opacity-50"></i>
+                                Belum ada nasabah terdaftar di peringkat.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                        <% list.forEach(item => { 
+                            let rankBg = 'bg-light text-dark border';
+                            let medalIcon = '';
+                            if (item.rank === 1) { rankBg = 'bg-warning text-dark shadow-sm'; medalIcon = '<i class="bi bi-trophy-fill text-warning me-1"></i>'; }
+                            else if (item.rank === 2) { rankBg = 'bg-secondary text-white shadow-sm'; medalIcon = '<i class="bi bi-award-fill text-secondary me-1"></i>'; }
+                            else if (item.rank === 3) { rankBg = 'bg-success text-white shadow-sm'; medalIcon = '<i class="bi bi-patch-check-fill text-success me-1"></i>'; }
+                        %>
+                        <tr>
+                            <td class="ps-4 text-center">
+                                <span class="rank-badge-circle <%= rankBg %>">
+                                    <%= item.rank %>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="rounded-circle bg-success-subtle text-success d-inline-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px; font-size: 13px;">
+                                        <%= item.full_name ? item.full_name.charAt(0).toUpperCase() : 'U' %>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark"><%- medalIcon %><%= item.full_name %></div>
+                                        <div class="small text-muted font-monospace" style="font-size: 11px;"><%= item.member_code %></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-dark small"><%= item.address || '-' %></div>
+                            </td>
+                            <td>
+                                <span class="fw-bold text-success fs-6"><%= Number(item.total_kg).toLocaleString('id-ID', { maximumFractionDigits: 1 }) %></span>
+                                <span class="small text-muted">kg</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border"><%= item.total_collections %> kali transaksi</span>
+                            </td>
+                            <td>
+                                <span class="fw-semibold text-info"><i class="bi bi-cloud-arrow-down me-1"></i><%= item.co2_saved %> kg CO₂e</span>
+                            </td>
+                            <td>
+                                <span class="badge rounded-pill <%= item.badge.badgeClass %> px-2 py-1">
+                                    <i class="bi <%= item.badge.icon %> me-1"></i><%= item.badge.name %>
+                                </span>
+                            </td>
+                            <td class="pe-4 text-end">
+                                <a href="/members?keyword=<%= encodeURIComponent(item.full_name) %>" class="btn btn-sm btn-outline-success rounded-pill px-3">
+                                    <i class="bi bi-person-vcard me-1"></i> Kartu
+                                </a>
+                            </td>
+                        </tr>
+                        <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL INFO TINGKAT LENCANA LINGKUNGAN -->
+<div class="modal fade" id="modalLencanaInfo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold"><i class="bi bi-patch-check-fill text-success me-2"></i>Kriteria Lencana Prestasi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body py-3">
+                <p class="small text-muted mb-3">Lencana lingkungan diberikan secara otomatis kepada warga berdasarkan akumulasi kilogram sampah bernilai yang berhasil disetorkan:</p>
+
+                <div class="list-group list-group-flush small">
+                    <div class="list-group-item px-0 py-2 border-0">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="p-2 rounded-3 bg-warning-subtle text-warning fs-4"><i class="bi bi-trophy-fill"></i></div>
+                            <div>
+                                <strong class="text-dark">🥇 Pendekar Daur Ulang (Tingkat Emas)</strong>
+                                <div class="text-muted">Total setoran sampah terpilah > 100 kg. Pahlawan sirkular utama bank sampah.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-0 py-2 border-0">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="p-2 rounded-3 bg-secondary-subtle text-secondary fs-4"><i class="bi bi-award-fill"></i></div>
+                            <div>
+                                <strong class="text-dark">🥈 Pahlawan Lingkungan (Tingkat Perak)</strong>
+                                <div class="text-muted">Total setoran sampah terpilah > 50 kg. Warga teladan konsisten memilah.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-0 py-2 border-0">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="p-2 rounded-3 bg-info-subtle text-info fs-4"><i class="bi bi-patch-check-fill"></i></div>
+                            <div>
+                                <strong class="text-dark">🥉 Pejuang Pemilah (Tingkat Perunggu)</strong>
+                                <div class="text-muted">Total setoran sampah terpilah > 20 kg. Berkontribusi rutin setiap minggu.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="list-group-item px-0 py-2 border-0">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="p-2 rounded-3 bg-success-subtle text-success fs-4"><i class="bi bi-tree-fill"></i></div>
+                            <div>
+                                <strong class="text-dark">🌿 Sahabat Hijau</strong>
+                                <div class="text-muted">Total setoran sampah terpilah > 5 kg. Menyelamatkan lingkungan dari timbulan sampah.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-success rounded-3 px-4" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>

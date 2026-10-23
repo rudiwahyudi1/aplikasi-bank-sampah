@@ -1,0 +1,1828 @@
+<%
+/* ============================================================
+   SAFE DATA
+============================================================ */
+const userRows =
+    (typeof users !== "undefined" && Array.isArray(users))
+        ? users
+        : [];
+
+const permissionList =
+    (typeof permissions !== "undefined" && Array.isArray(permissions))
+        ? permissions
+        : [];
+
+const isSuperadmin =
+    user?.role === "superadmin";
+
+const canCreateUser =
+    permissionList.includes("users.create") || isSuperadmin;
+
+const canUpdateUser =
+    permissionList.includes("users.update") || isSuperadmin;
+
+const canDeleteUser =
+    permissionList.includes("users.delete") || isSuperadmin;
+
+const totalUsers = userRows.length;
+
+const activeUsers = userRows.filter(u =>
+    String(u.status || "").toLowerCase() === "active"
+).length;
+
+const inactiveUsers = userRows.filter(u =>
+    String(u.status || "").toLowerCase() !== "active"
+).length;
+
+const totalBalance = userRows.reduce((sum, u) => {
+    return sum + Number(u.wallet_balance || 0);
+}, 0);
+%>
+
+<style>
+
+/* ============================================================
+   USERS PAGE
+============================================================ */
+
+.users-page {
+    width: 100%;
+}
+
+
+/* ============================================================
+   MAIN CARD
+============================================================ */
+
+.users-card {
+    background: #fff;
+    border: 1px solid #e8e8ed;
+    border-radius: 22px;
+    overflow: hidden;
+
+    box-shadow:
+        0 10px 30px rgba(31, 41, 55, .06);
+}
+
+
+/* ============================================================
+   HEADER
+============================================================ */
+
+.users-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+
+    padding: 20px 22px;
+
+    border-bottom: 1px solid #e8e8ed;
+
+    background:
+        linear-gradient(
+            180deg,
+            #fff 0%,
+            #fbfbfd 100%
+        );
+}
+
+.users-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.users-title-icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 12px;
+
+    background: #eaf8ef;
+    color: #16a34a;
+
+    font-size: 17px;
+}
+
+.users-title {
+    margin: 0;
+
+    color: #172033;
+
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.users-subtitle {
+    margin-top: 2px;
+
+    color: #8b94a4;
+
+    font-size: 12px;
+}
+
+.users-add-btn {
+    height: 39px;
+
+    padding: 0 14px;
+
+    border: 0;
+    border-radius: 11px;
+
+    background: #16a34a;
+    color: #fff;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    box-shadow:
+        0 5px 14px rgba(22, 163, 74, .15);
+
+    transition: all .2s ease;
+}
+
+.users-add-btn:hover {
+    background: #15803d;
+    transform: translateY(-1px);
+}
+
+
+/* ============================================================
+   STATS
+============================================================ */
+
+.users-stats {
+    display: grid;
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+
+    gap: 12px;
+
+    padding: 18px 22px 8px;
+}
+
+.users-stat {
+    min-height: 78px;
+
+    display: flex;
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 14px;
+
+    border: 1px solid #e8e8ed;
+    border-radius: 16px;
+
+    background: #fff;
+}
+
+.users-stat-icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 12px;
+
+    font-size: 16px;
+}
+
+.users-stat-icon.total {
+    background: #eaf8ef;
+    color: #16a34a;
+}
+
+.users-stat-icon.active {
+    background: #edf8f0;
+    color: #22a052;
+}
+
+.users-stat-icon.inactive {
+    background: #fff2f2;
+    color: #dc5a5a;
+}
+
+.users-stat-icon.wallet {
+    background: #fff7df;
+    color: #c88700;
+}
+
+.users-stat-value {
+    color: #172033;
+
+    font-size: 22px;
+    line-height: 1;
+
+    font-weight: 800;
+}
+
+.users-money {
+    font-size: 17px;
+}
+
+.users-stat-label {
+    margin-top: 5px;
+
+    color: #8b94a4;
+
+    font-size: 10px;
+}
+
+
+/* ============================================================
+   TABLE
+============================================================ */
+
+.users-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+
+    margin-top: 10px;
+}
+
+.users-table {
+    width: 100%;
+
+    min-width: 950px;
+
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.users-table thead th {
+    padding: 12px 22px;
+
+    border-top: 1px solid #e8e8ed;
+    border-bottom: 1px solid #e8e8ed;
+
+    background: #fbfbfd;
+
+    color: #8b94a4;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: .45px;
+    text-transform: uppercase;
+
+    white-space: nowrap;
+}
+
+.users-table tbody td {
+    padding: 14px 22px;
+
+    border-bottom: 1px solid #edf0f4;
+
+    color: #566071;
+
+    font-size: 12px;
+
+    vertical-align: middle;
+}
+
+.users-table tbody tr {
+    transition: background .2s ease;
+}
+
+.users-table tbody tr:hover {
+    background: #fbfcfd;
+}
+
+.users-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+
+/* ============================================================
+   USER
+============================================================ */
+
+.users-user {
+    display: flex;
+    align-items: center;
+
+    gap: 11px;
+
+    min-width: 220px;
+}
+
+.users-avatar {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 12px;
+
+    background: #eaf8ef;
+    color: #16a34a;
+
+    font-size: 15px;
+}
+
+.users-user-info {
+    min-width: 0;
+}
+
+.users-user-name {
+    color: #172033;
+
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.users-user-meta {
+    margin-top: 3px;
+
+    color: #9aa3b1;
+
+    font-size: 10px;
+
+    white-space: nowrap;
+}
+
+
+/* ============================================================
+   CONTACT
+============================================================ */
+
+.users-contact {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 7px;
+
+    color: #667085;
+}
+
+.users-contact i {
+    color: #8b94a4;
+}
+
+
+/* ============================================================
+   ROLE
+============================================================ */
+
+.users-role {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 6px 9px;
+
+    border-radius: 9px;
+
+    background: #f4f6f8;
+
+    color: #596273;
+
+    font-size: 10px;
+    font-weight: 650;
+}
+
+
+/* ============================================================
+   STATUS
+============================================================ */
+
+.users-status {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 6px;
+
+    padding: 6px 9px;
+
+    border-radius: 9px;
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.users-status i {
+    font-size: 6px;
+}
+
+.users-status.status-active {
+    background: #eaf8ef;
+    color: #16813d;
+}
+
+.users-status.status-inactive {
+    background: #f1f3f5;
+    color: #7b8492;
+}
+
+
+/* ============================================================
+   BALANCE
+============================================================ */
+
+.users-balance {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 7px;
+
+    color: #172033;
+
+    font-weight: 700;
+}
+
+.users-balance i {
+    color: #16a34a;
+}
+
+
+/* ============================================================
+   LOGIN
+============================================================ */
+
+.users-login-date {
+    color: #566071;
+
+    font-size: 11px;
+}
+
+.users-login-time {
+    margin-top: 3px;
+
+    color: #9aa3b1;
+
+    font-size: 9px;
+}
+
+.users-muted {
+    color: #9aa3b1;
+    font-size: 10px;
+}
+
+
+/* ============================================================
+   ACTION
+============================================================ */
+
+.users-actions {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 6px;
+}
+
+.users-action-btn {
+    width: 33px;
+    height: 33px;
+
+    display: inline-grid;
+    place-items: center;
+
+    padding: 0;
+
+    border: 1px solid #e3e7ec;
+    border-radius: 10px;
+
+    background: #fff;
+
+    color: #667085;
+
+    font-size: 12px;
+
+    transition: all .2s ease;
+}
+
+.users-action-btn:hover {
+    background: #f7f8fa;
+    transform: translateY(-1px);
+}
+
+.users-action-btn.edit:hover {
+    color: #16a34a;
+    border-color: #cde8d4;
+}
+
+.users-action-btn.delete {
+    color: #dc5a5a;
+}
+
+.users-action-btn.delete:hover {
+    background: #fff5f5;
+    border-color: #f2cccc;
+}
+
+
+/* ============================================================
+   EMPTY
+============================================================ */
+
+.users-empty-cell {
+    padding: 0 !important;
+}
+
+.users-empty {
+    padding: 60px 20px;
+
+    text-align: center;
+}
+
+.users-empty-icon {
+    width: 58px;
+    height: 58px;
+
+    margin: 0 auto 14px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 17px;
+
+    background: #f1f8f3;
+    color: #16a34a;
+
+    font-size: 22px;
+}
+
+.users-empty-title {
+    color: #172033;
+
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.users-empty-text {
+    margin-top: 5px;
+
+    color: #8b94a4;
+
+    font-size: 11px;
+}
+
+
+/* ============================================================
+   MODAL (IDENTIK DENGAN JENIS SAMPAH)
+============================================================ */
+
+.users-modal .modal-dialog {
+    max-width: 720px;
+}
+
+.users-modal .modal-content {
+    border: 0;
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 25px 70px rgba(15, 23, 42, .18);
+}
+
+.users-modal-header {
+    padding: 20px 22px;
+    border-bottom: 1px solid #edf0f4;
+    background: #ffffff;
+}
+
+.users-modal-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.users-modal-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.users-modal-icon.add {
+    background: #edf9f1;
+    color: #16a34a;
+}
+
+.users-modal-icon.edit {
+    background: #edf9f1;
+    color: #16a34a;
+}
+
+.users-modal .modal-title {
+    margin: 0;
+    color: #172033;
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.users-modal-subtitle {
+    margin-top: 3px;
+    color: #9aa2af;
+    font-size: 11px;
+}
+
+.users-modal-body {
+    padding: 22px;
+}
+
+.users-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    padding: 14px 20px;
+
+    border-top: 1px solid #e8e8ed;
+
+    background: #fbfbfd;
+}
+
+.users-cancel-btn {
+    height: 38px;
+
+    padding: 0 14px;
+
+    border: 1px solid #e1e6ed;
+    border-radius: 11px;
+
+    background: #fff;
+
+    color: #667085;
+
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.users-save-btn {
+    height: 38px;
+
+    padding: 0 15px;
+
+    border: 0;
+    border-radius: 11px;
+
+    background: #16a34a;
+    color: #fff;
+
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.users-save-btn:hover {
+    background: #15803d;
+}
+
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (max-width: 991.98px) {
+
+    .users-stats {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+}
+
+
+@media (max-width: 767.98px) {
+
+    .users-card {
+        border-radius: 18px;
+    }
+
+    .users-header {
+        padding: 17px 16px;
+    }
+
+    .users-add-btn {
+        height: 36px;
+
+        padding: 0 10px;
+
+        font-size: 10px;
+    }
+
+    .users-stats {
+        padding: 14px 16px 7px;
+
+        gap: 8px;
+    }
+
+    .users-stat {
+        min-height: 68px;
+
+        padding: 11px;
+
+        border-radius: 14px;
+    }
+
+    .users-stat-icon {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+
+        border-radius: 10px;
+    }
+
+    .users-stat-value {
+        font-size: 19px;
+    }
+
+    .users-money {
+        font-size: 14px;
+    }
+
+    .users-table thead th,
+    .users-table tbody td {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .users-modal-body {
+        padding: 16px;
+    }
+
+}
+
+
+@media (max-width: 480px) {
+
+    .users-header {
+        align-items: flex-start;
+    }
+
+    .users-header-left {
+        min-width: 0;
+    }
+
+    .users-title {
+        font-size: 14px;
+    }
+
+    .users-subtitle {
+        font-size: 10px;
+    }
+
+    .users-add-btn {
+        white-space: nowrap;
+    }
+
+    .users-stat-icon {
+        display: none;
+    }
+
+    .users-stat-value {
+        font-size: 18px;
+    }
+
+}
+
+/* ============================================================
+   TABLE OUTER
+============================================================ */
+
+.users-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+
+/* ============================================================
+   ROUNDED TABLE
+============================================================ */
+
+.users-table-rounded {
+    width: 100%;
+
+    overflow: hidden;
+
+    border: 1px solid #e8e8ed;
+
+    border-radius: 16px;
+
+    background: #fff;
+
+    box-shadow:
+        0 4px 16px rgba(31, 41, 55, .035);
+}
+
+
+/* ============================================================
+   TABLE
+============================================================ */
+
+.users-table {
+    width: 100%;
+
+    min-width: 950px;
+
+    margin: 0;
+
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+
+/* ============================================================
+   HEADER
+============================================================ */
+
+.users-table thead th {
+    padding: 13px 18px;
+
+    background: #f8f9fb;
+
+    border-bottom: 1px solid #e8e8ed;
+
+    color: #8b94a4;
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: .45px;
+    text-transform: uppercase;
+
+    white-space: nowrap;
+}
+
+
+/* rounded top corners */
+
+.users-table thead th:first-child {
+    border-top-left-radius: 15px;
+}
+
+.users-table thead th:last-child {
+    border-top-right-radius: 15px;
+}
+
+
+/* ============================================================
+   BODY
+============================================================ */
+
+.users-table tbody td {
+    padding: 14px 18px;
+
+    background: #fff;
+
+    border-bottom: 1px solid #edf0f4;
+
+    color: #566071;
+
+    font-size: 12px;
+
+    vertical-align: middle;
+}
+
+
+/* hilangkan border row terakhir */
+
+.users-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+
+/* ============================================================
+   HOVER
+============================================================ */
+
+.users-table tbody tr {
+    transition:
+        background .2s ease;
+}
+
+.users-table tbody tr:hover td {
+    background: #fbfcfd;
+}
+
+
+/* ============================================================
+   USER
+============================================================ */
+
+.users-user {
+    display: flex;
+    align-items: center;
+
+    gap: 11px;
+
+    min-width: 220px;
+}
+
+.users-avatar {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 12px;
+
+    background: #eaf8ef;
+    color: #16a34a;
+
+    font-size: 15px;
+}
+
+.users-user-name {
+    color: #172033;
+
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.users-user-meta {
+    margin-top: 3px;
+
+    color: #9aa3b1;
+
+    font-size: 10px;
+
+    white-space: nowrap;
+}
+
+
+/* ============================================================
+   CONTACT
+============================================================ */
+
+.users-contact {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 7px;
+}
+
+.users-contact i {
+    color: #8b94a4;
+}
+
+
+/* ============================================================
+   ROLE
+============================================================ */
+
+.users-role {
+    display: inline-flex;
+    align-items: center;
+
+    padding: 6px 9px;
+
+    border-radius: 9px;
+
+    background: #f4f6f8;
+
+    color: #596273;
+
+    font-size: 10px;
+    font-weight: 650;
+}
+
+
+/* ============================================================
+   STATUS
+============================================================ */
+
+.users-status {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 6px;
+
+    padding: 6px 9px;
+
+    border-radius: 9px;
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.users-status i {
+    font-size: 6px;
+}
+
+.users-status.status-active {
+    background: #eaf8ef;
+    color: #16813d;
+}
+
+.users-status.status-inactive {
+    background: #f1f3f5;
+    color: #7b8492;
+}
+
+
+/* ============================================================
+   BALANCE
+============================================================ */
+
+.users-balance {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 7px;
+
+    color: #172033;
+
+    font-weight: 700;
+}
+
+.users-balance i {
+    color: #16a34a;
+}
+
+
+/* ============================================================
+   LOGIN
+============================================================ */
+
+.users-login-date {
+    color: #566071;
+    font-size: 11px;
+}
+
+.users-login-time {
+    margin-top: 3px;
+
+    color: #9aa3b1;
+
+    font-size: 9px;
+}
+
+.users-muted {
+    color: #9aa3b1;
+    font-size: 10px;
+}
+
+
+/* ============================================================
+   ACTION
+============================================================ */
+
+.users-actions {
+    display: inline-flex;
+    align-items: center;
+
+    gap: 6px;
+}
+
+.users-action-btn {
+    width: 33px;
+    height: 33px;
+
+    display: inline-grid;
+    place-items: center;
+
+    padding: 0;
+
+    border: 1px solid #e3e7ec;
+    border-radius: 10px;
+
+    background: #fff;
+
+    color: #667085;
+
+    font-size: 12px;
+
+    transition: all .2s ease;
+}
+
+.users-action-btn:hover {
+    background: #f7f8fa;
+
+    transform: translateY(-1px);
+}
+
+.users-action-btn.edit:hover {
+    color: #16a34a;
+    border-color: #cde8d4;
+}
+
+.users-action-btn.delete {
+    color: #dc5a5a;
+}
+
+.users-action-btn.delete:hover {
+    background: #fff5f5;
+    border-color: #f2cccc;
+}
+
+
+/* ============================================================
+   EMPTY
+============================================================ */
+
+.users-empty-cell {
+    padding: 0 !important;
+}
+
+.users-empty {
+    padding: 60px 20px;
+
+    text-align: center;
+}
+
+.users-empty-icon {
+    width: 58px;
+    height: 58px;
+
+    margin: 0 auto 14px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 17px;
+
+    background: #f1f8f3;
+    color: #16a34a;
+
+    font-size: 22px;
+}
+
+.users-empty-title {
+    color: #172033;
+
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.users-empty-text {
+    margin-top: 5px;
+
+    color: #8b94a4;
+
+    font-size: 11px;
+}
+
+
+/* ============================================================
+   MOBILE
+============================================================ */
+
+@media (max-width: 767.98px) {
+
+    .users-table-wrap {
+        padding: 12px !important;
+    }
+
+    .users-table-rounded {
+        border-radius: 14px;
+    }
+
+    .users-table thead th {
+        padding: 12px 15px;
+    }
+
+    .users-table tbody td {
+        padding: 13px 15px;
+    }
+
+}
+
+</style>
+
+<!-- ============================================================
+     PENGGUNA (SATU CARD UTAMA)
+============================================================ -->
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="users-page">
+        <!-- ====================================================
+             HEADER
+        ===================================================== -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+            <div class="d-flex align-items-center gap-2">
+                <div style="width:38px; height:38px; border-radius:12px; background:#e9f8ef; color:#16a34a; display:grid; place-items:center; font-size:18px;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div>
+                    <h5 class="mb-0 fw-bold" style="color: #202939; letter-spacing: 0.5px;">MANAJEMEN PENGGUNA</h5>
+                    <div class="small mt-1" style="color: #16a34a; font-size: 11px;">
+                        Kelola data akun, peran akses, kontak, dan status keaktifan pengguna sistem.
+                    </div>
+                </div>
+            </div>
+
+            <% if (canCreateUser) { %>
+                <button
+                    type="button"
+                    class="btn btn-success fw-bold d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 shadow-sm"
+                    data-bs-toggle="modal"
+                    data-bs-target="#add"
+                >
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Tambah Pengguna</span>
+                </button>
+            <% } %>
+        </div>
+
+
+        <!-- ====================================================
+             STATISTICS
+        ===================================================== -->
+        <div class="users-stats">
+
+            <!-- TOTAL -->
+            <div class="users-stat">
+
+                <div class="users-stat-icon total">
+                    <i class="bi bi-people"></i>
+                </div>
+
+                <div>
+
+                    <div class="users-stat-value">
+                        <%= totalUsers %>
+                    </div>
+
+                    <div class="users-stat-label">
+                        Total Pengguna
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- ACTIVE -->
+            <div class="users-stat">
+
+                <div class="users-stat-icon active">
+                    <i class="bi bi-person-check"></i>
+                </div>
+
+                <div>
+
+                    <div class="users-stat-value">
+                        <%= activeUsers %>
+                    </div>
+
+                    <div class="users-stat-label">
+                        Pengguna Aktif
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- INACTIVE -->
+            <div class="users-stat">
+
+                <div class="users-stat-icon inactive">
+                    <i class="bi bi-person-x"></i>
+                </div>
+
+                <div>
+
+                    <div class="users-stat-value">
+                        <%= inactiveUsers %>
+                    </div>
+
+                    <div class="users-stat-label">
+                        Tidak Aktif
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- SALDO -->
+            <div class="users-stat">
+
+                <div class="users-stat-icon wallet">
+                    <i class="bi bi-wallet2"></i>
+                </div>
+
+                <div>
+
+                    <div class="users-stat-value users-money">
+                        Rp <%= Number(totalBalance).toLocaleString('id-ID') %>
+                    </div>
+
+                    <div class="users-stat-label">
+                        Total Saldo
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ====================================================
+             TABLE
+        ===================================================== -->
+        <div class="users-table-wrap p-3">
+
+            <div class="users-table-rounded">
+
+                <table class="users-table">
+
+                    <thead>
+
+                        <tr>
+                            <th>User</th>
+                            <th>Kontak</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Saldo</th>
+                            <th>Login Terakhir</th>
+                            <th class="text-end">Aksi</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        <% if (!userRows.length) { %>
+
+                            <tr>
+
+                                <td
+                                    colspan="7"
+                                    class="users-empty-cell"
+                                >
+
+                                    <div class="users-empty">
+
+                                        <div class="users-empty-icon">
+                                            <i class="bi bi-people"></i>
+                                        </div>
+
+                                        <div class="users-empty-title">
+                                            Belum Ada Pengguna
+                                        </div>
+
+                                        <div class="users-empty-text">
+                                            Belum ada pengguna yang tersedia.
+                                        </div>
+
+                                    </div>
+
+                                </td>
+
+                            </tr>
+
+                        <% } else { %>
+
+                            <% userRows.forEach(u => { %>
+
+                                <%
+                                    const statusText =
+                                        u.status || "-";
+
+                                    const statusClass =
+                                        String(statusText)
+                                            .toLowerCase() === "active"
+                                            ? "status-active"
+                                            : "status-inactive";
+                                %>
+
+                                <tr>
+
+                                    <!-- USER -->
+                                    <td>
+
+                                        <div class="users-user">
+
+                                            <div class="users-avatar">
+                                                <i class="bi bi-person-fill"></i>
+                                            </div>
+
+                                            <div class="users-user-info">
+
+                                                <div class="users-user-name">
+                                                    <%= u.full_name || "-" %>
+                                                </div>
+
+                                                <div class="users-user-meta">
+                                                    @<%= u.username || "-" %>
+
+                                                    <% if (u.email) { %>
+                                                        · <%= u.email %>
+                                                    <% } %>
+                                                </div>
+
+                                                <% if (u.ktp_number || u.bank_account_number) { %>
+                                                    <div class="d-flex flex-wrap gap-1 mt-1">
+                                                        <% if (u.ktp_number) { %>
+                                                            <span class="badge bg-light text-secondary border px-1 py-0" style="font-size:9.5px; font-weight:600;" title="No. KTP">
+                                                                <i class="bi bi-person-vcard text-primary me-1"></i><%= u.ktp_number %><% if (u.age) { %> (<%= u.age %> th)<% } %>
+                                                            </span>
+                                                        <% } %>
+                                                        <% if (u.bank_name && u.bank_account_number) { %>
+                                                            <span class="badge bg-success-subtle text-success border border-success-subtle px-1 py-0" style="font-size:9.5px; font-weight:600;" title="Rekening Pembayaran Sales">
+                                                                <i class="bi bi-bank me-1"></i><%= u.bank_name %>: <%= u.bank_account_number %>
+                                                            </span>
+                                                        <% } %>
+                                                    </div>
+                                                <% } %>
+
+                                            </div>
+
+                                        </div>
+
+                                    </td>
+
+
+                                    <!-- KONTAK -->
+                                    <td>
+
+                                        <div class="users-contact">
+
+                                            <i class="bi bi-telephone"></i>
+
+                                            <span>
+                                                <%= u.phone || "-" %>
+                                            </span>
+
+                                        </div>
+
+                                        <% if (u.address) { %>
+                                            <div class="small text-muted mt-1 text-truncate" style="max-width:180px; font-size:10px;" title="<%= u.address %>">
+                                                <i class="bi bi-geo-alt me-1"></i><%= u.address %>
+                                            </div>
+                                        <% } %>
+
+                                    </td>
+
+
+                                    <!-- ROLE -->
+                                    <td>
+
+                                        <span class="users-role">
+
+                                            <i class="bi bi-shield-check me-1"></i>
+
+                                            <%= u.roles || "-" %>
+
+                                        </span>
+
+                                    </td>
+
+
+                                    <!-- STATUS -->
+                                    <td>
+
+                                        <span
+                                            class="users-status <%= statusClass %>"
+                                        >
+
+                                            <i class="bi bi-circle-fill"></i>
+
+                                            <%= statusText %>
+
+                                        </span>
+
+                                    </td>
+
+
+                                    <!-- SALDO -->
+                                    <td>
+
+                                        <div class="users-balance">
+
+                                            <i class="bi bi-wallet2"></i>
+
+                                            <span>
+                                                Rp <%= Number(
+                                                    u.wallet_balance || 0
+                                                ).toLocaleString('id-ID') %>
+                                            </span>
+
+                                        </div>
+
+                                    </td>
+
+
+                                    <!-- LOGIN -->
+                                    <td>
+
+                                        <div class="users-login">
+
+                                            <% if (u.last_login_at) { %>
+
+                                                <div class="users-login-date">
+
+                                                    <%= new Date(
+                                                        u.last_login_at
+                                                    ).toLocaleDateString(
+                                                        'id-ID'
+                                                    ) %>
+
+                                                </div>
+
+                                                <div class="users-login-time">
+
+                                                    <i class="bi bi-clock me-1"></i>
+
+                                                    <%= new Date(
+                                                        u.last_login_at
+                                                    ).toLocaleTimeString(
+                                                        'id-ID',
+                                                        {
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        }
+                                                    ) %>
+
+                                                </div>
+
+                                            <% } else { %>
+
+                                                <span class="users-muted">
+                                                    Belum login
+                                                </span>
+
+                                            <% } %>
+
+                                        </div>
+
+                                    </td>
+
+
+                                    <!-- ACTION -->
+                                    <td class="text-end">
+
+                                        <div class="users-actions">
+
+                                            <% if (canUpdateUser) { %>
+
+                                                <button
+                                                    type="button"
+                                                    class="users-action-btn edit"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#edit<%= u.id %>"
+                                                    title="Edit Pengguna"
+                                                >
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+
+                                            <% } %>
+
+
+                                            <% if (canDeleteUser) { %>
+
+                                                <form
+                                                    class="d-inline"
+                                                    method="post"
+                                                    action="/admin/users/<%= u.id %>/delete"
+                                                    onsubmit="return confirm('Hapus user ini?')"
+                                                >
+
+                                                    <button
+                                                        type="submit"
+                                                        class="users-action-btn delete"
+                                                        title="Hapus Pengguna"
+                                                    >
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+
+                                                </form>
+
+                                            <% } %>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+
+                            <% }) %>
+
+                        <% } %>
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+</div>
+
+<!-- ============================================================
+     MODAL TAMBAH
+============================================================ -->
+<% if (canCreateUser) { %>
+
+<div
+    class="modal fade users-modal"
+    id="add"
+    tabindex="-1"
+    aria-hidden="true"
+>
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+        <form
+            class="modal-content"
+            method="post"
+            action="/admin/users/add"
+        >
+
+            <div class="modal-header users-modal-header">
+
+                <div class="users-modal-title-wrap">
+
+                    <div class="users-modal-icon add">
+                        <i class="bi bi-person-plus"></i>
+                    </div>
+
+                    <div>
+
+                        <h5 class="modal-title">
+                            Tambah Pengguna
+                        </h5>
+
+                        <div class="users-modal-subtitle">
+                            Tambahkan pengguna baru ke sistem.
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close"
+                ></button>
+
+            </div>
+
+
+            <div class="modal-body users-modal-body">
+
+                <%- include('../partials/form-user', {
+                    u: null,
+                    roles
+                }) %>
+
+            </div>
+
+
+            <div class="modal-footer users-modal-footer">
+
+                <button
+                    type="button"
+                    class="users-cancel-btn"
+                    data-bs-dismiss="modal"
+                >
+                    Batal
+                </button>
+
+                <button
+                    type="submit"
+                    class="users-save-btn"
+                >
+                    <i class="bi bi-check-lg me-1"></i>
+                    Simpan Pengguna
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+<% } %>
+
+
+<!-- ============================================================
+     MODAL EDIT
+============================================================ -->
+<% userRows.forEach(u => { %>
+
+    <% if (canUpdateUser) { %>
+
+    <div
+        class="modal fade users-modal"
+        id="edit<%= u.id %>"
+        tabindex="-1"
+        aria-hidden="true"
+    >
+
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+
+            <form
+                class="modal-content"
+                method="post"
+                action="/admin/users/<%= u.id %>/update"
+            >
+
+                <div class="modal-header users-modal-header">
+
+                    <div class="users-modal-title-wrap">
+
+                        <div class="users-modal-icon edit">
+                            <i class="bi bi-pencil-square"></i>
+                        </div>
+
+                        <div>
+
+                            <h5 class="modal-title">
+                                Edit Pengguna
+                            </h5>
+
+                            <div class="users-modal-subtitle">
+                                Perbarui informasi pengguna.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close"
+                    ></button>
+
+                </div>
+
+
+                <div class="modal-body users-modal-body">
+
+                    <%- include('../partials/form-user', {
+                        u,
+                        roles
+                    }) %>
+
+                </div>
+
+
+                <div class="modal-footer users-modal-footer">
+
+                    <button
+                        type="button"
+                        class="users-cancel-btn"
+                        data-bs-dismiss="modal"
+                    >
+                        Batal
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="users-save-btn"
+                    >
+                        <i class="bi bi-check-lg me-1"></i>
+                        Simpan Perubahan
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <% } %>
+
+<% }) %>
+
+<script>
+function toggleUserPasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) {
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        }
+    } else {
+        input.type = 'password';
+        if (icon) {
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    }
+}
+</script>
+

@@ -1,0 +1,5332 @@
+<%
+/* ============================================================
+   SAFE DATA
+============================================================ */
+
+const collectionRows =
+    (typeof rows !== "undefined" && Array.isArray(rows))
+        ? rows
+        : [];
+
+const currentUser =
+    (typeof user !== "undefined" && user)
+        ? user
+        : null;
+
+const isNasabah =
+    currentUser?.role === "nasabah";
+
+const isManager =
+    [
+        "superadmin",
+        "admin_pengelola",
+        "petugas_pengumpulan"
+    ].includes(currentUser?.role);
+
+const statusText = {
+    diajukan: "Diajukan",
+    dijadwalkan: "Dijadwalkan",
+    diambil: "Diambil",
+    ditimbang: "Ditimbang",
+    selesai: "Selesai",
+    ditolak: "Ditolak",
+    dibatalkan: "Dibatalkan"
+};
+
+const safeStatusList =
+    (typeof statusList !== "undefined" && Array.isArray(statusList))
+        ? statusList
+        : Object.keys(statusText);
+
+const safeCompanies =
+    (typeof companies !== "undefined" && Array.isArray(companies))
+        ? companies
+        : [];
+
+const safeCollectors =
+    (typeof collectors !== "undefined" && Array.isArray(collectors))
+        ? collectors
+        : [];
+
+const safeTypes =
+    (typeof types !== "undefined" && Array.isArray(types))
+        ? types
+        : [];
+
+const safeSummary =
+    (typeof summary !== "undefined" && summary)
+        ? summary
+        : {};
+
+const safeFilters =
+    (typeof filters !== "undefined" && filters)
+        ? filters
+        : {
+            keyword: "",
+            status: "",
+            date: "",
+            limit: 10
+        };
+
+
+/* ============================================================
+   HELPERS
+============================================================ */
+
+function fmtDate(v) {
+
+    if (!v) return "-";
+
+    const s = String(v).slice(0, 10);
+
+    const a = s.split("-");
+
+    if (a.length === 3) {
+
+        return `${a[2]}-${a[1]}-${a[0]}`;
+
+    }
+
+    try {
+
+        return new Date(v).toLocaleDateString("id-ID");
+
+    } catch (e) {
+
+        return "-";
+
+    }
+}
+
+
+function fmtNumber(v, decimals = 0) {
+
+    return Number(v || 0).toLocaleString(
+        "id-ID",
+        {
+            maximumFractionDigits: decimals
+        }
+    );
+
+}
+
+
+function statusClass(status) {
+
+    switch (String(status || "").toLowerCase()) {
+
+        case "diajukan":
+            return "status-requested";
+
+        case "dijadwalkan":
+            return "status-scheduled";
+
+        case "diambil":
+            return "status-picked";
+
+        case "ditimbang":
+            return "status-weighed";
+
+        case "selesai":
+            return "status-done";
+
+        case "ditolak":
+            return "status-rejected";
+
+        case "dibatalkan":
+            return "status-cancelled";
+
+        default:
+            return "status-default";
+
+    }
+
+}
+
+
+function statusIcon(status) {
+
+    switch (String(status || "").toLowerCase()) {
+
+        case "diajukan":
+            return "bi-send";
+
+        case "dijadwalkan":
+            return "bi-calendar-check";
+
+        case "diambil":
+            return "bi-truck";
+
+        case "ditimbang":
+            return "bi-speedometer2";
+
+        case "selesai":
+            return "bi-check-circle";
+
+        case "ditolak":
+            return "bi-x-circle";
+
+        case "dibatalkan":
+            return "bi-slash-circle";
+
+        default:
+            return "bi-circle";
+
+    }
+
+}
+%>
+
+<%
+/* ============================================================
+   UI-ONLY TRACKING HELPERS
+   Tidak membuat / mengubah database. Tracking hanya membaca
+   status pickup yang sudah tersedia pada data `r`.
+============================================================ */
+
+function trackingStageIndex(status) {
+    const s = String(status || "").toLowerCase();
+    const stages = ["diajukan", "dijadwalkan", "diambil", "ditimbang", "selesai"];
+    const idx = stages.indexOf(s);
+    return idx >= 0 ? idx : -1;
+}
+
+function trackingProgress(status) {
+    const idx = trackingStageIndex(status);
+    if (idx < 0) return 0;
+    return Math.round(((idx + 1) / 5) * 100);
+}
+
+function trackingStageClass(status, stage) {
+    const current = trackingStageIndex(status);
+    const target = trackingStageIndex(stage);
+    if (current < 0 || target < 0) return "";
+    if (target < current) return "completed";
+    if (target === current) return "current";
+    return "pending";
+}
+
+function trackingStageIcon(stage) {
+    switch (stage) {
+        case "diajukan": return "bi-send";
+        case "dijadwalkan": return "bi-calendar-check";
+        case "diambil": return "bi-truck";
+        case "ditimbang": return "bi-speedometer2";
+        case "selesai": return "bi-check-circle";
+        default: return "bi-circle";
+    }
+}
+%>
+
+<!-- LEAFLET.JS FOR MAP TRACKING -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+<style>
+    /* ============================================================
+    PENGUMPULAN SAMPAH — BOOTSTRAP STYLE
+    Bootstrap utilities/components are used for the main layout.
+    ============================================================ */
+
+    .collection-page{
+        color:#212529;
+        font-size:13px;
+    }
+
+    .collection-page .page-icon{
+        width:34px;
+        height:34px;
+        border-radius:10px;
+        background:#e9f8ef;
+        color:#16a34a;
+        display:grid;
+        place-items:center;
+        flex:0 0 34px;
+    }
+
+    .collection-page .page-title{
+        font-size:18px;
+        font-weight:700;
+        line-height:1.2;
+        margin:0;
+    }
+
+    .collection-page .page-subtitle{
+        color:#16a34a;
+        font-size:10px;
+        margin:4px 0 0;
+    }
+
+    .collection-page .stat-card,
+    .collection-page .content-card{
+        border:1px solid #edf0f3 !important;
+        border-radius:16px !important;
+        background:#fff;
+        box-shadow:0 1px 3px rgba(16,24,40,.04);
+    }
+
+    .collection-page .stat-card{
+        padding:16px;
+        min-height:92px;
+    }
+
+    .collection-page .stat-label{
+        color:#8b94a3;
+        font-size:11px;
+        margin-bottom:4px;
+    }
+
+    .collection-page .stat-value{
+        color:#172033;
+        font-size:24px;
+        font-weight:800;
+        line-height:1;
+    }
+
+    .collection-page .stat-icon{
+        width:40px;
+        height:40px;
+        border-radius:12px;
+        display:grid;
+        place-items:center;
+        font-size:17px;
+    }
+
+    .collection-page .section-card-header{
+        padding:16px 18px;
+        border-bottom:1px solid #edf0f3;
+        background:#fff;
+        border-radius:16px 16px 0 0;
+    }
+
+    .collection-page .section-title{
+        color:#202939;
+        font-size:13px;
+        font-weight:700;
+    }
+
+    .collection-page .section-subtitle{
+        color:#929baa;
+        font-size:10px;
+        margin-top:4px;
+    }
+
+    .collection-page .form-label{
+        color:#596273;
+        font-size:11px;
+        font-weight:600;
+        margin-bottom:6px;
+    }
+
+    .collection-page .form-control,
+    .collection-page .form-select{
+        min-height:38px;
+        border-color:#dfe4ea;
+        border-radius:10px;
+        font-size:11px;
+        box-shadow:none;
+    }
+
+    .collection-page .form-control:focus,
+    .collection-page .form-select:focus{
+        border-color:#86b7fe;
+        box-shadow:0 0 0 .15rem rgba(13,110,253,.08);
+    }
+
+    .collection-page .search-box{
+        position:relative;
+    }
+
+    .collection-page .search-box > i{
+        position:absolute;
+        left:13px;
+        top:50%;
+        transform:translateY(-50%);
+        color:#9aa2af;
+        z-index:2;
+    }
+
+    .collection-page .search-box input{
+        padding-left:36px;
+        padding-right:36px;
+    }
+
+    .collection-page .search-clear{
+        position:absolute;
+        right:7px;
+        top:50%;
+        transform:translateY(-50%);
+        border:0;
+        background:transparent;
+        color:#9aa2af;
+        width:28px;
+        height:28px;
+        border-radius:8px;
+        display:grid;
+        place-items:center;
+    }
+
+    .collection-page .search-clear:hover{
+        background:#f1f3f5;
+        color:#495057;
+    }
+
+    .collection-page .table-wrap{
+        width:100%;
+        overflow-x:auto;
+    }
+
+    .collection-page .table{
+        min-width:1050px;
+        margin-bottom:0;
+    }
+
+    .collection-page .table thead th{
+        background:#f8f9fa;
+        color:#6c757d;
+        border-bottom:1px solid #e9ecef;
+        font-size:10px;
+        font-weight:700;
+        white-space:nowrap;
+        padding:12px 14px;
+    }
+
+    .collection-page .table tbody td{
+        padding:13px 14px;
+        border-color:#f0f2f4;
+        font-size:11px;
+        vertical-align:middle;
+    }
+
+    .collection-page .table tbody tr:hover{
+        background:#fafcfb;
+    }
+
+    .collection-page .code-badge{
+        display:inline-flex;
+        align-items:center;
+        padding:5px 9px;
+        border-radius:8px;
+        background:#f4f6f8;
+        color:#374151;
+        font-size:10px;
+        font-weight:800;
+        letter-spacing:.3px;
+    }
+
+    .collection-page .address-text,
+    .collection-page .phone-text,
+    .collection-page .company-text,
+    .collection-page .time-text{
+        color:#8a93a1;
+        font-size:9px;
+        margin-top:4px;
+    }
+
+    .collection-page .customer-name,
+    .collection-page .company-name{
+        color:#202939;
+        font-size:11px;
+        font-weight:700;
+    }
+
+    .collection-page .schedule-date{
+        color:#495057;
+        font-size:10px;
+        font-weight:600;
+    }
+
+    .collection-page .weight-value,
+    .collection-page .money-value{
+        color:#172033;
+        font-size:11px;
+        font-weight:700;
+        white-space:nowrap;
+    }
+
+    .collection-page .ios-status{
+        display:inline-flex;
+        align-items:center;
+        gap:5px;
+        padding:5px 9px;
+        border-radius:999px;
+        font-size:9px;
+        font-weight:700;
+        white-space:nowrap;
+    }
+
+    .collection-page .status-requested{background:#fff6df;color:#9a6700}
+    .collection-page .status-scheduled{background:#edf5ff;color:#2878d4}
+    .collection-page .status-picked{background:#eaf8ef;color:#16803c}
+    .collection-page .status-weighed{background:#f0eaff;color:#7355c7}
+    .collection-page .status-done{background:#e9f8ee;color:#16803c}
+    .collection-page .status-rejected{background:#fff0f0;color:#dc2626}
+    .collection-page .status-cancelled{background:#f2f4f7;color:#667085}
+    .collection-page .status-default{background:#f2f4f7;color:#667085}
+
+    .collection-page .action-btn{
+        width:31px;
+        height:31px;
+        padding:0;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        border-radius:9px;
+        font-size:12px;
+    }
+
+    .collection-page .empty-state{
+        padding:50px 20px;
+        text-align:center;
+        display:none;
+    }
+
+    .collection-page .empty-icon{
+        width:58px;
+        height:58px;
+        border-radius:18px;
+        background:#f4f6f8;
+        color:#9ba4b2;
+        display:grid;
+        place-items:center;
+        margin:0 auto 12px;
+        font-size:23px;
+    }
+
+    .collection-page .empty-title{
+        color:#4c5668;
+        font-size:13px;
+        font-weight:700;
+    }
+
+    .collection-page .empty-text{
+        color:#9aa2af;
+        font-size:10px;
+        margin-top:4px;
+    }
+
+    .collection-page .pagination-area{
+        padding:15px 18px;
+        border-top:1px solid #edf0f3;
+    }
+
+    .collection-page .page-info{
+        color:#929baa;
+        font-size:10px;
+    }
+
+    .collection-page .page-info strong{
+        color:#4b5565;
+    }
+
+    .collection-page .page-btn{
+        padding:4px 9px;
+        background:#fff;
+        min-width:32px;
+        border-radius:8px !important;
+        font-size:10px;
+    }
+
+    .collection-page .modal-content{
+        border:0;
+        border-radius:16px;
+        box-shadow:0 18px 55px rgba(16,24,40,.18);
+        overflow:hidden;
+    }
+
+    .collection-page .modal-header{
+        padding:16px 18px;
+        border-bottom:1px solid #edf0f3;
+    }
+
+    .collection-page .modal-title{
+        color:#202939;
+        font-size:15px;
+        font-weight:700;
+    }
+
+    .collection-page .modal-body{
+        padding:18px;
+    }
+
+    .collection-page .modal-footer{
+        padding:14px 18px;
+        border-top:1px solid #edf0f3;
+        background:#fff;
+    }
+
+    .collection-page .input-group-text{
+        border-color:#dfe4ea;
+        background:#f8f9fa;
+        color:#6c757d;
+    }
+
+    .collection-page .hazard-box{
+        border:1px solid #e5e9ef;
+        border-radius:12px;
+        background:#fafbfc;
+        padding:13px;
+    }
+
+    .collection-page .btn{
+        font-size:11px;
+        border-radius:9px;
+    }
+
+    .collection-page .alert-container{
+        position:fixed;
+        right:18px;
+        top:18px;
+        z-index:1080;
+        width:min(380px,calc(100vw - 36px));
+    }
+
+    .collection-page .page-btn.active{background:#198754;color:#fff;border-color:#198754}
+    .collection-page .tracking-btn{
+        width:auto;
+        min-width:31px;
+        height:31px;
+        padding:0 9px;
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:5px;
+        border-radius:9px;
+        font-size:11px;
+        font-weight:700;
+    }
+
+    .collection-page .tracking-summary{
+        border:1px solid #e9eef2;
+        border-radius:16px;
+        background:linear-gradient(135deg,#f8fffb 0%,#ffffff 58%);
+        padding:18px;
+    }
+
+    .collection-page .tracking-code{
+        font-size:12px;
+        font-weight:800;
+        color:#202939;
+        letter-spacing:.25px;
+    }
+
+    .collection-page .tracking-status{
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+        padding:6px 10px;
+        border-radius:999px;
+        font-size:10px;
+        font-weight:800;
+    }
+
+    .collection-page .tracking-progress-wrap{
+        margin-top:16px;
+    }
+
+    .collection-page .tracking-progress{
+        height:8px;
+        background:#edf1f4;
+        border-radius:999px;
+        overflow:hidden;
+    }
+
+    .collection-page .tracking-progress > div{
+        height:100%;
+        border-radius:999px;
+        background:linear-gradient(90deg,#198754,#39b96f);
+        transition:width .35s ease;
+    }
+
+    .collection-page .tracking-timeline{
+        position:relative;
+        margin-top:20px;
+    }
+
+    .collection-page .tracking-step{
+        position:relative;
+        display:flex;
+        gap:12px;
+        min-height:72px;
+    }
+
+    .collection-page .tracking-step:last-child{
+        min-height:0;
+    }
+
+    .collection-page .tracking-step::before{
+        content:"";
+        position:absolute;
+        left:17px;
+        top:36px;
+        bottom:0;
+        width:2px;
+        background:#e6ebef;
+    }
+
+    .collection-page .tracking-step:last-child::before{
+        display:none;
+    }
+
+    .collection-page .tracking-dot{
+        position:relative;
+        z-index:2;
+        width:36px;
+        height:36px;
+        flex:0 0 36px;
+        border-radius:50%;
+        display:grid;
+        place-items:center;
+        background:#f2f4f7;
+        color:#98a2b3;
+        border:2px solid #e5e9ee;
+        font-size:13px;
+    }
+
+    .collection-page .tracking-step.completed .tracking-dot,
+    .collection-page .tracking-step.current .tracking-dot{
+        background:#e9f8ef;
+        color:#198754;
+        border-color:#a9dfbe;
+    }
+
+    .collection-page .tracking-step.current .tracking-dot{
+        box-shadow:0 0 0 5px rgba(25,135,84,.08);
+    }
+
+    .collection-page .tracking-step.completed::before{
+        background:#b7dfc6;
+    }
+
+    .collection-page .tracking-step-title{
+        color:#9aa3af;
+        font-size:11px;
+        font-weight:700;
+        line-height:1.25;
+        padding-top:3px;
+    }
+
+    .collection-page .tracking-step.completed .tracking-step-title,
+    .collection-page .tracking-step.current .tracking-step-title{
+        color:#202939;
+    }
+
+    .collection-page .tracking-step-desc{
+        color:#a0a8b3;
+        font-size:9px;
+        margin-top:4px;
+    }
+
+    .collection-page .tracking-step.current .tracking-step-desc{
+        color:#6f7885;
+    }
+
+    .collection-page .tracking-info-card{
+        height:100%;
+        border:1px solid #edf0f3;
+        border-radius:12px;
+        background:#fff;
+        padding:12px;
+    }
+
+    .collection-page .tracking-info-label{
+        color:#929baa;
+        font-size:9px;
+        margin-bottom:4px;
+    }
+
+    .collection-page .tracking-info-value{
+        color:#202939;
+        font-size:11px;
+        font-weight:700;
+    }
+
+    .collection-page .tracking-note{
+        border-radius:12px;
+        padding:11px 12px;
+        background:#f8f9fa;
+        border:1px solid #edf0f3;
+        color:#687180;
+        font-size:10px;
+    }
+
+    .collection-page .tracking-alert{
+        border-radius:12px;
+        padding:12px;
+        font-size:10px;
+        font-weight:600;
+    }
+
+    .collection-page .tracking-alert.rejected{
+        background:#fff1f1;
+        border:1px solid #ffd2d2;
+        color:#c62828;
+    }
+
+    .collection-page .tracking-alert.cancelled{
+        background:#f3f4f6;
+        border:1px solid #e5e7eb;
+        color:#667085;
+    }
+
+    @media(max-width:767.98px){
+        .collection-page .tracking-btn span{
+            display:none;
+        }
+        .collection-page .tracking-btn{
+            min-width:31px;
+            padding:0;
+        }
+    }\n\n@media(max-width:767.98px){
+        .collection-page .page-title{font-size:16px}
+        .collection-page .stat-card{padding:13px}
+        .collection-page .stat-value{font-size:20px}
+        .collection-page .table{min-width:900px}
+    }
+
+
+    /* =====================================================
+       IOS TRACKING MODAL
+    ===================================================== */
+
+    .ios-tracking-modal .modal-dialog {
+        max-width: 760px;
+    }
+
+    .ios-tracking-modal .modal-content {
+        border: 0;
+        border-radius: 24px;
+        overflow: hidden;
+        background: #f2f2f7;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, .20);
+    }
+
+    /* HEADER */
+    .ios-tracking-header {
+        background: rgba(255, 255, 255, .94);
+        border-bottom: 1px solid rgba(60, 60, 67, .12);
+        padding: 20px 22px 18px;
+    }
+
+    .ios-tracking-header-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
+    }
+
+    .ios-tracking-title-wrap {
+        min-width: 0;
+    }
+
+    .ios-tracking-title {
+        margin: 0;
+        font-size: 19px;
+        line-height: 1.3;
+        font-weight: 700;
+        color: #1c1c1e;
+        letter-spacing: -.2px;
+    }
+
+    .ios-tracking-title i {
+        color: #34c759;
+        margin-right: 7px;
+    }
+
+    .ios-tracking-subtitle {
+        margin-top: 5px;
+        color: #8e8e93;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .ios-close-btn {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        border: 0;
+        border-radius: 50%;
+        background: #e5e5ea;
+        color: #636366;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        transition: .2s ease;
+    }
+
+    .ios-close-btn:hover {
+        background: #d1d1d6;
+        color: #1c1c1e;
+    }
+
+    .ios-close-btn i {
+        font-size: 15px;
+    }
+
+    /* BODY */
+    .ios-tracking-body {
+        padding: 18px;
+    }
+
+    /* MAIN SUMMARY */
+    .ios-tracking-summary {
+        background: #fff;
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+    }
+
+    .ios-code-label {
+        color: #8e8e93;
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 4px;
+        text-transform: uppercase;
+        letter-spacing: .35px;
+    }
+
+    .ios-tracking-code {
+        color: #1c1c1e;
+        font-size: 20px;
+        font-weight: 750;
+        letter-spacing: -.3px;
+        word-break: break-word;
+    }
+
+    .ios-tracking-code i {
+        color: #34c759;
+        font-size: 18px;
+    }
+
+    .ios-company {
+        color: #8e8e93;
+        font-size: 13px;
+        margin-top: 4px;
+    }
+
+    /* STATUS */
+    .ios-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .ios-status i {
+        font-size: 13px;
+    }
+
+    /* PROGRESS */
+    .ios-progress-section {
+        margin-top: 22px;
+        padding-top: 18px;
+        border-top: 1px solid #f0f0f2;
+    }
+
+    .ios-progress-label {
+        color: #8e8e93;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .ios-progress-percent {
+        color: #34c759;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .ios-progress {
+        height: 8px;
+        margin-top: 8px;
+        background: #e5e5ea;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .ios-progress > div {
+        height: 100%;
+        background: #34c759;
+        border-radius: 999px;
+        transition: width .5s ease;
+    }
+
+    /* TIMELINE */
+    .ios-timeline {
+        margin-top: 24px;
+    }
+
+    .ios-timeline-step {
+        position: relative;
+        display: flex;
+        gap: 14px;
+        min-height: 72px;
+    }
+
+    .ios-timeline-step:last-child {
+        min-height: auto;
+    }
+
+    .ios-timeline-line {
+        position: absolute;
+        top: 34px;
+        left: 16px;
+        width: 2px;
+        height: calc(100% - 10px);
+        background: #e5e5ea;
+    }
+
+    .ios-timeline-step.completed .ios-timeline-line {
+        background: #34c759;
+    }
+
+    .ios-timeline-icon {
+        position: relative;
+        z-index: 2;
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #e5e5ea;
+        color: #8e8e93;
+        transition: .2s ease;
+    }
+
+    .ios-timeline-icon i {
+        font-size: 14px;
+    }
+
+    .ios-timeline-step.completed .ios-timeline-icon {
+        background: #34c759;
+        color: #fff;
+    }
+
+    .ios-timeline-step.current .ios-timeline-icon {
+        background: #34c759;
+        color: #fff;
+        box-shadow: 0 0 0 5px rgba(52, 199, 89, .13);
+    }
+
+    .ios-timeline-content {
+        padding: 1px 0 22px;
+        min-width: 0;
+    }
+
+    .ios-step-title {
+        color: #1c1c1e;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.4;
+    }
+
+    .ios-step-desc {
+        color: #8e8e93;
+        font-size: 12px;
+        line-height: 1.5;
+        margin-top: 3px;
+    }
+
+    .ios-current-badge {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 5px;
+        padding: 3px 7px;
+        border-radius: 999px;
+        background: #e8f8ed;
+        color: #248a3d;
+        font-size: 10px;
+        font-weight: 700;
+        vertical-align: middle;
+    }
+
+    /* ALERT */
+    .ios-alert {
+        border: 0;
+        border-radius: 18px;
+        padding: 14px 16px;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    .ios-alert.rejected {
+        background: #fff0f0;
+        color: #c62828;
+    }
+
+    .ios-alert.cancelled {
+        background: #f0f0f2;
+        color: #636366;
+    }
+
+    .ios-alert i {
+        font-size: 15px;
+    }
+
+    /* INFO CARDS */
+    .ios-info-card {
+        height: 100%;
+        background: #fff;
+        border-radius: 17px;
+        padding: 15px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
+    }
+
+    .ios-info-label {
+        color: #8e8e93;
+        font-size: 11px;
+        font-weight: 600;
+        margin-bottom: 7px;
+    }
+
+    .ios-info-value {
+        color: #1c1c1e;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.4;
+    }
+
+    .ios-info-value i {
+        color: #34c759;
+    }
+
+    /* NOTE */
+    .ios-note {
+        background: #fff;
+        border-radius: 17px;
+        padding: 14px 16px;
+        color: #8e8e93;
+        font-size: 12px;
+        line-height: 1.55;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
+    }
+
+    .ios-note i {
+        color: #34c759;
+    }
+
+    /* FOOTER */
+    .ios-tracking-footer {
+        background: rgba(255, 255, 255, .94);
+        border-top: 1px solid rgba(60, 60, 67, .12);
+        padding: 13px 18px;
+    }
+
+    .ios-btn-close {
+        width: 100%;
+        border: 0;
+        border-radius: 14px;
+        padding: 11px 16px;
+        background: #e5e5ea;
+        color: #1c1c1e;
+        font-size: 14px;
+        font-weight: 700;
+        transition: .2s ease;
+    }
+
+    .ios-btn-close:hover {
+        background: #d1d1d6;
+    }
+
+    /* MOBILE */
+    @media (max-width: 576px) {
+
+        .ios-tracking-modal .modal-dialog {
+            margin: 10px;
+            max-width: none;
+        }
+
+        .ios-tracking-modal .modal-content {
+            border-radius: 22px;
+        }
+
+        .ios-tracking-header {
+            padding: 17px 16px 15px;
+        }
+
+        .ios-tracking-body {
+            padding: 12px;
+        }
+
+        .ios-tracking-summary {
+            border-radius: 18px;
+            padding: 16px;
+        }
+
+        .ios-tracking-header-inner {
+            align-items: flex-start;
+        }
+
+        .ios-tracking-title {
+            font-size: 17px;
+        }
+
+        .ios-tracking-subtitle {
+            font-size: 12px;
+        }
+
+        .ios-tracking-code {
+            font-size: 18px;
+        }
+
+        .ios-status {
+            margin-top: 12px;
+        }
+
+        .ios-info-card {
+            padding: 13px;
+            border-radius: 15px;
+        }
+
+        .ios-info-label {
+            font-size: 10px;
+        }
+
+        .ios-info-value {
+            font-size: 12px;
+        }
+
+        .ios-timeline-step {
+            gap: 11px;
+        }
+
+        .ios-timeline-icon {
+            width: 32px;
+            min-width: 32px;
+            height: 32px;
+        }
+
+        .ios-timeline-line {
+            left: 15px;
+            top: 32px;
+        }
+
+        .ios-step-title {
+            font-size: 13px;
+        }
+
+        .ios-step-desc {
+            font-size: 11px;
+        }
+    }
+
+    /* MODAL ANIMATION */
+    .ios-tracking-modal.fade .modal-dialog {
+        transform: translateY(15px) scale(.98);
+        transition: transform .25s ease;
+    }
+
+    .ios-tracking-modal.show .modal-dialog {
+        transform: translateY(0) scale(1);
+    }
+</style>
+
+<div class="card bg-white border-0 p-3 p-md-4 rounded-4 shadow-sm">
+    <div class="collection-page">
+
+
+        <!-- ========================================================
+            PAGE HEADER
+        ========================================================= -->
+        <div class="mb-4">
+
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+
+                <div class="d-flex align-items-center gap-2">
+
+                    <div class="page-icon">
+
+                        <i class="bi bi-truck"></i>
+
+                    </div>
+
+                    <div class="page-title-wrap">
+                        <h5 class="mb-0">PENGUMPULAN SAMPAH</h5>
+                    </div>
+
+                </div>
+
+
+                <div class="d-flex gap-2">
+
+                    <button
+                        type="button"
+                        class="btn btn-light border"
+                        data-bs-toggle="modal"
+                        data-bs-target="#exportCollectionModal">
+                        <i class="bi bi-file-earmark-arrow-down me-1 text-primary"></i>
+                        Export Data
+                    </button>
+
+                    <% if (isManager) { %>
+
+                        <a
+                            href="/reports"
+                            class="btn btn-light border text-decoration-none">
+
+                            <i class="bi bi-bar-chart me-1"></i>
+                            Laporan
+
+                        </a>
+
+                    <% } %>
+
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-success fw-semibold"
+                        onclick="openQrScannerModal()">
+                        <i class="bi bi-qr-code-scan me-1"></i>
+                        Scan QR Nasabah
+                    </button>
+
+                    <% if (isNasabah) { %>
+
+                        <button
+                            type="button"
+                            class="btn btn-success"
+                            data-bs-toggle="modal"
+                            data-bs-target="#requestCollectionModal">
+
+                            <i class="bi bi-plus-lg me-1"></i>
+                            Ajukan Pickup
+
+                        </button>
+
+                    <% } %>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================================
+            STATISTICS
+        ========================================================= -->
+        <div class="mb-4">
+
+            <div class="row g-2">
+
+
+                <!-- TOTAL -->
+                <div class="col-6 col-xl">
+
+                    <div class="stat-card h-100">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <div class="stat-label">
+                                    Total
+                                </div>
+
+                                <div class="stat-value">
+                                    <%= Number(
+                                        safeSummary.total || 0
+                                    ).toLocaleString("id-ID") %>
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="stat-icon"
+                                style="background:#eef2ff;color:#536dfe">
+
+                                <i class="bi bi-collection"></i>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- DIAJUKAN -->
+                <div class="col-6 col-xl">
+
+                    <div class="stat-card h-100">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <div class="stat-label">
+                                    Diajukan
+                                </div>
+
+                                <div class="stat-value">
+                                    <%= Number(
+                                        safeSummary.diajukan || 0
+                                    ).toLocaleString("id-ID") %>
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="stat-icon"
+                                style="background:#fff6df;color:#a66b00">
+
+                                <i class="bi bi-send"></i>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- DIJADWALKAN -->
+                <div class="col-6 col-xl">
+
+                    <div class="stat-card h-100">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <div class="stat-label">
+                                    Dijadwalkan
+                                </div>
+
+                                <div class="stat-value">
+                                    <%= Number(
+                                        safeSummary.dijadwalkan || 0
+                                    ).toLocaleString("id-ID") %>
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="stat-icon"
+                                style="background:#edf5ff;color:#2878d4">
+
+                                <i class="bi bi-calendar-check"></i>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- DITIMBANG -->
+                <div class="col-6 col-xl">
+
+                    <div class="stat-card h-100">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <div class="stat-label">
+                                    Ditimbang
+                                </div>
+
+                                <div class="stat-value">
+                                    <%= Number(
+                                        safeSummary.ditimbang || 0
+                                    ).toLocaleString("id-ID") %>
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="stat-icon"
+                                style="background:#f0eaff;color:#7355c7">
+
+                                <i class="bi bi-speedometer2"></i>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- SELESAI -->
+                <div class="col-6 col-xl">
+
+                    <div class="stat-card h-100">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <div>
+
+                                <div class="stat-label">
+                                    Selesai
+                                </div>
+
+                                <div class="stat-value">
+                                    <%= Number(
+                                        safeSummary.selesai || 0
+                                    ).toLocaleString("id-ID") %>
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="stat-icon"
+                                style="background:#e9f8ee;color:#22a447">
+
+                                <i class="bi bi-check-circle"></i>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================================
+            FILTER
+        ========================================================= -->
+        <div class="content-card card mb-4">
+
+            <div class="section-card-header d-flex flex-wrap justify-content-between align-items-center gap-3">
+
+                <div>
+
+                    <div class="section-title">
+
+                        <i class="bi bi-sliders me-1 text-secondary"></i>
+
+                        Pencarian & Filter
+
+                    </div>
+
+                    <div class="section-subtitle">
+
+                        Cari pickup berdasarkan kode, nasabah, alamat atau status.
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="collectionResultCount"
+                    class="section-subtitle">
+
+                    <%= collectionRows.length %> data
+
+                </div>
+
+            </div>
+
+
+            <div class="p-3 p-md-4">
+
+                <form
+                    id="collectionFilterForm"
+                    method="get"
+                    action="">
+
+                    <div class="row g-2">
+
+
+                        <!-- SEARCH -->
+                        <div class="col-lg-4">
+
+                            <div class="search-box">
+
+                                <i class="bi bi-search"></i>
+
+                                <input
+                                    type="text"
+                                    id="collectionSearch"
+                                    name="keyword"
+                                    autocomplete="off"
+                                    class="form-control"
+                                    placeholder="Cari kode, nasabah, alamat..."
+                                    value="<%= safeFilters.keyword || '' %>"
+                                >
+
+                                <button
+                                    type="button"
+                                    id="clearCollectionSearch"
+                                    class="search-clear">
+
+                                    <i class="bi bi-x"></i>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- STATUS -->
+                        <div class="col-lg-2 col-md-4">
+
+                            <select
+                                class="form-select"
+                                id="collectionStatus"
+                                name="status">
+
+                                <option value="">
+                                    Semua Status
+                                </option>
+
+                                <% safeStatusList.forEach(s => { %>
+
+                                    <option
+                                        value="<%= s %>"
+                                        <%= String(safeFilters.status || "") === String(s) ? "selected" : "" %>>
+
+                                        <%= statusText[s] || s %>
+
+                                    </option>
+
+                                <% }) %>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- DATE -->
+                        <div class="col-lg-2 col-md-4">
+
+                            <input
+                                type="date"
+                                class="form-control"
+                                id="collectionDate"
+                                name="date"
+                                value="<%= safeFilters.date || '' %>"
+                            >
+
+                        </div>
+
+
+                        <!-- LIMIT -->
+                        <div class="col-lg-2 col-md-4">
+
+                            <select
+                                class="form-select"
+                                id="collectionLimit"
+                                name="limit">
+
+                                <option
+                                    value="10"
+                                    <%= String(safeFilters.limit || "10") === "10" ? "selected" : "" %>>
+                                    10 Data
+                                </option>
+
+                                <option
+                                    value="25"
+                                    <%= String(safeFilters.limit || "") === "25" ? "selected" : "" %>>
+                                    25 Data
+                                </option>
+
+                                <option
+                                    value="50"
+                                    <%= String(safeFilters.limit || "") === "50" ? "selected" : "" %>>
+                                    50 Data
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <!-- BUTTON -->
+                        <div class="col-lg-2">
+
+                            <button
+                                type="submit"
+                                class="btn btn-success w-100"
+                                style="height:38px">
+
+                                <i class="bi bi-search me-1"></i>
+                                Filter
+
+                            </button>
+
+                        </div>
+
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================================
+            DATA TABLE
+        ========================================================= -->
+        <div class="content-card card mb-4">
+
+            <div class="table-wrap">
+
+                <table class="table table-hover align-middle mb-0">
+
+                    <thead>
+
+                        <tr>
+
+                            <th><i class="bi bi-upc me-1"></i> Kode</th>
+
+                            <th><i class="bi bi-person me-1"></i> Nasabah</th>
+
+                            <th><i class="bi bi-building me-1"></i> Perusahaan</th>
+
+                            <th><i class="bi bi-calendar3 me-1"></i> Jadwal</th>
+
+                            <th><i class="bi bi-speedometer2 me-1"></i> Berat</th>
+
+                            <th><i class="bi bi-cash-stack me-1"></i> Nilai</th>
+
+                            <th><i class="bi bi-toggle2-on me-1"></i> Status</th>
+
+                            <th class="text-end"><i class="bi bi-three-dots-vertical me-1"></i> Aksi</th>
+
+                        </tr>
+
+                    </thead>
+
+
+                    <tbody id="collectionTableBody">
+
+
+                        <% collectionRows.forEach((r, index) => { %>
+
+                            <%
+                                const searchable =
+                                    String(
+                                        (r.code || "") + " " +
+                                        (r.full_name || "") + " " +
+                                        (r.address || "") + " " +
+                                        (r.company_name || "") + " " +
+                                        (r.phone || "") + " " +
+                                        (r.status || "")
+                                    ).toLowerCase();
+                            %>
+
+
+                            <tr
+                                class="collection-row"
+                                data-index="<%= index %>"
+                                data-search="<%= searchable %>"
+                            >
+
+
+                                <!-- KODE -->
+                                <td>
+
+                                    <div class="code-badge">
+
+                                        <%= r.code || "-" %>
+
+                                    </div>
+
+                                    <div class="address-text">
+
+                                        <i class="bi bi-geo-alt me-1"></i>
+
+                                        <%= r.address || "-" %>
+
+                                    </div>
+
+                                </td>
+
+
+                                <!-- NASABAH -->
+                                <td>
+
+                                    <div class="customer-name">
+
+                                        <%= r.full_name || "-" %>
+
+                                    </div>
+
+                                    <% if (r.phone) { %>
+
+                                        <div class="phone-text">
+
+                                            <i class="bi bi-telephone me-1"></i>
+
+                                            <%= r.phone %>
+
+                                        </div>
+
+                                    <% } %>
+
+                                </td>
+
+
+                                <!-- PERUSAHAAN -->
+                                <td>
+
+                                    <div class="company-text">
+
+                                        <i class="bi bi-building me-1"></i>
+
+                                        <%= r.company_name || "-" %>
+
+                                    </div>
+
+                                </td>
+
+
+                                <!-- JADWAL -->
+                                <td>
+
+                                    <div class="schedule-date">
+
+                                        <i class="bi bi-calendar3 me-1 text-secondary"></i>
+
+                                        <%= fmtDate(r.scheduled_date) %>
+
+                                    </div>
+
+                                    <div class="time-text">
+
+                                        <i class="bi bi-clock me-1"></i>
+
+                                        <%= r.scheduled_time
+                                            ? String(r.scheduled_time).slice(0,5)
+                                            : "-"
+                                        %>
+
+                                    </div>
+
+                                </td>
+
+
+                                <!-- BERAT -->
+                                <td>
+
+                                    <span class="weight-value">
+
+                                        <%= fmtNumber(
+                                            r.total_weight,
+                                            3
+                                        ) %>
+
+                                        kg
+
+                                    </span>
+
+                                </td>
+
+
+                                <!-- NILAI -->
+                                <td>
+
+                                    <span class="money-value">
+
+                                        Rp
+                                        <%= fmtNumber(
+                                            r.total_value
+                                        ) %>
+
+                                    </span>
+
+                                </td>
+
+
+                                <!-- STATUS -->
+                                <td>
+
+                                    <span
+                                        class="ios-status <%= statusClass(r.status) %>">
+
+                                        <i class="bi <%= statusIcon(r.status) %>"></i>
+
+                                        <%= statusText[r.status] || r.status || "-" %>
+
+                                    </span>
+
+                                </td>
+
+
+                                <!-- AKSI -->
+                                <td class="text-end">
+
+                                    <div class="d-flex justify-content-end gap-1">
+
+
+                                        <% if (isManager) { %>
+
+
+                                            <!-- STATUS -->
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-light border action-btn"
+                                                title="Update Status"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#statusCollection<%= r.id %>">
+
+                                                <i class="bi bi-arrow-repeat"></i>
+
+                                            </button>
+
+
+                                            <!-- TIMBANG -->
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-light border action-btn"
+                                                title="Tambah Hasil Timbang"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#itemCollection<%= r.id %>">
+
+                                                <i class="bi bi-speedometer2"></i>
+
+                                            </button>
+
+
+                                            <!-- EDIT -->
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-light border action-btn"
+                                                title="Edit"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editCollection<%= r.id %>">
+
+                                                <i class="bi bi-pencil"></i>
+
+                                            </button>
+
+                                            <!-- TRACKING & PETA UNTUK ADMIN/PETUGAS --                                            <!-- TRACKING & PETA UNTUK ADMIN/PETUGAS -->
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-light border action-btn text-success"
+                                                title="Tracking & Peta Lokasi"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#trackingCollection<%= r.id %>">
+                                                <i class="bi bi-geo-alt"></i>
+                                            </button>
+
+                                            <!-- STRUK THERMAL NOTA -->
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-light border action-btn text-primary"
+                                                title="Cetak Struk Nota Timbangan"
+                                                onclick="openReceiptThermal(<%= r.id %>)">
+                                                <i class="bi bi-printer"></i>
+                                            </button>
+
+                                        <% } else if (
+                                            isNasabah &&
+                                            Number(r.user_id) === Number(currentUser.id)
+                                        ) { %>
+
+                                            <!-- TRACKING NASABAH -->
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-success tracking-btn"
+                                                title="Lihat Tracking"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#trackingCollection<%= r.id %>">
+                                                <i class="bi bi-geo-alt"></i>
+                                                <span>Tracking</span>
+                                            </button>
+
+                                            <!-- EDIT NASABAH -->
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-light border action-btn"
+                                                title="Edit Pickup"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#editCollection<%= r.id %>">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+
+                                            <!-- STRUK NOTA NASABAH -->
+                                            <button
+                                                type="button"
+                                                class="btn btn-sm btn-light border action-btn text-primary"
+                                                title="Cetak Struk Nota Timbangan"
+                                                onclick="openReceiptThermal(<%= r.id %>)">
+                                                <i class="bi bi-printer"></i>
+                                            </button>
+
+                                        <% } %>%>
+
+
+                                    </div>
+
+                                </td>
+
+
+                            </tr>
+
+                        <% }) %>
+
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+
+            <!-- ====================================================
+                EMPTY STATE
+            ===================================================== -->
+            <div
+                id="collectionEmpty"
+                class="empty-state"
+                style="display: none;">
+
+                <div class="empty-icon">
+
+                    <i class="bi bi-search"></i>
+
+                </div>
+
+                <div class="empty-title">
+
+                    Data tidak ditemukan
+
+                </div>
+
+                <div class="empty-text">
+
+                    Tidak ada pengumpulan yang sesuai dengan pencarian atau filter.
+
+                </div>
+
+            </div>
+
+
+            <!-- ====================================================
+                PAGINATION
+            ===================================================== -->
+            <div
+                id="collectionPagination"
+                class="pagination-area d-flex flex-wrap justify-content-between align-items-center gap-3">
+
+                <div
+                    id="collectionPageInfo"
+                    class="page-info">
+
+                    Menampilkan data
+
+                </div>
+
+                <div
+                    id="collectionPaginationButtons"
+                    class="d-flex flex-wrap align-items-center gap-1">
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- ============================================================
+     ALERT CONTAINER
+============================================================ -->
+<div
+    id="collectionAlertContainer"
+    class="alert-container">
+</div>
+
+<!-- ============================================================
+     MODALS
+     BOOTSTRAP STYLE
+     ICON SEJAJAR DENGAN KOLOM INPUT
+============================================================ -->
+
+<% collectionRows.forEach(r => { %>
+
+    <!-- ========================================================
+         EDIT PICKUP
+    ========================================================= -->
+    <div
+        class="modal fade"
+        id="editCollection<%= r.id %>"
+        tabindex="-1"
+        aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+
+            <form
+                class="modal-content border-0 shadow"
+                method="post"
+                action="/collection/<%= r.id %>/edit">
+
+                <!-- HEADER -->
+                <div class="modal-header">
+
+                    <div>
+
+                        <h5 class="modal-title fw-semibold">
+
+                            <i class="bi bi-pencil-square text-success me-2"></i>
+
+                            Edit Pickup
+                            <%= r.code || "" %>
+
+                        </h5>
+
+                        <div class="small text-secondary mt-1">
+                            Perbarui detail pengumpulan.
+                        </div>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                    </button>
+
+                </div>
+
+
+                <!-- BODY -->
+                <div class="modal-body">
+
+                    <!-- ==================================================
+                         ALAMAT PICKUP
+                    =================================================== -->
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Alamat Pickup
+                        </label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text bg-light">
+                                <i class="bi bi-geo-alt text-success"></i>
+                            </span>
+
+                            <textarea
+                                class="form-control"
+                                name="address"
+                                id="editAddress_<%= r.id %>"
+                                rows="3"
+                                required
+                                oninput="checkCityInAddress(<%= r.id %>)"
+                                placeholder="Masukkan alamat pickup..."><%= r.address || "" %></textarea>
+
+                        </div>
+
+                    </div>
+
+                    <!-- KOORDINAT GPS (LATITUDE & LONGITUDE) -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small text-muted">Latitude</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light"><i class="bi bi-compass text-success"></i></span>
+                                <input type="text" class="form-control" name="latitude" id="editLat_<%= r.id %>" value="<%= r.latitude || '' %>" placeholder="-6.7320">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small text-muted">Longitude</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light"><i class="bi bi-compass text-success"></i></span>
+                                <input type="text" class="form-control" name="longitude" id="editLng_<%= r.id %>" value="<%= r.longitude || '' %>" placeholder="108.5523">
+                            </div>
+                        </div>
+                        <div class="col-12 mt-1 d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-light border text-success fw-semibold" onclick="autoDetectCoords(<%= r.id %>)">
+                                <i class="bi bi-geo-alt-fill me-1"></i> Deteksi Kota dari Alamat (e.g. Cirebon)
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light border text-primary fw-semibold" onclick="useGpsLocation(<%= r.id %>)">
+                                <i class="bi bi-crosshair me-1"></i> Gunakan GPS Saya
+                            </button>
+                        </div>
+                    </div>
+
+
+                    <!-- ==================================================
+                         PERUSAHAAN + TANGGAL
+                    =================================================== -->
+                    <div class="row g-3">
+
+                        <!-- PERUSAHAAN -->
+                        <div class="col-md-6">
+
+                            <label class="form-label fw-semibold">
+                                Perusahaan
+                            </label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-building text-success"></i>
+                                </span>
+
+                                <select
+                                    class="form-select"
+                                    name="company_id">
+
+                                    <option value="">
+                                        -
+                                    </option>
+
+                                    <% safeCompanies.forEach(c => { %>
+
+                                        <option
+                                            value="<%= c.id %>"
+                                            <%= Number(r.company_id) === Number(c.id)
+                                                ? "selected"
+                                                : ""
+                                            %>>
+
+                                            <%= c.name %>
+
+                                        </option>
+
+                                    <% }) %>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- TANGGAL -->
+                        <div class="col-md-6">
+
+                            <label class="form-label fw-semibold">
+                                Tanggal
+                            </label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-calendar3 text-success"></i>
+                                </span>
+
+                                <input
+                                    class="form-control"
+                                    type="date"
+                                    name="scheduled_date"
+                                    value="<%= r.scheduled_date
+                                        ? String(r.scheduled_date).slice(0,10)
+                                        : ''
+                                    %>"
+                                >
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ==================================================
+                         JAM PICKUP
+                    =================================================== -->
+                    <div class="mt-3">
+
+                        <label class="form-label fw-semibold">
+                            Jam Pickup
+                        </label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text bg-light">
+                                <i class="bi bi-clock text-success"></i>
+                            </span>
+
+                            <input
+                                class="form-control"
+                                type="time"
+                                name="scheduled_time"
+                                value="<%= r.scheduled_time
+                                    ? String(r.scheduled_time).slice(0,5)
+                                    : ''
+                                %>"
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ==================================================
+                         CATATAN
+                    =================================================== -->
+                    <div class="mt-3">
+
+                        <label class="form-label fw-semibold">
+                            Catatan
+                        </label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text bg-light align-items-start pt-2">
+                                <i class="bi bi-sticky text-success"></i>
+                            </span>
+
+                            <textarea
+                                class="form-control"
+                                name="request_note"
+                                rows="3"
+                                placeholder="Masukkan catatan..."><%= r.request_note || "" %></textarea>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- FOOTER -->
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-light border"
+                        data-bs-dismiss="modal">
+
+                        <i class="bi bi-x-lg me-1"></i>
+
+                        Batal
+
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-success">
+
+                        <i class="bi bi-check-lg me-1"></i>
+
+                        Simpan
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <% if (isManager) { %>
+
+
+        <!-- ====================================================
+             UPDATE STATUS
+        ===================================================== -->
+        <div
+            class="modal fade"
+            id="statusCollection<%= r.id %>"
+            tabindex="-1"
+            aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+
+                <form
+                    class="modal-content border-0 shadow"
+                    method="post"
+                    action="/collection/<%= r.id %>/status">
+
+                    <!-- HEADER -->
+                    <div class="modal-header">
+
+                        <div>
+
+                            <h5 class="modal-title fw-semibold">
+
+                                <i class="bi bi-arrow-repeat text-success me-2"></i>
+
+                                Update Status
+
+                            </h5>
+
+                            <div class="small text-secondary mt-1">
+                                <%= r.code || "" %>
+                            </div>
+
+                        </div>
+
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                        </button>
+
+                    </div>
+
+
+                    <!-- BODY -->
+                    <div class="modal-body">
+
+                        <!-- ==================================================
+                             STATUS
+                        =================================================== -->
+                        <div class="mb-3">
+
+                            <label class="form-label fw-semibold">
+                                Status
+                            </label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-toggle2-on text-success"></i>
+                                </span>
+
+                                <select
+                                    class="form-select"
+                                    name="status">
+
+                                    <% safeStatusList.forEach(s => { %>
+
+                                        <option
+                                            value="<%= s %>"
+                                            <%= r.status === s
+                                                ? "selected"
+                                                : ""
+                                            %>>
+
+                                            <%= statusText[s] || s %>
+
+                                        </option>
+
+                                    <% }) %>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ==================================================
+                             PETUGAS
+                        =================================================== -->
+                        <div class="mb-3">
+
+                            <label class="form-label fw-semibold">
+                                Petugas
+                            </label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-person-badge text-success"></i>
+                                </span>
+
+                                <select
+                                    class="form-select"
+                                    name="assigned_to">
+
+                                    <option value="">
+                                        Petugas tetap
+                                    </option>
+
+                                    <% safeCollectors.forEach(c => { %>
+
+                                        <option
+                                            value="<%= c.id %>"
+                                            <%= Number(r.assigned_to) === Number(c.id)
+                                                ? "selected"
+                                                : ""
+                                            %>>
+
+                                            <%= c.full_name %>
+
+                                        </option>
+
+                                    <% }) %>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ==================================================
+                             ALASAN PENOLAKAN
+                        =================================================== -->
+                        <div>
+
+                            <label class="form-label fw-semibold">
+                                Alasan Penolakan
+                            </label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-text bg-light align-items-start pt-2">
+
+                                    <i class="bi bi-exclamation-triangle text-danger"></i>
+
+                                </span>
+
+                                <textarea
+                                    class="form-control"
+                                    name="rejected_reason"
+                                    rows="3"
+                                    placeholder="Isi jika pickup ditolak..."><%= r.rejected_reason || "" %></textarea>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- FOOTER -->
+                    <div class="modal-footer">
+
+                        <button
+                            type="button"
+                            class="btn btn-light border"
+                            data-bs-dismiss="modal">
+
+                            <i class="bi bi-x-lg me-1"></i>
+
+                            Batal
+
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="btn btn-success">
+
+                            <i class="bi bi-check-lg me-1"></i>
+
+                            Simpan Status
+
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+
+        <!-- ====================================================
+             HASIL TIMBANG
+        ===================================================== -->
+        <div
+            class="modal fade"
+            id="itemCollection<%= r.id %>"
+            tabindex="-1"
+            aria-hidden="true">
+
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+
+                <form
+                    class="modal-content border-0 shadow"
+                    method="post"
+                    enctype="multipart/form-data"
+                    action="/collection/<%= r.id %>/items">
+
+                    <!-- HEADER -->
+                    <div class="modal-header">
+
+                        <div>
+
+                            <h5 class="modal-title fw-semibold">
+
+                                <i class="bi bi-speedometer2 text-success me-2"></i>
+
+                                Tambah Hasil Timbang
+
+                            </h5>
+
+                            <div class="small text-secondary mt-1">
+
+                                Pickup <%= r.code || "" %>
+
+                            </div>
+
+                        </div>
+
+                        <button
+                            type="button"
+                            class="btn-close"
+                            data-bs-dismiss="modal"
+                            aria-label="Close">
+                        </button>
+
+                    </div>
+
+
+                    <!-- BODY -->
+                    <div class="modal-body">
+
+                        <!-- ==================================================
+                             JENIS SAMPAH
+                        =================================================== -->
+                        <div class="mb-3">
+
+                            <label class="form-label fw-semibold">
+                                Jenis Sampah
+                            </label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-text bg-light">
+
+                                    <i class="bi bi-trash3 text-success"></i>
+
+                                </span>
+
+                                <select
+                                    class="form-select"
+                                    name="waste_type_id"
+                                    required>
+
+                                    <option value="">
+                                        Pilih jenis sampah
+                                    </option>
+
+                                    <% safeTypes.forEach(t => { %>
+
+                                        <option
+                                            value="<%= t.id %>">
+
+                                            <%= t.code %>
+                                            —
+                                            <%= t.name %>
+                                            ·
+                                            Rp <%= Number(
+                                                t.price_per_unit || 0
+                                            ).toLocaleString("id-ID") %>
+                                            /
+                                            <%= t.unit %>
+
+                                        </option>
+
+                                    <% }) %>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ==================================================
+                             BERAT + HARGA
+                        =================================================== -->
+                        <div class="row g-3">
+
+                            <!-- BERAT -->
+                            <div class="col-md-6">
+
+                                <label class="form-label fw-semibold">
+                                    Berat
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text bg-light">
+
+                                        <i class="bi bi-speedometer2 text-success"></i>
+
+                                    </span>
+
+                                    <input
+                                        class="form-control"
+                                        type="number"
+                                        step="0.001"
+                                        min="0.001"
+                                        name="weight"
+                                        placeholder="0.000"
+                                        required
+                                    >
+
+                                    <span class="input-group-text">
+                                        kg
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+
+                            <!-- HARGA -->
+                            <div class="col-md-6">
+
+                                <label class="form-label fw-semibold">
+                                    Harga / Unit
+                                </label>
+
+                                <div class="input-group">
+
+                                    <span class="input-group-text bg-light">
+
+                                        <i class="bi bi-cash-stack text-success"></i>
+
+                                    </span>
+
+                                    <input
+                                        class="form-control"
+                                        type="number"
+                                        step="0.01"
+                                        name="price_per_unit"
+                                        placeholder="0"
+                                    >
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- ==================================================
+                             CATATAN
+                        =================================================== -->
+                        <div class="mt-3">
+
+                            <label class="form-label fw-semibold">
+                                Catatan
+                            </label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-text bg-light align-items-start pt-2">
+
+                                    <i class="bi bi-sticky text-success"></i>
+
+                                </span>
+
+                                <textarea
+                                    class="form-control"
+                                    name="notes"
+                                    rows="3"
+                                    placeholder="Catatan item timbang..."></textarea>
+
+                            </div>
+
+                        </div>
+
+                        <!-- ==================================================
+                             FOTO SAMPAH / BUKTI TIMBANG
+                        =================================================== -->
+                        <div class="mt-3">
+
+                            <label class="form-label fw-semibold">
+                                Foto Sampah / Bukti Timbang
+                            </label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-camera text-success"></i>
+                                </span>
+
+                                <input
+                                    class="form-control"
+                                    type="file"
+                                    name="waste_photo"
+                                    accept="image/*"
+                                    capture="environment"
+                                >
+
+                            </div>
+
+                            <div class="form-text">
+                                Unggah foto sampah atau penimbangan (JPG, PNG, WEBP). Bisa langsung gunakan kamera HP.
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- FOOTER -->
+                    <div class="modal-footer">
+
+                        <button
+                            type="button"
+                            class="btn btn-light border"
+                            data-bs-dismiss="modal">
+
+                            <i class="bi bi-x-lg me-1"></i>
+
+                            Batal
+
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="btn btn-success">
+
+                            <i class="bi bi-check-lg me-1"></i>
+
+                            Simpan Timbangan
+
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+
+
+    <% } %>
+
+
+<% }) %>
+
+
+<% /* TRACKING MODAL UNTUK SEMUA ROLE (ADMIN, PETUGAS & NASABAH) */ %>
+<% collectionRows.forEach(r => { %>
+
+<!-- ========================================================
+     TRACKING PICKUP MODAL
+======================================================== -->
+<div
+    class="modal fade ios-tracking-modal"
+    id="trackingCollection<%= r.id %>"
+    tabindex="-1"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+
+        <div class="modal-content">
+
+            <!-- =================================================
+                 HEADER
+            ================================================== -->
+            <div class="ios-tracking-header">
+
+                <div class="ios-tracking-header-inner">
+
+                    <div class="ios-tracking-title-wrap">
+
+                        <h5 class="ios-tracking-title">
+                            <i class="bi bi-truck"></i>
+                            Tracking Pengiriman
+                        </h5>
+
+                        <div class="ios-tracking-subtitle">
+                            Pantau proses pickup
+                            <strong><%= r.code || "-" %></strong>
+                        </div>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        class="ios-close-btn"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+
+                        <i class="bi bi-x-lg"></i>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 BODY
+            ================================================== -->
+            <div class="ios-tracking-body">
+
+                <%
+                    const trackingStatus =
+                        String(r.status || "").toLowerCase();
+
+                    const trackingIndex =
+                        trackingStageIndex(trackingStatus);
+
+                    const trackingPercent =
+                        trackingProgress(trackingStatus);
+
+                    const trackingStages = [
+                        {
+                            key: "diajukan",
+                            title: "Pickup Diajukan",
+                            desc: "Permintaan pickup sudah diterima sistem."
+                        },
+                        {
+                            key: "dijadwalkan",
+                            title: "Pickup Dijadwalkan",
+                            desc: "Jadwal pengambilan sudah ditentukan."
+                        },
+                        {
+                            key: "diambil",
+                            title: "Sampah Diambil",
+                            desc: "Petugas sudah melakukan pengambilan."
+                        },
+                        {
+                            key: "ditimbang",
+                            title: "Sedang / Sudah Ditimbang",
+                            desc: "Hasil pengambilan sedang diproses dan ditimbang."
+                        },
+                        {
+                            key: "selesai",
+                            title: "Proses Selesai",
+                            desc: "Pengumpulan sudah selesai diproses."
+                        }
+                    ];
+                %>
+
+
+                <!-- =================================================
+                     SUMMARY
+                ================================================== -->
+                <div class="ios-tracking-summary">
+
+                    <div class="d-flex flex-wrap justify-content-between align-items-start">
+
+                        <div>
+
+                            <div class="ios-code-label">
+                                Kode Pickup
+                            </div>
+
+                            <div class="ios-tracking-code">
+
+                                <i class="bi bi-upc"></i>
+
+                                <%= r.code || "-" %>
+
+                            </div>
+
+                            <div class="ios-company">
+
+                                <i class="bi bi-building me-1"></i>
+
+                                <%= r.company_name || "Perusahaan belum dipilih" %>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- STATUS -->
+                        <span class="ios-status <%= statusClass(r.status) %>">
+
+                            <i class="bi <%= statusIcon(r.status) %>"></i>
+
+                            <%= statusText[r.status] || r.status || "Belum ada status" %>
+
+                        </span>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         PROGRESS
+                    ================================================== -->
+                    <div class="ios-progress-section">
+
+                        <div class="d-flex justify-content-between align-items-center">
+
+                            <span class="ios-progress-label">
+                                Progress proses
+                            </span>
+
+                            <strong class="ios-progress-percent">
+                                <%= trackingPercent %>%
+                            </strong>
+
+                        </div>
+
+
+                        <div class="ios-progress">
+
+                            <div
+                                style="width:<%= trackingPercent %>%">
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         TIMELINE
+                    ================================================== -->
+                    <div class="ios-timeline">
+
+                        <% trackingStages.forEach((stage, stageIndex) => { %>
+
+                            <%
+                                const stageClass =
+                                    trackingStageClass(
+                                        r.status,
+                                        stage.key
+                                    );
+
+                                const isCurrent =
+                                    trackingStageIndex(r.status) === stageIndex;
+
+                                const normalizedStageClass =
+                                    String(stageClass || "").toLowerCase();
+
+                                const isCompleted =
+                                    normalizedStageClass.includes("completed") ||
+                                    normalizedStageClass.includes("complete") ||
+                                    normalizedStageClass.includes("done");
+
+                            %>
+
+                            <div
+                                class="ios-timeline-step
+                                    <%= isCompleted ? 'completed' : '' %>
+                                    <%= isCurrent ? 'current' : '' %>">
+
+                                <% if (stageIndex < trackingStages.length - 1) { %>
+
+                                    <div class="ios-timeline-line"></div>
+
+                                <% } %>
+
+
+                                <!-- ICON -->
+                                <div class="ios-timeline-icon">
+
+                                    <i class="bi <%= trackingStageIcon(stage.key) %>"></i>
+
+                                </div>
+
+
+                                <!-- CONTENT -->
+                                <div class="ios-timeline-content">
+
+                                    <div class="ios-step-title">
+
+                                        <%= stage.title %>
+
+                                        <% if (isCurrent) { %>
+
+                                            <span class="ios-current-badge">
+
+                                                Posisi Sekarang
+
+                                            </span>
+
+                                        <% } %>
+
+                                    </div>
+
+
+                                    <div class="ios-step-desc">
+
+                                        <%= stage.desc %>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        <% }) %>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     REJECTED
+                ================================================== -->
+                <% if (trackingStatus === "ditolak") { %>
+
+                    <div class="ios-alert rejected mt-3">
+
+                        <div class="fw-semibold">
+
+                            <i class="bi bi-x-circle me-1"></i>
+
+                            Pickup ini ditolak.
+
+                        </div>
+
+                        <% if (r.rejected_reason) { %>
+
+                            <div class="mt-1">
+
+                                Alasan:
+                                <%= r.rejected_reason %>
+
+                            </div>
+
+                        <% } %>
+
+                    </div>
+
+                <% } %>
+
+
+                <!-- =================================================
+                     CANCELLED
+                ================================================== -->
+                <% if (trackingStatus === "dibatalkan") { %>
+
+                    <div class="ios-alert cancelled mt-3">
+
+                        <i class="bi bi-slash-circle me-1"></i>
+
+                        Pickup ini dibatalkan dan proses tidak dilanjutkan.
+
+                    </div>
+
+                <% } %>
+
+
+                <!-- =================================================
+                     INFORMATION CARDS
+                ================================================== -->
+                <div class="row g-2 mt-2">
+
+
+                    <!-- TANGGAL -->
+                    <div class="col-6 col-md-3">
+
+                        <div class="ios-info-card">
+
+                            <div class="ios-info-label">
+                                Tanggal Pickup
+                            </div>
+
+                            <div class="ios-info-value">
+
+                                <i class="bi bi-calendar3 me-1"></i>
+
+                                <%= fmtDate(r.scheduled_date) %>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- JAM -->
+                    <div class="col-6 col-md-3">
+
+                        <div class="ios-info-card">
+
+                            <div class="ios-info-label">
+                                Jam Pickup
+                            </div>
+
+                            <div class="ios-info-value">
+
+                                <i class="bi bi-clock me-1"></i>
+
+                                <%= r.scheduled_time
+                                    ? String(r.scheduled_time).slice(0,5)
+                                    : "-" %>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- BERAT -->
+                    <div class="col-6 col-md-3">
+
+                        <div class="ios-info-card">
+
+                            <div class="ios-info-label">
+                                Berat
+                            </div>
+
+                            <div class="ios-info-value">
+
+                                <i class="bi bi-box-seam me-1"></i>
+
+                                <%= fmtNumber(r.total_weight, 3) %> kg
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- NILAI -->
+                    <div class="col-6 col-md-3">
+
+                        <div class="ios-info-card">
+
+                            <div class="ios-info-label">
+                                Nilai
+                            </div>
+
+                            <div class="ios-info-value">
+
+                                <i class="bi bi-cash-stack me-1"></i>
+
+                                Rp <%= fmtNumber(r.total_value) %>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =================================================
+                     PETA LOKASI PENJEMPUTAN & KURIR (LEAFLET)
+                ================================================== -->
+                <div class="mt-3 p-3 bg-white border rounded-3 shadow-sm">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="fw-bold text-dark" style="font-size:13px;">
+                            <i class="bi bi-geo-alt-fill text-danger me-1"></i> Peta Titik Penjemputan
+                        </div>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size:11px;">
+                            <i class="bi bi-pin-map me-1"></i> <%= r.address ? (r.address.length > 30 ? r.address.slice(0, 30) + '...' : r.address) : 'Lokasi Terpetakan' %>
+                        </span>
+                    </div>
+
+                    <div
+                        id="trackingMap_<%= r.id %>"
+                        class="leaflet-tracking-map"
+                        data-id="<%= r.id %>"
+                        data-lat="<%= r.latitude || '-6.2088' %>"
+                        data-lng="<%= r.longitude || '106.8456' %>"
+                        data-code="<%= r.code || '-' %>"
+                        data-nasabah="<%= r.full_name || '-' %>"
+                        data-address="<%= r.address || 'Alamat Pickup' %>"
+                        data-status="<%= r.status || 'diajukan' %>"
+                        data-collector="<%= r.collector_name || 'Petugas Pengumpulan' %>"
+                        style="height: 230px; width: 100%; border-radius: 10px; border: 1px solid #e2e8f0; z-index: 1;"
+                    ></div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-2 text-muted" style="font-size:11px;">
+                        <div>
+                            <i class="bi bi-geo text-danger"></i> Titik Koordinat: <strong><%= r.latitude ? (Number(r.latitude).toFixed(4) + ', ' + Number(r.longitude).toFixed(4)) : 'Standar Wilayah' %></strong>
+                        </div>
+                        <div>
+                            <i class="bi bi-truck text-success"></i> Kurir: <strong><%= r.collector_name || 'Menunggu Penugasan' %></strong>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- =================================================
+                     FOTO & RINCIAN HASIL TIMBANG / SAMPAH
+                ================================================== -->
+                <% if (r.items && r.items.length) { %>
+                    <div class="mt-3">
+                        <div class="fw-semibold small text-dark mb-2 d-flex align-items-center gap-1">
+                            <i class="bi bi-camera-fill text-success"></i>
+                            <span>Dokumentasi Sampah & Rincian Timbang (<%= r.items.length %> item)</span>
+                        </div>
+                        <div class="row g-2">
+                            <% r.items.forEach(it => { %>
+                                <div class="col-12 col-md-6">
+                                    <div class="border rounded-3 p-2 bg-white d-flex align-items-center gap-2 shadow-sm">
+                                        <% if (it.photo_url) { %>
+                                            <a href="<%= it.photo_url %>" target="_blank" title="Klik untuk perbesar foto" class="flex-shrink-0">
+                                                <img src="<%= it.photo_url %>" alt="Foto Sampah" class="rounded border" style="width: 58px; height: 58px; object-fit: cover;">
+                                            </a>
+                                        <% } else { %>
+                                            <div class="rounded border bg-light text-muted d-grid place-items-center flex-shrink-0" style="width: 58px; height: 58px;">
+                                                <i class="bi bi-trash3 text-success fs-5"></i>
+                                            </div>
+                                        <% } %>
+                                        <div class="flex-grow-1 overflow-hidden">
+                                            <div class="fw-bold text-truncate text-dark" style="font-size: 13px;"><%= it.waste_name %></div>
+                                            <div class="text-success fw-semibold" style="font-size: 11px;">
+                                                <%= fmtNumber(it.weight, 3) %> <%= it.unit || 'kg' %> · Rp <%= fmtNumber(it.subtotal) %>
+                                            </div>
+                                            <% if (it.notes) { %>
+                                                <div class="small text-muted text-truncate" style="font-size: 11px;"><%= it.notes %></div>
+                                            <% } %>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }) %>
+                        </div>
+                    </div>
+                <% } else if (r.photo_url) { %>
+                    <div class="mt-3 border rounded-3 p-3 bg-white text-center shadow-sm">
+                        <div class="fw-semibold small text-dark mb-2 text-start d-flex align-items-center gap-1">
+                            <i class="bi bi-camera-fill text-success"></i>
+                            <span>Foto Dokumentasi Pengumpulan</span>
+                        </div>
+                        <a href="<%= r.photo_url %>" target="_blank" title="Klik untuk lihat ukuran penuh">
+                            <img src="<%= r.photo_url %>" alt="Foto Pickup" class="img-fluid rounded border" style="max-height: 220px; object-fit: contain;">
+                        </a>
+                    </div>
+                <% } %>
+
+
+                <!-- =================================================
+                     NOTE
+                ================================================== -->
+                <div class="alert alert-light border rounded-4 mt-3 mb-0 d-flex align-items-start gap-2" role="alert">
+                    <i class="bi bi-info-circle-fill text-success fs-5 flex-shrink-0"></i>
+                    <span class="small text-secondary">
+                        Mohon pantau aktivitas pickup ini melalui informasi status yang ditampilkan.
+                        Informasi tracking akan menunjukkan perkembangan dan status pickup yang sedang berlangsung.
+                    </span>
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 FOOTER
+            ================================================== -->
+            <div class="ios-tracking-footer">
+
+                <button
+                    type="button"
+                    class="ios-btn-close"
+                    data-bs-dismiss="modal">
+
+                    <i class="bi bi-x-lg me-1"></i>
+
+                    Tutup
+
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<% }) %>
+
+<% if (isNasabah) { %>
+    <!-- ========================================================
+         REQUEST PICKUP
+    ========================================================= -->
+    <div
+        class="modal fade"
+        id="requestCollectionModal"
+        tabindex="-1"
+        aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+
+            <form
+                class="modal-content border-0 shadow"
+                method="post"
+                action="/collection/request">
+
+                <!-- HEADER -->
+                <div class="modal-header">
+
+                    <div>
+
+                        <h5 class="modal-title fw-semibold">
+
+                            <i class="bi bi-truck text-success me-2"></i>
+
+                            Ajukan Pickup
+
+                        </h5>
+
+                        <div class="small text-secondary mt-1">
+
+                            Ajukan pengumpulan sampah baru.
+
+                        </div>
+
+                    </div>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                    </button>
+
+                </div>
+
+
+                <!-- BODY -->
+                <div class="modal-body">
+
+                    <!-- ==================================================
+                         ALAMAT PICKUP
+                    =================================================== -->
+                    <div class="mb-3">
+
+                        <label class="form-label fw-semibold">
+                            Alamat Pickup
+                        </label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text bg-light">
+
+                                <i class="bi bi-geo-alt text-success"></i>
+
+                            </span>
+
+                            <textarea
+                                class="form-control"
+                                name="address"
+                                id="createPickupAddress"
+                                rows="3"
+                                required
+                                oninput="checkCityInCreateAddress()"
+                                placeholder="Masukkan alamat pickup..."></textarea>
+
+                        </div>
+
+                    </div>
+
+                    <!-- KOORDINAT GPS (LATITUDE & LONGITUDE) -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small text-muted">Latitude</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light"><i class="bi bi-compass text-success"></i></span>
+                                <input type="text" class="form-control" name="latitude" id="createPickupLat" placeholder="-6.7320">
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small text-muted">Longitude</label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-light"><i class="bi bi-compass text-success"></i></span>
+                                <input type="text" class="form-control" name="longitude" id="createPickupLng" placeholder="108.5523">
+                            </div>
+                        </div>
+                        <div class="col-12 mt-1 d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-light border text-success fw-semibold" onclick="autoDetectCreateCoords()">
+                                <i class="bi bi-geo-alt-fill me-1"></i> Deteksi Kota dari Alamat (e.g. Cirebon)
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light border text-primary fw-semibold" onclick="useGpsCreateLocation()">
+                                <i class="bi bi-crosshair me-1"></i> Gunakan GPS Saya
+                            </button>
+                        </div>
+                    </div>
+
+
+                    <!-- ==================================================
+                         PERUSAHAAN + TANGGAL
+                    =================================================== -->
+                    <div class="row g-3">
+
+                        <!-- PERUSAHAAN -->
+                        <div class="col-md-6">
+
+                            <label class="form-label fw-semibold">
+                                Perusahaan
+                            </label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-text bg-light">
+
+                                    <i class="bi bi-building text-success"></i>
+
+                                </span>
+
+                                <select
+                                    class="form-select"
+                                    name="company_id">
+
+                                    <option value="">
+                                        Pilih perusahaan
+                                    </option>
+
+                                    <% safeCompanies.forEach(c => { %>
+
+                                        <option
+                                            value="<%= c.id %>">
+
+                                            <%= c.name %>
+
+                                        </option>
+
+                                    <% }) %>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <!-- TANGGAL -->
+                        <div class="col-md-6">
+
+                            <label class="form-label fw-semibold">
+                                Tanggal
+                            </label>
+
+                            <div class="input-group">
+
+                                <span class="input-group-text bg-light">
+
+                                    <i class="bi bi-calendar3 text-success"></i>
+
+                                </span>
+
+                                <input
+                                    class="form-control"
+                                    type="date"
+                                    name="scheduled_date"
+                                >
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ==================================================
+                         JAM PICKUP
+                    =================================================== -->
+                    <div class="mt-3">
+
+                        <label class="form-label fw-semibold">
+                            Jam Pickup
+                        </label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text bg-light">
+
+                                <i class="bi bi-clock text-success"></i>
+
+                            </span>
+
+                            <input
+                                class="form-control"
+                                type="time"
+                                name="scheduled_time"
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ==================================================
+                         CATATAN
+                    =================================================== -->
+                    <div class="mt-3">
+
+                        <label class="form-label fw-semibold">
+                            Catatan
+                        </label>
+
+                        <div class="input-group">
+
+                            <span class="input-group-text bg-light align-items-start pt-2">
+
+                                <i class="bi bi-sticky text-success"></i>
+
+                            </span>
+
+                            <textarea
+                                class="form-control"
+                                name="request_note"
+                                rows="3"
+                                placeholder="Catatan tambahan..."></textarea>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- FOOTER -->
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-light border"
+                        data-bs-dismiss="modal">
+
+                        <i class="bi bi-x-lg me-1"></i>
+
+                        Batal
+
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-success">
+
+                        <i class="bi bi-send me-1"></i>
+
+                        Ajukan Pickup
+
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+<% } %>
+
+
+<!-- ========================================================
+     MODAL EXPORT DATA PENGUMPULAN SAMPAH
+========================================================= -->
+<div
+    class="modal fade"
+    id="exportCollectionModal"
+    tabindex="-1"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-dialog-centered">
+
+        <div class="modal-content border-0 shadow">
+
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark">
+                        <i class="bi bi-file-earmark-arrow-down text-success me-2"></i>
+                        Export Pengumpulan Sampah
+                    </h5>
+                    <div class="small text-muted">
+                        Pilih rentang tanggal untuk preview PDF atau download Excel.
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    class="btn-close"
+                    data-bs-dismiss="modal"
+                    aria-label="Close">
+                </button>
+            </div>
+
+            <form id="collectionExportForm" method="get" action="/collection/export/preview-pdf" target="_blank">
+
+                <div class="modal-body">
+
+                    <!-- RENTANG TANGGAL -->
+                    <div class="row g-3 mb-3">
+
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">
+                                Dari Tanggal
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-calendar-date text-success"></i>
+                                </span>
+                                <input
+                                    type="date"
+                                    class="form-control"
+                                    name="start_date"
+                                    id="colExportStartDate"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">
+                                Sampai Tanggal
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">
+                                    <i class="bi bi-calendar-date-fill text-success"></i>
+                                </span>
+                                <input
+                                    type="date"
+                                    class="form-control"
+                                    name="end_date"
+                                    id="colExportEndDate"
+                                >
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- STATUS -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">
+                            Status Pengumpulan
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="bi bi-funnel text-success"></i>
+                            </span>
+                            <select class="form-select" name="status">
+                                <option value="">Semua Status</option>
+                                <% safeStatusList.forEach(s => { %>
+                                    <option value="<%= s %>"><%= statusText[s] || s %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-light border rounded-3 p-2 mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-info-circle text-primary fs-5"></i>
+                        <span class="small text-muted">
+                            Kosongkan tanggal untuk mengekspor seluruh data yang tersedia.
+                        </span>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer d-flex flex-column-reverse flex-sm-row justify-content-between gap-2 p-3">
+                    <button
+                        type="button"
+                        class="btn btn-light border w-100 w-sm-auto rounded-3"
+                        data-bs-dismiss="modal">
+                        Batal
+                    </button>
+
+                    <div class="d-flex flex-column flex-sm-row gap-2 w-100 w-sm-auto justify-content-end">
+                        <button
+                            type="submit"
+                            class="btn btn-outline-danger w-100 w-sm-auto rounded-3 text-nowrap"
+                            id="btnColPreviewPdf"
+                            onclick="setColExportAction('pdf')">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>
+                            Preview PDF
+                        </button>
+
+                        <button
+                            type="submit"
+                            class="btn btn-success w-100 w-sm-auto rounded-3 text-nowrap"
+                            id="btnColExportExcel"
+                            onclick="setColExportAction('excel')">
+                            <i class="bi bi-file-earmark-excel me-1"></i>
+                            Export Excel (.xlsx)
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+function setColExportAction(mode) {
+    const form = document.getElementById("collectionExportForm");
+    if (!form) return;
+    if (mode === "pdf") {
+        form.action = "/collection/export/preview-pdf";
+        form.target = "_blank";
+    } else {
+        form.action = "/collection/export/excel";
+        form.target = "_self";
+    }
+}
+</script>
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+
+        /* ====================================================
+           ELEMENTS
+        ==================================================== */
+
+        const rows =
+            Array.from(
+                document.querySelectorAll(
+                    ".collection-row"
+                )
+            );
+
+        const searchInput =
+            document.getElementById(
+                "collectionSearch"
+            );
+
+        const clearButton =
+            document.getElementById(
+                "clearCollectionSearch"
+            );
+
+        const statusInput =
+            document.getElementById(
+                "collectionStatus"
+            );
+
+        const dateInput =
+            document.getElementById(
+                "collectionDate"
+            );
+
+        const limitInput =
+            document.getElementById(
+                "collectionLimit"
+            );
+
+        const emptyState =
+            document.getElementById(
+                "collectionEmpty"
+            );
+
+        const pagination =
+            document.getElementById(
+                "collectionPagination"
+            );
+
+        const pageInfo =
+            document.getElementById(
+                "collectionPageInfo"
+            );
+
+        const paginationButtons =
+            document.getElementById(
+                "collectionPaginationButtons"
+            );
+
+        const resultCount =
+            document.getElementById(
+                "collectionResultCount"
+            );
+
+
+        /* ====================================================
+           CONFIG
+        ==================================================== */
+
+        let currentPage = 1;
+
+        let pageSize =
+            parseInt(
+                limitInput?.value || 10,
+                10
+            );
+
+        let filteredRows = [...rows];
+
+
+        /* ====================================================
+           ALERT
+        ==================================================== */
+
+        function showAlert(
+            message,
+            type = "warning",
+            icon = "bi-exclamation-circle"
+        ) {
+
+            const container =
+                document.getElementById(
+                    "collectionAlertContainer"
+                );
+
+            if (!container) return;
+
+
+            const alertId =
+                "collectionAlert_" +
+                Date.now();
+
+
+            container.insertAdjacentHTML(
+                "beforeend",
+                `
+                    <div
+                        id="${alertId}"
+                        class="alert alert-${type} alert-dismissible fade show collection-alert d-flex align-items-center gap-2"
+                        role="alert">
+
+                        <i class="bi ${icon} fs-5"></i>
+
+                        <div>
+                            ${message}
+                        </div>
+
+                        <button
+                            type="button"
+                            class="btn-close ms-auto"
+                            data-bs-dismiss="alert">
+                        </button>
+
+                    </div>
+                `
+            );
+
+
+            setTimeout(
+                function () {
+
+                    const element =
+                        document.getElementById(
+                            alertId
+                        );
+
+                    if (element) {
+
+                        const alert =
+                            bootstrap.Alert
+                                .getOrCreateInstance(
+                                    element
+                                );
+
+                        alert.close();
+
+                    }
+
+                },
+                3500
+            );
+
+        }
+
+
+        /* ====================================================
+           ESCAPE HTML
+        ==================================================== */
+
+        function escapeHtml(value) {
+
+            return String(value)
+
+                .replace(
+                    /&/g,
+                    "&amp;"
+                )
+
+                .replace(
+                    /</g,
+                    "&lt;"
+                )
+
+                .replace(
+                    />/g,
+                    "&gt;"
+                )
+
+                .replace(
+                    /"/g,
+                    "&quot;"
+                )
+
+                .replace(
+                    /'/g,
+                    "&#039;"
+                );
+
+        }
+
+
+        /* ====================================================
+           FILTER LOCAL
+        ==================================================== */
+
+        function applyLocalFilter(
+            showEmptyAlert = false
+        ) {
+
+            const keyword =
+                String(
+                    searchInput?.value || ""
+                )
+                .trim()
+                .toLowerCase();
+
+
+            const status =
+                String(
+                    statusInput?.value || ""
+                )
+                .trim()
+                .toLowerCase();
+
+
+            /* Clear button */
+
+            if (clearButton) {
+
+                clearButton.style.display =
+                    keyword
+                        ? "flex"
+                        : "none";
+
+            }
+
+
+            filteredRows =
+                rows.filter(
+                    function (row) {
+
+                        const searchData =
+                            String(
+                                row.dataset.search || ""
+                            )
+                            .toLowerCase();
+
+
+                        /* Search */
+
+                        if (
+                            keyword &&
+                            !searchData.includes(
+                                keyword
+                            )
+                        ) {
+
+                            return false;
+
+                        }
+
+
+                        /* Status */
+
+                        if (status) {
+
+                            const rowStatus =
+                                String(
+                                    row.dataset.search || ""
+                                ).toLowerCase();
+
+                            /*
+                             * Status ada di search dataset,
+                             * tetapi kita cek dari text status
+                             * agar lebih aman.
+                             */
+
+                            const statusElement =
+                                row.querySelector(
+                                    ".ios-status"
+                                );
+
+                            const currentStatus =
+                                String(
+                                    statusElement?.textContent || ""
+                                )
+                                .trim()
+                                .toLowerCase();
+
+
+                            const selectedStatusText =
+                                String(
+                                    document.querySelector(
+                                        "#collectionStatus option:checked"
+                                    )?.textContent || ""
+                                )
+                                .trim()
+                                .toLowerCase();
+
+
+                            if (
+                                selectedStatusText &&
+                                selectedStatusText !==
+                                    "semua status" &&
+                                !currentStatus.includes(
+                                    selectedStatusText
+                                )
+                            ) {
+
+                                return false;
+
+                            }
+
+                        }
+
+
+                        return true;
+
+                    }
+                );
+
+
+            currentPage = 1;
+
+
+            render();
+
+
+            /* Alert jika search kosong */
+
+            if (
+                showEmptyAlert &&
+                keyword &&
+                filteredRows.length === 0
+            ) {
+
+                showAlert(
+                    `Data pengumpulan dengan kata kunci "<strong>${escapeHtml(keyword)}</strong>" tidak ditemukan.`,
+                    "warning",
+                    "bi-search"
+                );
+
+            }
+
+
+            /* Alert jika filter status kosong */
+
+            if (
+                showEmptyAlert &&
+                status &&
+                filteredRows.length === 0
+            ) {
+
+                const selectedText =
+                    document.querySelector(
+                        "#collectionStatus option:checked"
+                    )?.textContent?.trim() ||
+                    "status tersebut";
+
+
+                showAlert(
+                    `Tidak ada data dengan status <strong>${escapeHtml(selectedText)}</strong>.`,
+                    "warning",
+                    "bi-funnel"
+                );
+
+            }
+
+        }
+
+
+        /* ====================================================
+           RENDER
+        ==================================================== */
+
+        function render() {
+
+            rows.forEach(
+                function (row) {
+
+                    row.style.display =
+                        "none";
+
+                }
+            );
+
+
+            /* EMPTY */
+
+            if (
+                filteredRows.length === 0
+            ) {
+
+                if (emptyState) {
+
+                    emptyState.style.display =
+                        "block";
+
+                }
+
+                if (pagination) {
+
+                    pagination.style.display =
+                        "none";
+
+                }
+
+                if (pageInfo) {
+
+                    pageInfo.textContent =
+                        "Tidak ada data";
+
+                }
+
+                if (resultCount) {
+
+                    resultCount.textContent =
+                        "0 data";
+
+                }
+
+                return;
+
+            }
+
+
+            /* SHOW EMPTY OFF */
+
+            if (emptyState) {
+
+                emptyState.style.display =
+                    "none";
+
+            }
+
+            if (pagination) {
+
+                pagination.style.display =
+                    "flex";
+
+            }
+
+
+            const totalPages =
+                Math.ceil(
+                    filteredRows.length /
+                    pageSize
+                );
+
+
+            if (
+                currentPage >
+                totalPages
+            ) {
+
+                currentPage =
+                    totalPages;
+
+            }
+
+
+            const start =
+                (currentPage - 1) *
+                pageSize;
+
+
+            const end =
+                start + pageSize;
+
+
+            const pageRows =
+                filteredRows.slice(
+                    start,
+                    end
+                );
+
+
+            pageRows.forEach(
+                function (row) {
+
+                    row.style.display =
+                        "";
+
+                }
+            );
+
+
+            /* INFO */
+
+            const from =
+                start + 1;
+
+            const to =
+                Math.min(
+                    end,
+                    filteredRows.length
+                );
+
+
+            if (pageInfo) {
+
+                pageInfo.textContent =
+                    `Menampilkan ${from}-${to} dari ${filteredRows.length} data`;
+
+            }
+
+
+            if (resultCount) {
+
+                resultCount.textContent =
+                    `${filteredRows.length} data`;
+
+            }
+
+
+            renderPagination(
+                totalPages
+            );
+
+        }
+
+
+        /* ====================================================
+           PAGINATION
+        ==================================================== */
+
+        function renderPagination(
+            totalPages
+        ) {
+
+            if (!paginationButtons) {
+                return;
+            }
+
+
+            paginationButtons.innerHTML =
+                "";
+
+
+            /* PREVIOUS */
+
+            const previous =
+                document.createElement(
+                    "button"
+                );
+
+            previous.type =
+                "button";
+
+            previous.className =
+                "btn btn-sm btn-light border page-btn";
+
+            previous.innerHTML =
+                '<i class="bi bi-chevron-left"></i>';
+
+            previous.disabled =
+                currentPage === 1;
+
+
+            previous.addEventListener(
+                "click",
+                function () {
+
+                    if (
+                        currentPage > 1
+                    ) {
+
+                        currentPage--;
+
+                        render();
+
+                    }
+
+                }
+            );
+
+
+            paginationButtons.appendChild(
+                previous
+            );
+
+
+            /* PAGE NUMBERS */
+
+            let startPage =
+                Math.max(
+                    1,
+                    currentPage - 2
+                );
+
+            let endPage =
+                Math.min(
+                    totalPages,
+                    startPage + 4
+                );
+
+
+            if (
+                endPage - startPage < 4
+            ) {
+
+                startPage =
+                    Math.max(
+                        1,
+                        endPage - 4
+                    );
+
+            }
+
+
+            for (
+                let page = startPage;
+                page <= endPage;
+                page++
+            ) {
+
+                const button =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                button.type =
+                    "button";
+
+
+                button.className =
+                    "btn btn-sm btn-light border page-btn" +
+                    (
+                        page === currentPage
+                            ? " active"
+                            : ""
+                    );
+
+
+                button.textContent =
+                    page;
+
+
+                button.addEventListener(
+                    "click",
+                    function () {
+
+                        currentPage =
+                            page;
+
+                        render();
+
+                    }
+                );
+
+
+                paginationButtons.appendChild(
+                    button
+                );
+
+            }
+
+
+            /* NEXT */
+
+            const next =
+                document.createElement(
+                    "button"
+                );
+
+
+            next.type =
+                "button";
+
+
+            next.className =
+                "btn btn-sm btn-light border page-btn";
+
+
+            next.innerHTML =
+                '<i class="bi bi-chevron-right"></i>';
+
+
+            next.disabled =
+                currentPage === totalPages;
+
+
+            next.addEventListener(
+                "click",
+                function () {
+
+                    if (
+                        currentPage <
+                        totalPages
+                    ) {
+
+                        currentPage++;
+
+                        render();
+
+                    }
+
+                }
+            );
+
+
+            paginationButtons.appendChild(
+                next
+            );
+
+        }
+
+
+        /* ====================================================
+           SEARCH INPUT
+        ==================================================== */
+
+        if (searchInput) {
+
+            searchInput.addEventListener(
+                "input",
+                function () {
+
+                    applyLocalFilter(
+                        false
+                    );
+
+                }
+            );
+
+
+            searchInput.addEventListener(
+                "keydown",
+                function (event) {
+
+                    if (
+                        event.key ===
+                        "Enter"
+                    ) {
+
+                        event.preventDefault();
+
+                        applyLocalFilter(
+                            true
+                        );
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        /* ====================================================
+           STATUS CHANGE
+        ==================================================== */
+
+        if (statusInput) {
+
+            statusInput.addEventListener(
+                "change",
+                function () {
+
+                    applyLocalFilter(
+                        true
+                    );
+
+                }
+            );
+
+        }
+
+
+        /* ====================================================
+           CLEAR SEARCH
+        ==================================================== */
+
+        if (clearButton) {
+
+            clearButton.addEventListener(
+                "click",
+                function () {
+
+                    if (searchInput) {
+
+                        searchInput.value =
+                            "";
+
+                    }
+
+                    applyLocalFilter(
+                        false
+                    );
+
+                    searchInput?.focus();
+
+                }
+            );
+
+        }
+
+
+        /* ====================================================
+           LIMIT
+        ==================================================== */
+
+        if (limitInput) {
+
+            limitInput.addEventListener(
+                "change",
+                function () {
+
+                    pageSize =
+                        parseInt(
+                            limitInput.value ||
+                            10,
+                            10
+                        );
+
+                    currentPage = 1;
+
+                    render();
+
+                }
+            );
+
+        }
+
+
+        /* ====================================================
+           DATE FILTER
+        ==================================================== */
+
+        if (dateInput) {
+
+            dateInput.addEventListener(
+                "change",
+                function () {
+
+                    /*
+                     * Tanggal tetap diproses server
+                     * ketika tombol Filter ditekan.
+                     */
+
+                    const form =
+                        document.getElementById(
+                            "collectionFilterForm"
+                        );
+
+                    if (form) {
+
+                        form.requestSubmit();
+
+                    }
+
+                }
+            );
+
+        }
+
+
+        /* ====================================================
+           FORM FILTER
+        ==================================================== */
+
+        const filterForm =
+            document.getElementById(
+                "collectionFilterForm"
+            );
+
+
+        if (filterForm) {
+
+            filterForm.addEventListener(
+                "submit",
+                function (event) {
+
+                    /*
+                     * Jika hanya search/status,
+                     * kita tetap submit ke server
+                     * supaya filter backend ikut sinkron.
+                     *
+                     * Jika hasil server kosong,
+                     * server akan menampilkan empty state.
+                     */
+
+                }
+            );
+
+        }
+
+
+        /* ====================================================
+           INITIAL RENDER
+        ==================================================== */
+
+        render();
+
+
+        /* ====================================================
+           SERVER EMPTY DATA
+        ==================================================== */
+
+        if (
+            rows.length === 0
+        ) {
+
+            showAlert(
+                "Belum ada data pengumpulan sampah.",
+                "info",
+                "bi-info-circle"
+            );
+        }
+
+        /* ====================================================
+           LEAFLET TRACKING MAP INITIALIZER
+        ==================================================== */
+        const trackingModals = document.querySelectorAll(".ios-tracking-modal");
+        const initializedMaps = {};
+
+        function setupTrackingMap(modal) {
+            const mapEl = modal.querySelector(".leaflet-tracking-map");
+            if (!mapEl) return;
+
+            const id = mapEl.getAttribute("data-id");
+            const lat = parseFloat(mapEl.getAttribute("data-lat")) || -6.2088;
+            const lng = parseFloat(mapEl.getAttribute("data-lng")) || 106.8456;
+            const code = mapEl.getAttribute("data-code") || "-";
+            const nasabah = mapEl.getAttribute("data-nasabah") || "-";
+            const address = mapEl.getAttribute("data-address") || "Lokasi Penjemputan";
+            const status = mapEl.getAttribute("data-status") || "diajukan";
+            const collector = mapEl.getAttribute("data-collector") || "Petugas";
+
+            if (!initializedMaps[id] && typeof L !== "undefined") {
+                try {
+                    // Check if already initialized by Leaflet
+                    if (mapEl._leaflet_id) {
+                        return;
+                    }
+
+                    const map = L.map(mapEl.id, {
+                        center: [lat, lng],
+                        zoom: 15,
+                        zoomControl: true
+                    });
+
+                    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                        maxZoom: 19,
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>'
+                    }).addTo(map);
+
+                    const userIcon = L.divIcon({
+                        html: '<div style="background-color:#16a34a;color:#fff;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.35);border:2px solid #fff;"><i class="bi bi-geo-alt-fill" style="font-size:18px;"></i></div>',
+                        className: 'custom-map-icon',
+                        iconSize: [34, 34],
+                        iconAnchor: [17, 34],
+                        popupAnchor: [0, -32]
+                    });
+
+                    const marker = L.marker([lat, lng], { icon: userIcon }).addTo(map);
+                    marker.bindPopup(`
+                        <div style="font-family:sans-serif;min-width:180px;font-size:12px;">
+                            <strong style="color:#16a34a;font-size:13px;">${code}</strong><br>
+                            <span style="font-weight:600;">Nasabah: ${nasabah}</span><br>
+                            <small style="color:#64748b;">${address}</small><br>
+                            <span class="badge bg-light text-dark border mt-1" style="font-size:10px;">Status: ${status}</span>
+                        </div>
+                    `).openPopup();
+
+                    if (status === 'diambil' || status === 'ditimbang' || status === 'dijadwalkan' || status === 'diajukan') {
+                        const courierLat = lat + 0.0035;
+                        const courierLng = lng + 0.0040;
+                        const courierIcon = L.divIcon({
+                            html: '<div style="background-color:#2563eb;color:#fff;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,0.35);border:2px solid #fff;"><i class="bi bi-truck" style="font-size:16px;"></i></div>',
+                            className: 'custom-courier-icon',
+                            iconSize: [32, 32],
+                            iconAnchor: [16, 32],
+                            popupAnchor: [0, -30]
+                        });
+                        const courierMarker = L.marker([courierLat, courierLng], { icon: courierIcon }).addTo(map);
+                        courierMarker.bindPopup(`<b>${collector}</b><br><small>Menuju titik penjemputan</small>`);
+
+                        L.polyline([[courierLat, courierLng], [lat, lng]], {
+                            color: '#16a34a',
+                            dashArray: '6, 8',
+                            weight: 3,
+                            opacity: 0.8
+                        }).addTo(map);
+                    }
+
+                    initializedMaps[id] = map;
+                } catch (e) {
+                    console.error("Leaflet map init error:", e);
+                }
+            }
+
+            if (initializedMaps[id]) {
+                setTimeout(() => {
+                    initializedMaps[id].invalidateSize();
+                }, 200);
+                setTimeout(() => {
+                    initializedMaps[id].invalidateSize();
+                }, 600);
+            }
+        }
+
+        trackingModals.forEach(function (modal) {
+            modal.addEventListener("shown.bs.modal", function () {
+                setupTrackingMap(modal);
+            });
+        });
+
+        // Trigger on direct click of tracking button as fallback
+        document.querySelectorAll("[data-bs-target^='#trackingCollection']").forEach(btn => {
+            btn.addEventListener("click", function () {
+                const targetSelector = btn.getAttribute("data-bs-target");
+                const modal = document.querySelector(targetSelector);
+                if (modal) {
+                    setTimeout(() => setupTrackingMap(modal), 300);
+                }
+            });
+        });
+
+    }
+);
+
+/* ====================================================
+   CLIENT-SIDE GEOCODING & GPS HELPERS (REALTIME CIREBON & CITIES)
+==================================================== */
+const INDO_CITIES_COORDS = [
+    { keys: ['cirebon', 'kesambi', 'harjamukti', 'kejaksan', 'pekalipan', 'lemwungkuk', 'plumbon', 'kedawung', 'weru', 'sumber', 'klayan', 'gunung jati', 'gunung laya', 'mundu', 'astana'], lat: -6.7320, lng: 108.5523 },
+    { keys: ['bandung', 'cimahi', 'dago', 'buahbatu', 'lembang', 'padalarang'], lat: -6.9175, lng: 107.6191 },
+    { keys: ['jakarta', 'jakpus', 'jaksel', 'jaktim', 'jakbar', 'jakut', 'monas', 'kemang', 'sudirman'], lat: -6.2088, lng: 106.8456 },
+    { keys: ['surabaya', 'rungkut', 'gubeng', 'wonokromo', 'tegalsari'], lat: -7.2575, lng: 112.7521 },
+    { keys: ['semarang', 'simpang lima', 'tembalang', 'banyumanik'], lat: -6.9667, lng: 110.4167 },
+    { keys: ['yogyakarta', 'jogja', 'malioboro', 'sleman', 'bantul'], lat: -7.7956, lng: 110.3695 },
+    { keys: ['solo', 'surakarta'], lat: -7.5755, lng: 110.8243 },
+    { keys: ['bogor', 'cibinong'], lat: -6.5971, lng: 106.8060 },
+    { keys: ['depok', 'margonda'], lat: -6.4025, lng: 106.7942 },
+    { keys: ['tangerang', 'bsd', 'karawaci', 'serpong', 'ciputat'], lat: -6.1783, lng: 106.6319 },
+    { keys: ['bekasi', 'cikarang', 'tambun'], lat: -6.2383, lng: 106.9756 },
+    { keys: ['kuningan'], lat: -6.9765, lng: 108.4831 },
+    { keys: ['majalengka'], lat: -6.8361, lng: 108.2274 },
+    { keys: ['indramayu'], lat: -6.3264, lng: 108.3200 },
+    { keys: ['tegal'], lat: -6.8694, lng: 109.1402 },
+    { keys: ['brebes'], lat: -6.8706, lng: 109.0435 },
+    { keys: ['pekalongan'], lat: -6.8886, lng: 109.6753 },
+    { keys: ['malang', 'batu'], lat: -7.9666, lng: 112.6326 },
+    { keys: ['denpasar', 'bali', 'kuta', 'ubud', 'sanur'], lat: -8.6705, lng: 115.2126 },
+    { keys: ['medan'], lat: 3.5952, lng: 98.6722 },
+    { keys: ['palembang'], lat: -2.9761, lng: 104.7754 },
+    { keys: ['makassar'], lat: -5.1477, lng: 119.4327 },
+    { keys: ['balikpapan'], lat: -1.2379, lng: 116.8529 }
+];
+
+function findCoordsByAddress(address) {
+    if (!address) return null;
+    const lower = String(address).toLowerCase();
+    for (const item of INDO_CITIES_COORDS) {
+        if (item.keys.some(k => lower.includes(k))) {
+            return { lat: item.lat, lng: item.lng };
+        }
+    }
+    return null;
+}
+
+function checkCityInAddress(id) {
+    const addr = document.getElementById("editAddress_" + id)?.value;
+    const coords = findCoordsByAddress(addr);
+    if (coords) {
+        const latEl = document.getElementById("editLat_" + id);
+        const lngEl = document.getElementById("editLng_" + id);
+        if (latEl && lngEl) {
+            latEl.value = coords.lat;
+            lngEl.value = coords.lng;
+        }
+    }
+}
+
+function autoDetectCoords(id) {
+    const addr = document.getElementById("editAddress_" + id)?.value;
+    const coords = findCoordsByAddress(addr);
+    const latEl = document.getElementById("editLat_" + id);
+    const lngEl = document.getElementById("editLng_" + id);
+    if (coords && latEl && lngEl) {
+        latEl.value = coords.lat;
+        lngEl.value = coords.lng;
+        alert(`Lokasi kota terdeteksi!\nLatitude: ${coords.lat}\nLongitude: ${coords.lng}`);
+    } else {
+        alert("Nama kota dalam alamat belum dikenali secara otomatis. Masukkan manual atau gunakan tombol GPS.");
+    }
+}
+
+function useGpsLocation(id) {
+    if (!navigator.geolocation) {
+        alert("Browser Anda tidak mendukung geolokasi GPS.");
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        function (pos) {
+            const lat = pos.coords.latitude.toFixed(6);
+            const lng = pos.coords.longitude.toFixed(6);
+            const latEl = document.getElementById("editLat_" + id);
+            const lngEl = document.getElementById("editLng_" + id);
+            if (latEl && lngEl) {
+                latEl.value = lat;
+                lngEl.value = lng;
+                alert(`GPS berhasil diambil: ${lat}, ${lng}`);
+            }
+        },
+        function (err) {
+            alert("Gagal mengambil GPS: " + err.message);
+        },
+        { timeout: 10000 }
+    );
+}
+
+function checkCityInCreateAddress() {
+    const addr = document.getElementById("createPickupAddress")?.value;
+    const coords = findCoordsByAddress(addr);
+    if (coords) {
+        const latEl = document.getElementById("createPickupLat");
+        const lngEl = document.getElementById("createPickupLng");
+        if (latEl && lngEl) {
+            latEl.value = coords.lat;
+            lngEl.value = coords.lng;
+        }
+    }
+}
+
+function autoDetectCreateCoords() {
+    const addr = document.getElementById("createPickupAddress")?.value;
+    const coords = findCoordsByAddress(addr);
+    const latEl = document.getElementById("createPickupLat");
+    const lngEl = document.getElementById("createPickupLng");
+    if (coords && latEl && lngEl) {
+        latEl.value = coords.lat;
+        lngEl.value = coords.lng;
+        alert(`Lokasi kota terdeteksi!\nLatitude: ${coords.lat}\nLongitude: ${coords.lng}`);
+    } else {
+        alert("Nama kota dalam alamat belum dikenali secara otomatis. Masukkan manual atau gunakan tombol GPS.");
+    }
+}
+
+function useGpsCreateLocation() {
+    if (!navigator.geolocation) {
+        alert("Browser Anda tidak mendukung geolokasi GPS.");
+        return;
+    }
+    navigator.geolocation.getCurrentPosition(
+        function (pos) {
+            const lat = pos.coords.latitude.toFixed(6);
+            const lng = pos.coords.longitude.toFixed(6);
+            const latEl = document.getElementById("createPickupLat");
+            const lngEl = document.getElementById("createPickupLng");
+            if (latEl && lngEl) {
+                latEl.value = lat;
+                lngEl.value = lng;
+                alert(`GPS berhasil diambil: ${lat}, ${lng}`);
+            }
+        },
+        function (err) {
+            alert("Gagal mengambil GPS: " + err.message);
+        },
+        { timeout: 10000 }
+    );
+}
+
+/* ================================================================
+   FITUR: STRUK THERMAL & BUKTI WA
+================================================================ */
+let currentReceiptData = null;
+
+async function openReceiptThermal(id) {
+    try {
+        const res = await fetch('/collection/api/receipt/' + id);
+        const json = await res.json();
+        if (!json.success || !json.receipt) {
+            alert("Gagal mengambil data struk timbangan: " + (json.message || "Data tidak ditemukan"));
+            return;
+        }
+
+        const r = json.receipt;
+        currentReceiptData = r;
+
+        document.getElementById("receiptBankName").textContent = r.settings.bank_name;
+        document.getElementById("receiptOfficeAddr").textContent = r.settings.office_address;
+        document.getElementById("receiptPhone").textContent = "WA: " + r.settings.contact_whatsapp;
+        document.getElementById("receiptCode").textContent = r.code || ('#CR-' + r.id);
+        
+        const dateStr = r.scheduled_date ? new Date(r.scheduled_date).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : new Date(r.created_at).toLocaleDateString('id-ID');
+        document.getElementById("receiptDate").textContent = dateStr + " " + (r.scheduled_time ? String(r.scheduled_time).slice(0,5) : "");
+        document.getElementById("receiptCustomer").textContent = r.customer_name || "-";
+        document.getElementById("receiptCustomerPhone").textContent = r.customer_phone || "-";
+        document.getElementById("receiptCollector").textContent = r.collector_name || "Petugas Lapangan";
+
+        // Render items
+        const tbody = document.getElementById("receiptItemsBody");
+        tbody.innerHTML = "";
+
+        let totalWeight = 0;
+        let totalVal = 0;
+
+        if (r.items && r.items.length > 0) {
+            r.items.forEach(it => {
+                const w = Number(it.weight || 0);
+                const sub = Number(it.subtotal || 0);
+                totalWeight += w;
+                totalVal += sub;
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td style="padding: 2px 0;">${it.waste_name || it.waste_code || 'Sampah'}</td>
+                    <td style="text-align: right; padding: 2px 0;">${w.toLocaleString('id-ID', { maximumFractionDigits: 2 })} ${it.waste_unit || 'kg'}</td>
+                    <td style="text-align: right; padding: 2px 0;">${Number(it.price_per_unit || 0).toLocaleString('id-ID')}</td>
+                    <td style="text-align: right; padding: 2px 0; font-weight: bold;">${sub.toLocaleString('id-ID')}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            totalWeight = Number(r.total_weight || 0);
+            totalVal = Number(r.total_value || 0);
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td style="padding: 2px 0;">Setoran Sampah</td>
+                <td style="text-align: right; padding: 2px 0;">${totalWeight.toLocaleString('id-ID', { maximumFractionDigits: 2 })} kg</td>
+                <td style="text-align: right; padding: 2px 0;">-</td>
+                <td style="text-align: right; padding: 2px 0; font-weight: bold;">${totalVal.toLocaleString('id-ID')}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        document.getElementById("receiptTotalWeight").textContent = totalWeight.toLocaleString('id-ID', { maximumFractionDigits: 2 }) + " kg";
+        document.getElementById("receiptTotalValue").textContent = "Rp " + totalVal.toLocaleString('id-ID');
+        document.getElementById("receiptCustomerBalance").textContent = "Rp " + Number(r.customer_balance || 0).toLocaleString('id-ID');
+        document.getElementById("receiptStatus").textContent = (r.status === 'selesai' ? 'LUNAS (MASUK SALDO)' : r.status.toUpperCase());
+
+        const modal = new bootstrap.Modal(document.getElementById("modalReceiptThermal"));
+        modal.show();
+    } catch (err) {
+        alert("Gagal memuat struk: " + err.message);
+    }
+}
+
+function printThermalReceipt() {
+    window.print();
+}
+
+function sendReceiptWhatsApp() {
+    if (!currentReceiptData) return;
+    const r = currentReceiptData;
+    let text = `🧾 *NOTA SETORAN BANK SAMPAH*\n*${r.settings.bank_name}*\n${r.settings.office_address}\n--------------------------------\n`;
+    text += `No. Nota : ${r.code || ('#CR-' + r.id)}\n`;
+    text += `Tanggal  : ${r.scheduled_date ? new Date(r.scheduled_date).toLocaleDateString('id-ID') : new Date().toLocaleDateString('id-ID')}\n`;
+    text += `Nasabah  : ${r.customer_name}\n`;
+    text += `Petugas  : ${r.collector_name || 'Petugas Lapangan'}\n`;
+    text += `--------------------------------\n`;
+    
+    if (r.items && r.items.length > 0) {
+        r.items.forEach((it, idx) => {
+            text += `${idx + 1}. ${it.waste_name}: ${Number(it.weight).toLocaleString('id-ID')} kg @Rp ${Number(it.price_per_unit).toLocaleString('id-ID')} = Rp ${Number(it.subtotal).toLocaleString('id-ID')}\n`;
+        });
+    } else {
+        text += `Total Berat: ${Number(r.total_weight || 0).toLocaleString('id-ID')} kg\n`;
+    }
+    
+    text += `--------------------------------\n`;
+    text += `*TOTAL NILAI*: Rp ${Number(r.total_value || 0).toLocaleString('id-ID')}\n`;
+    text += `*SALDO TERKINI*: Rp ${Number(r.customer_balance || 0).toLocaleString('id-ID')}\n`;
+    text += `--------------------------------\n`;
+    text += `Terima kasih telah memilah sampah dan merawat kelestarian lingkungan hidup bersama kami! 🌱`;
+
+    const phone = r.customer_phone ? r.customer_phone.replace(/^0/, '62').replace(/[^0-9]/g, '') : '';
+    const url = phone ? `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(text)}` : `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+}
+
+/* ================================================================
+   FITUR: SCANNER KAMERA QR CODE
+================================================================ */
+let html5QrScanner = null;
+
+function openQrScannerModal() {
+    const modalEl = document.getElementById("modalQrScanner");
+    const modal = new bootstrap.Modal(modalEl);
+    modal.show();
+
+    document.getElementById("scanResultCard").style.display = "none";
+    document.getElementById("scanErrorMessage").style.display = "none";
+
+    // Muat script HTML5-QRCode jika belum ada
+    if (typeof Html5Qrcode === "undefined") {
+        const script = document.createElement("script");
+        script.src = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
+        script.onload = () => startScanner();
+        document.body.appendChild(script);
+    } else {
+        startScanner();
+    }
+}
+
+function startScanner() {
+    try {
+        if (html5QrScanner) {
+            html5QrScanner.stop().catch(() => {}).then(() => {
+                initScannerInstance();
+            });
+        } else {
+            initScannerInstance();
+        }
+    } catch (e) {
+        console.error("Scanner error:", e);
+    }
+}
+
+function initScannerInstance() {
+    html5QrScanner = new Html5Qrcode("qrVideoRegion");
+    const config = { fps: 10, qrbox: { width: 220, height: 220 } };
+
+    html5QrScanner.start(
+        { facingMode: "environment" },
+        config,
+        (decodedText) => {
+            onQrCodeSuccess(decodedText);
+        },
+        (errorMessage) => {}
+    ).catch(err => {
+        document.getElementById("scanErrorMessage").style.display = "block";
+        document.getElementById("scanErrorMessage").textContent = "Tidak dapat mengakses kamera: " + err;
+    });
+}
+
+function stopScanner() {
+    if (html5QrScanner) {
+        html5QrScanner.stop().then(() => {
+            html5QrScanner = null;
+        }).catch(() => {});
+    }
+}
+
+async function onQrCodeSuccess(decodedText) {
+    stopScanner();
+
+    try {
+        // Ekstrak ID atau format BS-2026-XXXX
+        let query = decodedText.trim();
+        const match = query.match(/BS-\d{4}-\d+/i);
+        if (match) query = match[0];
+
+        // Cari di input search
+        const searchInput = document.getElementById("collectionSearch");
+        if (searchInput) {
+            searchInput.value = query;
+        }
+
+        // Tampilkan result di modal
+        document.getElementById("scanResultCard").style.display = "block";
+        document.getElementById("scannedCodeBadge").textContent = decodedText;
+
+        // Auto submit filter untuk menyaring pickup nasabah ini
+        const filterForm = document.getElementById("collectionFilterForm");
+        document.getElementById("btnApplyScanFilter").onclick = () => {
+            if (filterForm) filterForm.submit();
+        };
+
+    } catch (e) {
+        console.error("Scan processing error:", e);
+    }
+}
+
+document.getElementById("modalQrScanner")?.addEventListener("hidden.bs.modal", () => {
+    stopScanner();
+});
+</script>
+
+<!-- ================================================================
+     MODAL STRUK THERMAL (#modalReceiptThermal)
+================================================================= -->
+<style>
+@media print {
+    body * {
+        visibility: hidden !important;
+    }
+    #thermalReceiptArea, #thermalReceiptArea * {
+        visibility: visible !important;
+    }
+    #thermalReceiptArea {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: 78mm !important;
+        margin: 0 !important;
+        padding: 5px !important;
+        box-shadow: none !important;
+        border: none !important;
+        font-size: 11px !important;
+    }
+    .modal, .modal-backdrop {
+        display: block !important;
+        background: none !important;
+        position: static !important;
+    }
+    .modal-dialog {
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    .no-print {
+        display: none !important;
+    }
+}
+.thermal-receipt-box {
+    background: #fff;
+    color: #000;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 16px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+}
+.thermal-divider {
+    border-top: 1px dashed #000;
+    margin: 8px 0;
+}
+.thermal-double-divider {
+    border-top: 2px dashed #000;
+    margin: 8px 0;
+}
+</style>
+
+<div class="modal fade" id="modalReceiptThermal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-dark text-white p-3 no-print">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-printer fs-5 text-success"></i>
+                    <h6 class="modal-title fw-bold mb-0">Struk Nota Timbangan Kasir</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 bg-light">
+                <!-- PRINTABLE THERMAL BOX -->
+                <div id="thermalReceiptArea" class="thermal-receipt-box shadow-sm">
+                    <!-- HEADER -->
+                    <div class="text-center">
+                        <div class="fw-bold fs-6" id="receiptBankName">Aplikasi Sampah Terintegrasi (PilahKita)</div>
+                        <div style="font-size: 10px;" id="receiptOfficeAddr">Jl.Gununglaya RT004/RW001 Ds. Klayan Kec. Gunung Jati, Kab. Cirebon</div>
+                        <div style="font-size: 10px;" id="receiptPhone">WA: 081234567890</div>
+                    </div>
+
+                    <div class="thermal-double-divider"></div>
+
+                    <!-- META INFO -->
+                    <div class="d-flex justify-content-between">
+                        <span>No. Tiket</span>
+                        <span class="fw-bold" id="receiptCode">#CR-000</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Waktu</span>
+                        <span id="receiptDate">20/09/2026</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Nasabah</span>
+                        <span class="fw-bold text-truncate" style="max-width: 170px;" id="receiptCustomer">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Kontak</span>
+                        <span id="receiptCustomerPhone">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Petugas</span>
+                        <span id="receiptCollector">Petugas</span>
+                    </div>
+
+                    <div class="thermal-divider"></div>
+
+                    <!-- ITEMS TABLE -->
+                    <table style="width: 100%; font-size: 11px;">
+                        <thead>
+                            <tr style="border-bottom: 1px dashed #000;">
+                                <th style="text-align: left; padding-bottom: 3px;">Item</th>
+                                <th style="text-align: right; padding-bottom: 3px;">Qty</th>
+                                <th style="text-align: right; padding-bottom: 3px;">Harga</th>
+                                <th style="text-align: right; padding-bottom: 3px;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="receiptItemsBody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+
+                    <div class="thermal-divider"></div>
+
+                    <!-- TOTAL -->
+                    <div class="d-flex justify-content-between">
+                        <span>TOTAL BERAT</span>
+                        <span class="fw-bold" id="receiptTotalWeight">0 kg</span>
+                    </div>
+                    <div class="d-flex justify-content-between fs-6 fw-bold mt-1">
+                        <span>TOTAL SETORAN</span>
+                        <span id="receiptTotalValue">Rp 0</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted" style="font-size: 10.5px; margin-top: 3px;">
+                        <span>Status Setoran</span>
+                        <span class="fw-bold text-success" id="receiptStatus">LUNAS</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1 pt-1" style="border-top: 1px dotted #888;">
+                        <span class="fw-semibold">Saldo Buku Tabungan</span>
+                        <span class="fw-bold text-primary" id="receiptCustomerBalance">Rp 0</span>
+                    </div>
+
+                    <div class="thermal-double-divider"></div>
+
+                    <div class="text-center" style="font-size: 10px;">
+                        <div>*** TERIMA KASIH ***</div>
+                        <div>Telah memilah sampah demi bumi lestari</div>
+                        <div class="mt-1 font-monospace" style="letter-spacing: 2px;">||||||||||||||||||||||||||||</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-3 bg-white d-flex gap-2 no-print">
+                <button type="button" class="btn btn-outline-secondary w-50 fw-semibold" onclick="sendReceiptWhatsApp()">
+                    <i class="bi bi-whatsapp me-1 text-success"></i> Kirim WhatsApp
+                </button>
+                <button type="button" class="btn btn-primary w-50 fw-semibold" onclick="printThermalReceipt()">
+                    <i class="bi bi-printer me-1"></i> Cetak Struk
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================================================================
+     MODAL SCANNER QR KAMERA (#modalQrScanner)
+================================================================= -->
+<div class="modal fade" id="modalQrScanner" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header border-0 bg-success text-white p-3">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-qr-code-scan fs-5"></i>
+                    <h6 class="modal-title fw-bold mb-0">Scanner QR Code Nasabah</h6>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3 text-center">
+                <p class="text-muted small mb-3">Arahkan kamera ke QR Code pada Kartu Anggota Digital nasabah untuk mendeteksi identitas otomatis.</p>
+                
+                <div id="qrVideoRegion" class="bg-dark rounded-3 mb-3 mx-auto" style="width: 100%; min-height: 260px; display: flex; align-items: center; justify-content: center; color: #fff;">
+                    <div class="spinner-border text-light spinner-border-sm me-2" role="status"></div>
+                    <span>Mengaktifkan kamera...</span>
+                </div>
+
+                <div id="scanErrorMessage" class="alert alert-danger py-2 small" style="display: none;"></div>
+
+                <!-- SCAN RESULT CARD -->
+                <div id="scanResultCard" class="card border-success p-3 rounded-3 text-start bg-light" style="display: none;">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                        <span class="fw-bold text-dark">Kartu Berhasil Terdeteksi!</span>
+                    </div>
+                    <div class="small text-muted mb-2">Kode Nasabah:</div>
+                    <div class="badge bg-success fs-6 font-monospace mb-3" id="scannedCodeBadge">BS-2026-XXXX</div>
+                    <button type="button" id="btnApplyScanFilter" class="btn btn-success w-100 fw-semibold" data-bs-dismiss="modal">
+                        <i class="bi bi-funnel me-1"></i> Tampilkan Data Pickup Nasabah Ini
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-3 bg-light">
+                <button type="button" class="btn btn-secondary w-100 fw-semibold rounded-3" data-bs-dismiss="modal">Tutup Scanner</button>
+            </div>
+        </div>
+    </div>
+</div>
+</script>
