@@ -878,6 +878,54 @@ app.get(
 );
 
 // ================================================================
+// PROMETHEUS / METRICS MONITORING ENDPOINT
+// ================================================================
+
+app.get(
+    "/metrics",
+    async (req, res) => {
+        try {
+            const memory = process.memoryUsage();
+            const uptime = process.uptime();
+            
+            let dbActive = 0;
+            try {
+                const db = getPool();
+                if (db) dbActive = 1;
+            } catch (_) {
+                dbActive = 0;
+            }
+
+            res.set("Content-Type", "text/plain; version=0.0.4; charset=utf-8");
+            const metrics = [
+                "# HELP process_uptime_seconds The process uptime in seconds.",
+                "# TYPE process_uptime_seconds gauge",
+                `process_uptime_seconds ${uptime.toFixed(2)}`,
+                "",
+                "# HELP nodejs_memory_heap_used_bytes Process heap memory used.",
+                "# TYPE nodejs_memory_heap_used_bytes gauge",
+                `nodejs_memory_heap_used_bytes ${memory.heapUsed}`,
+                "",
+                "# HELP nodejs_memory_heap_total_bytes Process heap memory total.",
+                "# TYPE nodejs_memory_heap_total_bytes gauge",
+                `nodejs_memory_heap_total_bytes ${memory.heapTotal}`,
+                "",
+                "# HELP nodejs_memory_rss_bytes Process resident set size.",
+                "# TYPE nodejs_memory_rss_bytes gauge",
+                `nodejs_memory_rss_bytes ${memory.rss}`,
+                "",
+                "# HELP app_database_pool_active Status of database connection pool.",
+                "# TYPE app_database_pool_active gauge",
+                `app_database_pool_active ${dbActive}`
+            ];
+            res.send(metrics.join("\n") + "\n");
+        } catch (err) {
+            res.status(500).send("# ERROR: " + err.message);
+        }
+    }
+);
+
+// ================================================================
 // ROOT
 // ================================================================
 

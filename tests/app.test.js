@@ -34,4 +34,12 @@ describe("Express Web Application Routes", () => {
         const res = await request(app).get("/non-existent-page-xyz");
         expect(res.status).toBe(404);
     });
+
+    test("GET /metrics should return Prometheus formatted monitoring metrics", async () => {
+        const res = await request(app).get("/metrics");
+        expect(res.status).toBe(200);
+        expect(res.headers["content-type"]).toContain("text/plain");
+        expect(res.text).toContain("process_uptime_seconds");
+        expect(res.text).toContain("nodejs_memory_heap_used_bytes");
+    });
 });
